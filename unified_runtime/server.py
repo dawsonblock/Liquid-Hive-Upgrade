@@ -567,6 +567,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
     answer = "Placeholder: HiveMind unavailable"
     # Decide which reasoning strategy to apply.  Prefer the dynamic selector
     # when available; otherwise fall back to the static policy function.
+    policy_used = None
     if text_roles is not None and judge is not None and settings is not None:
         try:
             # Prepare a minimal system context for the strategy selector
