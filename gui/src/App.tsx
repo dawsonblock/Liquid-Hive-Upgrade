@@ -17,6 +17,8 @@ import { useState } from 'react';
 import ChatPanel from './components/ChatPanel';
 import SystemPanel from './components/SystemPanel';
 import ForgePanel from './components/ForgePanel';
+import { Provider } from 'react-redux';
+import { store } from './store';
 
 const drawerWidth = 240;
 
@@ -24,10 +26,10 @@ const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#16213e',
+      main: '#0ea5e9',
     },
     secondary: {
-      main: '#e94560',
+      main: '#e11d48',
     },
   },
 });
@@ -35,45 +37,47 @@ const darkTheme = createTheme({
 export default function App() {
   const [panel, setPanel] = useState<'chat' | 'system' | 'forge'>('chat');
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Typography variant="h6" noWrap component="div">
-            Cerebral Operator Console
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
-        }}
-      >
-        <Toolbar />
-        <List>
-          <ListItem button selected={panel === 'chat'} onClick={() => setPanel('chat')}>
-            <ListItemIcon><ChatIcon /></ListItemIcon>
-            <ListItemText primary="Cognitive Core" />
-          </ListItem>
-          <ListItem button selected={panel === 'system'} onClick={() => setPanel('system')}>
-            <ListItemIcon><DashboardIcon /></ListItemIcon>
-            <ListItemText primary="Operator Console" />
-          </ListItem>
-          <ListItem button selected={panel === 'forge'} onClick={() => setPanel('forge')}>
-            <ListItemIcon><SettingsIcon /></ListItemIcon>
-            <ListItemText primary="Cognitive Forge" />
-          </ListItem>
-        </List>
-      </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, ml: `${drawerWidth}px` }}>
-        <Toolbar />
-        {panel === 'chat' && <ChatPanel />}
-        {panel === 'system' && <SystemPanel />}
-        {panel === 'forge' && <ForgePanel />}
-      </Box>
-    </ThemeProvider>
+    <Provider store={store}>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+          <Toolbar>
+            <Typography variant="h6" noWrap component="div">
+              Cerebral Operator Console
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: drawerWidth,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          }}
+        >
+          <Toolbar />
+          <List>
+            <ListItem button selected={panel === 'chat'} onClick={() => setPanel('chat')}>
+              <ListItemIcon><ChatIcon /></ListItemIcon>
+              <ListItemText primary="Cognitive Core" />
+            </ListItem>
+            <ListItem button selected={panel === 'system'} onClick={() => setPanel('system')}>
+              <ListItemIcon><DashboardIcon /></ListItemIcon>
+              <ListItemText primary="Operator Console" />
+            </ListItem>
+            <ListItem button selected={panel === 'forge'} onClick={() => setPanel('forge')}>
+              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemText primary="Cognitive Forge" />
+            </ListItem>
+          </List>
+        </Drawer>
+        <Box component="main" sx={{ flexGrow: 1, p: 3, ml: `${drawerWidth}px` }}>
+          <Toolbar />
+          {panel === 'chat' && <ChatPanel />}
+          {panel === 'system' && <SystemPanel />}
+          {panel === 'forge' && <ForgePanel />}
+        </Box>
+      </ThemeProvider>
+    </Provider>
   );
 }
