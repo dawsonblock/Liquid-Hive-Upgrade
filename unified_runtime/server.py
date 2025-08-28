@@ -602,6 +602,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
             if strategy_selector is not None:
                 decision = await strategy_selector.decide(prompt, ctx)
                 policy = decision.get("strategy")
+                policy_used = policy
             # If the selector returns nothing or is unavailable, use the static policy
             if not policy and decide_policy is not None:
                 policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
