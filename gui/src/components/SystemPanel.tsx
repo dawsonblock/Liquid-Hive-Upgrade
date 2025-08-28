@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { getApprovals, approveProposal, denyProposal, fetchState } from '@services/api';
+import { getApprovals, approveProposal, denyProposal, fetchState } from '../services/api';
 
 const SystemPanel: React.FC = () => {
   const [approvals, setApprovals] = useState<{ id: number; content: string }[]>([]);
