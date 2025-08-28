@@ -15,6 +15,7 @@ RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 FROM node:20-alpine as guibuilder
 WORKDIR /app/gui
 COPY gui/package.json ./package.json
+COPY gui/yarn.lock ./yarn.lock
 COPY gui/tsconfig.json ./tsconfig.json
 COPY gui/vite.config.ts ./vite.config.ts
 COPY gui/index.html ./index.html
