@@ -750,7 +750,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
 # API routes continue to work and the SPA handles client-side routing.
 try:
     import pathlib
-    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    repo_root = pathlib.Path(__file__).resolve().parents[1]
     gui_dist_path = repo_root / "gui" / "dist"
     gui_build_path = repo_root / "gui" / "build"
     static_root: Optional[pathlib.Path] = None
