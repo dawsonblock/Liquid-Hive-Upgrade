@@ -678,7 +678,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
 # returns the selected answer.  Optionally the answer can be validated
 # against the image via the grounding validator.
 @app.post("/vision")
-async def vision(question: str, file: UploadFile = File(...), grounding_required: bool = False, request: Request = None) -> dict[str, any]:
+async def vision(question: str, file: UploadFile = File(...), grounding_required: bool = False, request: Request = None):
     """Answer a visual question using the HiveMind vision agents.
 
     This endpoint records the question, invokes the vision committee and
