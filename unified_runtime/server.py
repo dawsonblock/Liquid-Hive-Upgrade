@@ -29,6 +29,7 @@ import asyncio
 from typing import Optional, List, Any, Dict
 import sys
 import os
+import uuid
 
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi import WebSocket, WebSocketDisconnect
@@ -81,7 +82,13 @@ except Exception:
     ToolAuditor = None  # type: ignore
     IntentModeler = None  # type: ignore
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.1")
+# Optional: Redis for leader election
+try:
+    import redis  # type: ignore
+except Exception:
+    redis = None  # type: ignore
+
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.2")
 
 # If available, attach the Prometheus metrics middleware and route
 if MetricsMiddleware is not None:
@@ -112,6 +119,9 @@ except Exception:
     AutonomyOrchestrator = None  # type: ignore
 
 autonomy_orchestrator: Optional[AutonomyOrchestrator] = None
+_autonomy_lock: Any = None
+_autonomy_lock_key = "liquid_hive:autonomy_leader"
+_autonomy_id = uuid.uuid4().hex
 
 # Track connected websocket clients
 websockets: list[WebSocket] = []
@@ -145,6 +155,56 @@ def _env_write(key: str, value: str) -> None:
         pass
 
 
+async def _start_autonomy_with_leader_election() -> None:
+    """Start the AutonomyOrchestrator with a cluster-wide leader lock via Redis.
+
+    Only the instance holding the Redis lock runs autonomy loops. Others stay
+    dormant and periodically attempt to acquire leadership.
+    """
+    global autonomy_orchestrator, _autonomy_lock
+    if AutonomyOrchestrator is None or engine is None or settings is None:
+        return
+    # If redis is unavailable or no URL provided, do not start autonomy to avoid split-brain
+    if redis is None or not getattr(settings, "redis_url", None):
+        return
+    try:
+        r = redis.Redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore
+        lock = r.lock(_autonomy_lock_key, timeout=120)  # 2 minutes lease
+        got = lock.acquire(blocking=False)
+        if not got:
+            return
+        _autonomy_lock = lock
+        autonomy_orchestrator = AutonomyOrchestrator(engine, adapter_manager, settings)  # type: ignore
+        await autonomy_orchestrator.start()
+
+        async def renew_lock() -> None:
+            while True:
+                try:
+                    # Extend the lease if still held
+                    lock.extend(120)
+                except Exception:
+                    # Failed to extend, likely lost leadership; stop orchestrator
+                    try:
+                        if autonomy_orchestrator is not None:
+                            await autonomy_orchestrator.stop()
+                    except Exception:
+                        pass
+                    return
+                await asyncio.sleep(60)
+
+        asyncio.get_event_loop().create_task(renew_lock())
+    except Exception:
+        # On any error, do not start to avoid multiple leaders
+        try:
+            if _autonomy_lock is not None:
+                _autonomy_lock.release()
+        except Exception:
+            pass
+        _autonomy_lock = None
+        autonomy_orchestrator = None
+        return
+
+
 @app.on_event("startup")
 async def startup() -> None:
     """Initialise the Capsule engine, HiveMind clients and strategy selector."""
@@ -159,8 +219,6 @@ async def startup() -> None:
     # that case the service will continue to operate, but answers will be
     # placeholders.
     try:
-        # Load configuration from environment or .env file.  See hivemind/config.py
-        # for details of the Settings fields.
         if Settings is None:
             raise RuntimeError("HiveMind settings unavailable")
         settings_ = Settings()  # type: ignore
@@ -180,10 +238,7 @@ async def startup() -> None:
         )
         text_roles_ = TextRoles(vclient) if TextRoles else None
         judge_ = Judge(vclient) if Judge else None
-        # Instantiate the strategy selector using the same VLLM client
         selector_ = StrategySelector(vclient) if StrategySelector else None
-        # Initialise retriever for RAG.  If the configured index does not exist
-        # then search() will return an empty list.
         retriever_ = Retriever(settings_.rag_index, settings_.embed_model) if Retriever else None
         # Instantiate vision client and roles if possible
         if VLClient and VisionRoles:
@@ -206,9 +261,6 @@ async def startup() -> None:
         tool_auditor = tool_auditor_
         intent_modeler = intent_modeler_
     except Exception:
-        # In constrained environments the imports above may fail.  Log and
-        # continue with None placeholders.  Logging is deferred to the capsule
-        # logger through the engine if available.
         text_roles = None
         judge = None
         retriever = None
@@ -226,17 +278,14 @@ async def startup() -> None:
                 try:
                     underperforming = tool_auditor.flag_underperforming()
                     for tool_name in underperforming:
-                        # Compose a self‑extension prompt and insert into memory
                         prompt = (
                             f"The tool '{tool_name}' has a high failure rate. "
                             f"Please analyze its implementation and propose a more resilient version."
                         )
-                        # Log the prompt for future processing by the HiveMind
                         engine.add_memory("self_extension", prompt)
-                    # Wait between analyses
                 except Exception:
                     pass
-                await asyncio.sleep(60)  # run every minute
+                await asyncio.sleep(60)
         try:
             asyncio.get_event_loop().create_task(auditor_loop())
         except Exception:
@@ -250,39 +299,38 @@ async def startup() -> None:
                     resource_estimator.update_from_logs(settings.runs_dir if settings else "./runs")  # type: ignore
                 except Exception:
                     pass
-                await asyncio.sleep(120)  # update every two minutes
+                await asyncio.sleep(120)
         try:
             asyncio.get_event_loop().create_task(estimator_loop())
         except Exception:
             pass
 
-    # Launch the autonomy orchestrator if enabled
-    global autonomy_orchestrator
-    if AutonomyOrchestrator is not None and engine is not None and settings is not None:
-        try:
-            # Ensure we use the same adapter manager as the main runtime
-            autonomy_orchestrator = AutonomyOrchestrator(engine, adapter_manager, settings)  # type: ignore
-            await autonomy_orchestrator.start()
-        except Exception:
-            pass
+    # Launch the autonomy orchestrator with leader election
+    await _start_autonomy_with_leader_election()
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
     """Shutdown the Capsule engine when the service exits."""
+    global _autonomy_lock
+    if autonomy_orchestrator is not None:
+        try:
+            await autonomy_orchestrator.stop()
+        except Exception:
+            pass
+    if _autonomy_lock is not None:
+        try:
+            _autonomy_lock.release()
+        except Exception:
+            pass
+        _autonomy_lock = None
     if engine is not None:
         await engine.shutdown()
 
 
 @app.get("/healthz")
 async def healthz() -> dict[str, bool]:
-    """Health check endpoint.
-
-    Returns ``{"ok": True}`` if the Capsule engine has been initialised, otherwise
-    ``{"ok": False}``.
-    """
     return {"ok": engine is not None}
-
 
 # Helper to get approvals list from memory
 async def _get_approvals() -> List[Dict[str, Any]]:
@@ -297,42 +345,27 @@ async def _get_approvals() -> List[Dict[str, Any]]:
         pass
     return items
 
-
 # --- Approval Queue Endpoints ---
 @app.get("/approvals")
 async def list_approvals() -> List[Dict[str, Any]]:
-    """Return pending approval proposals.
-
-    Each item includes an ``id`` (index in memory) and the proposal content.
-    """
     return await _get_approvals()
-
 
 @app.post("/approvals/{idx}/approve")
 async def approve_proposal(idx: int) -> Dict[str, str]:
-    """Approve a proposal by index and record approval.
-
-    When approved, the proposal is removed from memory and an 'approved'
-    entry is recorded.
-    """
     if engine is None:
         return {"error": "Engine not ready"}
     try:
         item = engine.memory[idx]  # type: ignore
         if item.get("role") != "approval":
             raise IndexError
-        # Record approval feedback
         engine.add_memory("approval_feedback", f"APPROVED: {item.get('content', '')}")  # type: ignore
-        # Remove the proposal
         del engine.memory[idx]  # type: ignore
         return {"status": "approved"}
     except Exception:
         return {"error": "Invalid approval index"}
 
-
 @app.post("/approvals/{idx}/deny")
 async def deny_proposal(idx: int) -> Dict[str, str]:
-    """Deny a proposal by index and record denial."""
     if engine is None:
         return {"error": "Engine not ready"}
     try:
@@ -345,15 +378,9 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
     except Exception:
         return {"error": "Invalid approval index"}
 
-
 # --- Adapter deployment endpoints ---
 @app.get("/adapters")
 async def list_adapters() -> List[Dict[str, Any]]:
-    """Return the current adapter deployment state.
-
-    Each entry contains the role, the champion (active) adapter and the
-    challenger adapter if present.
-    """
     table: List[Dict[str, Any]] = []
     if adapter_manager is None:
         return table
@@ -368,10 +395,8 @@ async def list_adapters() -> List[Dict[str, Any]]:
         pass
     return table
 
-
 @app.get("/adapters/state")
 async def adapters_state() -> Dict[str, Any]:
-    """Raw adapter manager state for detailed UI."""
     if adapter_manager is None:
         return {"state": {}}
     try:
@@ -379,10 +404,8 @@ async def adapters_state() -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-
 @app.post("/adapters/promote/{role}")
 async def promote_adapter(role: str) -> Dict[str, Any]:
-    """Promote the challenger adapter to champion for the given role."""
     if adapter_manager is None:
         return {"error": "Adapter manager unavailable"}
     try:
@@ -391,11 +414,9 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-
 # --- Governor configuration endpoints ---
 @app.get("/config/governor")
 async def get_governor() -> Dict[str, Any]:
-    """Return current Arbiter governor flags."""
     if settings is None:
         return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_GPT4O_ARBITER": None}
     try:
@@ -406,22 +427,14 @@ async def get_governor() -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-
 @app.post("/config/governor")
 async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
-    """Update the Arbiter governor configuration.
-
-    Accepts JSON with ENABLE_ORACLE_REFINEMENT and FORCE_GPT4O_ARBITER keys, or
-    shorthand keys {"enabled": bool, "force_gpt4o": bool}. Updates in-memory
-    settings and attempts to persist to the project .env file.
-    """
     global settings
     if settings is None:
         return {"error": "Settings unavailable"}
     try:
         enable_val = cfg.get("ENABLE_ORACLE_REFINEMENT")
         force_val = cfg.get("FORCE_GPT4O_ARBITER")
-        # Accept shorthand keys
         if enable_val is None and "enabled" in cfg:
             enable_val = cfg["enabled"]
         if force_val is None and "force_gpt4o" in cfg:
@@ -436,26 +449,16 @@ async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
     except Exception as exc:
         return {"error": str(exc)}
 
+# State and WebSocket endpoints unchanged ... (below)
 
-# Expose the internal state of the Capsule engine for introspection.  This
-# endpoint returns a summary including memory size, knowledge graph stats and
-# self‑awareness metrics such as the IIT surrogate Φ.
 @app.get("/state")
 async def state() -> dict[str, Any]:
     if engine is None:
         return {"error": "Engine not ready"}
     return engine.get_state_summary()
 
-
-# WebSocket endpoint for real‑time updates
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
-    """Stream periodic state updates to connected clients.
-
-    Every 10 seconds this endpoint sends the current state summary under
-    the ``state_update`` event type. Additionally it sends the current
-    approvals list so clients can update in real-time.
-    """
     await websocket.accept()
     websockets.append(websocket)  # type: ignore
     try:
@@ -477,34 +480,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         except Exception:
             pass
 
-
-# Allow the operator to trigger the self‑improvement pipeline.  When called,
-# this endpoint will attempt to build a new SFT/DPO dataset from recent run
-# logs and fine‑tune the LoRA adapters.  In this environment heavy ML
-# dependencies may not be available, so the function returns immediately
-# with a placeholder response.
 @app.post("/train")
 async def train() -> dict[str, str]:
-    """Kick off the self‑improvement training loop.
-
-    This endpoint attempts to build new SFT/DPO datasets from the run logs
-    and fine‑tune a LoRA adapter using the existing training scripts.  If the
-    required ML dependencies are unavailable the endpoint will return an
-    error.  When successful it returns the path to the new adapter.
-    """
     try:
-        # Step 1: build datasets from run logs
         from hivemind.training.dataset_build import build_text_sft_and_prefs
         build_text_sft_and_prefs()
-
-        # Step 2: fine‑tune a new LoRA adapter.  Use a subprocess call to
-        # leverage the existing script with command‑line arguments.  The
-        # adapter will be written to the adapters/text/ directory.
-        import subprocess, pathlib, uuid
-        out_dir = pathlib.Path("adapters/text") / f"adapter_{uuid.uuid4().hex}"
+        import subprocess, pathlib, uuid as _uuid
+        base = pathlib.Path(settings.adapters_dir if settings else "/app/adapters")  # type: ignore
+        out_dir = base / "text" / f"adapter_{_uuid.uuid4().hex}"
         out_dir.mkdir(parents=True, exist_ok=True)
-        # The training script expects a base model and dataset path; rely on
-        # defaults defined in the script.  Adjust hyperparameters if needed.
         subprocess.run([
             sys.executable,
             "-m",
@@ -512,31 +496,17 @@ async def train() -> dict[str, str]:
             "--out",
             str(out_dir),
         ], check=True)
-
-        # Update settings so that future requests use the new adapter
         if settings is not None:
             settings.text_adapter_path = str(out_dir)
         return {"status": "success", "adapter_path": str(out_dir)}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
-
 @app.post("/chat")
 async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
-    """Chat endpoint.
-
-    Accepts a query string ``q``, records it into the Capsule memory and then
-    orchestrates a response via HiveMind if available.  The returned payload
-    always includes the key ``answer`` containing either a real answer from
-    HiveMind or a placeholder.  If retrieval‑augmented generation was used, the
-    RAG context is returned under the key ``context``.
-    """
     if engine is None:
         return {"answer": "Engine not ready"}
-    # Record the user query in the Capsule memory
     engine.add_memory("user", q)
-
-    # First, run the planner to get high‑level hints about how to approach the query.
     planner_hints = None
     reasoning_steps = None
     if plan_once is not None:
@@ -547,8 +517,6 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
         except Exception:
             planner_hints = None
             reasoning_steps = None
-
-    # Prepare prompt and context
     context_txt = ""
     prompt = q
     if retriever is not None and format_context is not None:
@@ -561,54 +529,37 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 "Cite using [#]. If not in context, say 'Not in context'."
             )
         except Exception:
-            # If retrieval fails fall back to the plain question
             prompt = q
-
     answer = "Placeholder: HiveMind unavailable"
-    # Decide which reasoning strategy to apply.  Prefer the dynamic selector
-    # when available; otherwise fall back to the static policy function.
     policy_used = None
     if text_roles is not None and judge is not None and settings is not None:
         try:
-            # Prepare a minimal system context for the strategy selector
             ctx: dict[str, Any] = {}
-            # GPU utilisation is not readily available in this runtime; leave as N/A
             ctx["gpu_utilization_percent"] = "N/A"
-            # No explicit tools are exposed from CapsuleEngine; pass empty list
             ctx["tools"] = []
-            # Include cost estimator if available; set an arbitrary max_cost
             if resource_estimator is not None:
                 ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer")
-            # Provide the current operator intent if available
             try:
                 if intent_modeler is not None:
                     ctx["operator_intent"] = intent_modeler.current_intent
             except Exception:
                 pass
-            # Include the latest IIT φ metric if available to give the selector
-            # an indication of internal coherence.  φ closer to zero implies low
-            # integration; higher values reflect more integrated state.
             try:
                 if engine is not None:
                     phi = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
                     ctx["phi"] = phi
             except Exception:
                 pass
-            # Provide planner hints and reasoning steps to the selector
             ctx["planner_hints"] = planner_hints or []
             ctx["reasoning_steps"] = reasoning_steps or ""
             policy = None
-            # If the dynamic strategy selector is available, use it
             if strategy_selector is not None:
                 decision = await strategy_selector.decide(prompt, ctx)
                 policy = decision.get("strategy")
                 policy_used = policy
-            # If the selector returns nothing or is unavailable, use the static policy
             if not policy and decide_policy is not None:
                 policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
-            # Execute the chosen policy
             if policy == "committee":
-                # Run multiple implementers in parallel
                 tasks: List[str] = await asyncio.gather(*[
                     text_roles.implementer(prompt)  # type: ignore[attr-defined]
                     for _ in range(settings.committee_k)
@@ -621,119 +572,63 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
                 answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
             elif policy == "clone_dispatch":
-                # Clone dispatch is not supported in this environment; fall back to single
                 answer = await text_roles.implementer(prompt)  # type: ignore[attr-defined]
             elif policy == "self_extension_prompt":
-                # Self‑extension prompts are not handled here; return a polite message
                 answer = "Self‑extension requests are not supported by this endpoint"
             elif policy == "cross_modal_synthesis":
-                # Cross‑modal synthesis: combine retrieval context (if any) as an image description
                 img_desc = context_txt if context_txt else None
                 try:
                     answer = await text_roles.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
                 except Exception as exc:
                     answer = f"Error generating cross‑modal answer: {exc}"
             else:
-                # Default to the single implementer path
                 answer = await text_roles.implementer(prompt)  # type: ignore[attr-defined]
             policy_used = policy_used or policy or "single"
         except Exception as exc:
-            # If any HiveMind call fails capture the exception in the answer
             answer = f"Error generating answer: {exc}"
-
-    # Record the assistant answer in Capsule memory
     engine.add_memory("assistant", answer)
-
-    # If a VLLM client was used, expose the adapter version to the metrics middleware.
     try:
         if hasattr(text_roles, "c"):
             client = text_roles.c  # type: ignore[attr-defined]
-            # Attempt to read adapter version attribute
             adapter_version = getattr(client, "current_adapter_version", None)
             if adapter_version:
-                # Store in the request scope for metrics middleware
                 request.scope["adapter_version"] = adapter_version
     except Exception:
         pass
-
     result: dict[str, str | dict[str, str]] = {"answer": answer}
     if policy_used:
         result["reasoning_strategy"] = str(policy_used)
     if context_txt:
         result["context"] = context_txt
-    # Expose planner hints in the response for transparency
     if planner_hints:
         result["planner_hints"] = planner_hints  # type: ignore
     if reasoning_steps:
         result["reasoning_steps"] = reasoning_steps  # type: ignore
     return result
 
-
-# ---------------------------------------------------------------------------
-# Multi‑modal Vision Endpoint
-#
-# This endpoint implements a rudimentary vision pipeline.  It accepts an image
-# upload and a question, generates candidate answers using the HiveMind
-# ``VisionRoles`` (if available), ranks them with the multi‑modal judge and
-# returns the selected answer.  Optionally the answer can be validated
-# against the image via the grounding validator.
+# Vision endpoint unchanged except for signature
 @app.post("/vision")
 async def vision(question: str, file: UploadFile = File(...), grounding_required: bool = False, request: Request = None):
-    """Answer a visual question using the HiveMind vision agents.
-
-    This endpoint records the question, invokes the vision committee and
-    judge, and optionally validates the answer using the grounding
-    validator.  If the required models are unavailable the response will
-    indicate that vision functionality is missing.
-
-    Parameters
-    ----------
-
-
-    question: str
-        The user's question about the uploaded image.
-    file: UploadFile
-        The image file provided by the client.
-    grounding_required: bool, optional
-        If True, perform grounding validation on the chosen answer.
-
-    Returns
-    -------
-    dict
-        A JSON response containing the answer and optional critique and
-        grounding information.
-    """
-    # Ensure the engine is initialised
     if engine is None:
         return {"answer": "Engine not ready"}
-    # Check that the vision pipeline is available
     if vl_roles is None or judge is None:
         return {"answer": "Vision pipeline unavailable"}
-    # Read image bytes from the uploaded file
     image_data = await file.read()
-    # Log the user question
     engine.add_memory("user", question)
-    # Default response values
     answer: str = "Vision processing unavailable"
     critique: Optional[str] = None
     grounding: Optional[dict[str, any]] = None
     try:
-        # Generate a small set of candidate answers via the vision committee
         candidates = await vl_roles.vl_committee(question, image_data, k=2)  # type: ignore[attr-defined]
-        # Rank the candidates using the multi‑modal judge
         rankings = await judge.rank_vision(question, image_data, candidates)  # type: ignore[attr-defined]
         wid = int(rankings.get("winner_id", 0))
         answer = candidates[wid] if 0 <= wid < len(candidates) else candidates[0]
         critique = rankings.get("critique")
-        # Perform grounding validation if requested
         if grounding_required:
             grounding = vl_roles.grounding_validator(question, image_data, answer)  # type: ignore[attr-defined]
     except Exception as exc:
         answer = f"Error processing vision request: {exc}"
-    # Record the assistant answer
     engine.add_memory("assistant", answer)
-
-    # For vision requests there is no adapter selection; annotate as 'vl' version
     if request is not None:
         try:
             request.scope["adapter_version"] = "vl"
@@ -746,8 +641,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
         resp["grounding"] = grounding
     return resp
 
-# After all routes are declared, mount the GUI static files if present so that
-# API routes continue to work and the SPA handles client-side routing.
+# Mount GUI static content (SPA)
 try:
     import pathlib
     repo_root = pathlib.Path(__file__).resolve().parents[1]
