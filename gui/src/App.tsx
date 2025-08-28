@@ -58,17 +58,23 @@ export default function App() {
         >
           <Toolbar />
           <List>
-            <ListItem button selected={panel === 'chat'} onClick={() => setPanel('chat')}>
-              <ListItemIcon><ChatIcon /></ListItemIcon>
-              <ListItemText primary="Cognitive Core" />
+            <ListItem disablePadding>
+              <ListItemButton selected={panel === 'chat'} onClick={() => setPanel('chat')}>
+                <ListItemIcon><ChatIcon /></ListItemIcon>
+                <ListItemText primary="Cognitive Core" />
+              </ListItemButton>
             </ListItem>
-            <ListItem button selected={panel === 'system'} onClick={() => setPanel('system')}>
-              <ListItemIcon><DashboardIcon /></ListItemIcon>
-              <ListItemText primary="Operator Console" />
+            <ListItem disablePadding>
+              <ListItemButton selected={panel === 'system'} onClick={() => setPanel('system')}>
+                <ListItemIcon><DashboardIcon /></ListItemIcon>
+                <ListItemText primary="Operator Console" />
+              </ListItemButton>
             </ListItem>
-            <ListItem button selected={panel === 'forge'} onClick={() => setPanel('forge')}>
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary="Cognitive Forge" />
+            <ListItem disablePadding>
+              <ListItemButton selected={panel === 'forge'} onClick={() => setPanel('forge')}>
+                <ListItemIcon><SettingsIcon /></ListItemIcon>
+                <ListItemText primary="Cognitive Forge" />
+              </ListItemButton>
             </ListItem>
           </List>
         </Drawer>
