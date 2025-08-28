@@ -1,5 +1,6 @@
--e fastapi
-uvicorn
-python-multipart
-networkx
-
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+networkx>=3.3
+pydantic>=2.8
+websockets>=12.0
