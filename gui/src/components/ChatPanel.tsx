@@ -3,7 +3,7 @@ import { Box, Paper, TextField, IconButton, Stack, Typography, Button, Switch, F
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ReactMarkdown from 'react-markdown';
-import { postChat, postVision, fetchState } from '@services/api';
+import { postChat, postVision, fetchState } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import { addChat } from '../store';
