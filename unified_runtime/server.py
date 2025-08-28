@@ -740,3 +740,20 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
     if grounding:
         resp["grounding"] = grounding
     return resp
+
+# After all routes are declared, mount the GUI static files if present so that
+# API routes continue to work and the SPA handles client-side routing.
+try:
+    import pathlib
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    gui_dist_path = repo_root / "gui" / "dist"
+    gui_build_path = repo_root / "gui" / "build"
+    static_root: Optional[pathlib.Path] = None
+    if gui_dist_path.exists():
+        static_root = gui_dist_path
+    elif gui_build_path.exists():
+        static_root = gui_build_path
+    if static_root is not None:
+        app.mount("/", StaticFiles(directory=str(static_root), html=True), name="gui")
+except Exception:
+    pass
