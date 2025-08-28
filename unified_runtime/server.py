@@ -636,6 +636,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
             else:
                 # Default to the single implementer path
                 answer = await text_roles.implementer(prompt)  # type: ignore[attr-defined]
+            policy_used = policy_used or policy or "single"
         except Exception as exc:
             # If any HiveMind call fails capture the exception in the answer
             answer = f"Error generating answer: {exc}"
