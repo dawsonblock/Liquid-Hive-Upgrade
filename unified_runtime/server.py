@@ -89,24 +89,8 @@ if MetricsMiddleware is not None:
 if metrics_router is not None:
     app.include_router(metrics_router)
 
-# Serve the React GUI if the build directory exists. Prefer Vite's dist/ but
-# maintain compatibility with CRA's build/ if present.
-try:
-    import pathlib
-    repo_root = pathlib.Path(__file__).resolve().parents[2]
-    gui_dist_path = repo_root / "gui" / "dist"
-    gui_build_path = repo_root / "gui" / "build"
-    static_root: Optional[pathlib.Path] = None
-    if gui_dist_path.exists():
-        static_root = gui_dist_path
-    elif gui_build_path.exists():
-        static_root = gui_build_path
-    if static_root is not None:
-        # Mount at root to serve index.html and assets. Keep html=True so unknown
-        # routes fall back to index.html for SPA routing.
-        app.mount("/", StaticFiles(directory=str(static_root), html=True), name="gui")
-except Exception:
-    pass
+# Static mounting is appended at the end of this module after all API routes
+# are registered to ensure API endpoints take precedence over the SPA fallthrough.
 
 # Global objects.  These are initialised in the startup event.
 engine: Optional[CapsuleEngine] = None
