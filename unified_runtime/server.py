@@ -657,6 +657,8 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
         pass
 
     result: dict[str, str | dict[str, str]] = {"answer": answer}
+    if policy_used:
+        result["reasoning_strategy"] = str(policy_used)
     if context_txt:
         result["context"] = context_txt
     # Expose planner hints in the response for transparency
