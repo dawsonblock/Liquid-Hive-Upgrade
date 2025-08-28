@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Grid, Paper, Switch, FormControlLabel, Typography, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Stack } from '@mui/material';
-import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraining } from '@services/api';
+import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraining } from '../services/api';
 
 const ForgePanel: React.FC = () => {
   const [adapters, setAdapters] = useState<any>({ state: {} });
