@@ -26,8 +26,9 @@ unreachable) the service will fall back to returning a placeholder answer.
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 import sys
+import os
 
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi import WebSocket, WebSocketDisconnect
@@ -80,7 +81,7 @@ except Exception:
     ToolAuditor = None  # type: ignore
     IntentModeler = None  # type: ignore
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.0")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.1")
 
 # If available, attach the Prometheus metrics middleware and route
 if MetricsMiddleware is not None:
@@ -88,15 +89,22 @@ if MetricsMiddleware is not None:
 if metrics_router is not None:
     app.include_router(metrics_router)
 
-# Serve the React GUI if the build directory exists.  This must be done
-# after the FastAPI app is created but before any dynamic routes are
-# registered.  The GUI's ``build`` directory is expected at ``gui/build``
-# relative to this server module.
+# Serve the React GUI if the build directory exists. Prefer Vite's dist/ but
+# maintain compatibility with CRA's build/ if present.
 try:
     import pathlib
-    gui_build_path = pathlib.Path(__file__).resolve().parents[2] / "gui" / "build"
-    if gui_build_path.exists():
-        app.mount("/", StaticFiles(directory=str(gui_build_path), html=True), name="gui")
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    gui_dist_path = repo_root / "gui" / "dist"
+    gui_build_path = repo_root / "gui" / "build"
+    static_root: Optional[pathlib.Path] = None
+    if gui_dist_path.exists():
+        static_root = gui_dist_path
+    elif gui_build_path.exists():
+        static_root = gui_build_path
+    if static_root is not None:
+        # Mount at root to serve index.html and assets. Keep html=True so unknown
+        # routes fall back to index.html for SPA routing.
+        app.mount("/", StaticFiles(directory=str(static_root), html=True), name="gui")
 except Exception:
     pass
 
@@ -125,6 +133,34 @@ autonomy_orchestrator: Optional[AutonomyOrchestrator] = None
 websockets: list[WebSocket] = []
 
 
+def _env_write(key: str, value: str) -> None:
+    """Persist a key=value into the project .env file safely.
+
+    This updates or inserts the key while preserving other lines and comments.
+    """
+    try:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+        lines: List[str] = []
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+        found = False
+        new_lines: List[str] = []
+        for line in lines:
+            if line.strip().startswith(f"{key}="):
+                new_lines.append(f"{key}={value}")
+                found = True
+            else:
+                new_lines.append(line)
+        if not found:
+            new_lines.append(f"{key}={value}")
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(new_lines) + "\n")
+    except Exception:
+        # Non-fatal; ignore persistence errors
+        pass
+
+
 @app.on_event("startup")
 async def startup() -> None:
     """Initialise the Capsule engine, HiveMind clients and strategy selector."""
@@ -143,13 +179,18 @@ async def startup() -> None:
         # for details of the Settings fields.
         if Settings is None:
             raise RuntimeError("HiveMind settings unavailable")
-        settings = Settings()  # type: ignore
+        settings_ = Settings()  # type: ignore
+        # Initialise optional services first so dependencies can reference them
+        resource_estimator_ = ResourceEstimator() if ResourceEstimator else None
+        adapter_manager_ = AdapterDeploymentManager() if AdapterDeploymentManager else None
+        tool_auditor_ = ToolAuditor(settings_.runs_dir) if ToolAuditor and settings_ else None
+        intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
         # Instantiate the vLLM client used by text roles, judge and strategy selector
         vclient = VLLMClient(
-            settings.vllm_endpoint,
-            settings.vllm_api_key,
-            max_new_tokens=settings.max_new_tokens,
-            adapter=settings.text_adapter_path,
+            settings_.vllm_endpoint,
+            settings_.vllm_api_key,
+            max_new_tokens=settings_.max_new_tokens,
+            adapter=settings_.text_adapter_path,
             adapter_manager=adapter_manager_,
             role="implementer",
         )
@@ -159,22 +200,18 @@ async def startup() -> None:
         selector_ = StrategySelector(vclient) if StrategySelector else None
         # Initialise retriever for RAG.  If the configured index does not exist
         # then search() will return an empty list.
-        retriever_ = Retriever(settings.rag_index, settings.embed_model) if Retriever else None
-        # Initialise optional services
-        resource_estimator_ = ResourceEstimator() if ResourceEstimator else None
-        adapter_manager_ = AdapterDeploymentManager() if AdapterDeploymentManager else None
-        tool_auditor_ = ToolAuditor(settings.runs_dir) if ToolAuditor and settings else None
-        intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
+        retriever_ = Retriever(settings_.rag_index, settings_.embed_model) if Retriever else None
         # Instantiate vision client and roles if possible
         if VLClient and VisionRoles:
             try:
-                vl_client = VLClient(settings.vl_model_id)
+                vl_client = VLClient(settings_.vl_model_id)
                 vl_roles_ = VisionRoles(vl_client)
             except Exception:
                 vl_roles_ = None
         else:
             vl_roles_ = None
         # Assign to globals
+        settings = settings_
         text_roles = text_roles_
         judge = judge_
         retriever = retriever_
@@ -262,6 +299,21 @@ async def healthz() -> dict[str, bool]:
     """
     return {"ok": engine is not None}
 
+
+# Helper to get approvals list from memory
+async def _get_approvals() -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    if engine is None:
+        return items
+    try:
+        for idx, item in enumerate(engine.memory):  # type: ignore
+            if item.get("role") == "approval":
+                items.append({"id": idx, "content": item.get("content", "")})
+    except Exception:
+        pass
+    return items
+
+
 # --- Approval Queue Endpoints ---
 @app.get("/approvals")
 async def list_approvals() -> List[Dict[str, Any]]:
@@ -269,13 +321,8 @@ async def list_approvals() -> List[Dict[str, Any]]:
 
     Each item includes an ``id`` (index in memory) and the proposal content.
     """
-    if engine is None:
-        return []
-    items: List[Dict[str, Any]] = []
-    for idx, item in enumerate(engine.memory):  # type: ignore
-        if item.get("role") == "approval":
-            items.append({"id": idx, "content": item.get("content", "")})
-    return items
+    return await _get_approvals()
+
 
 @app.post("/approvals/{idx}/approve")
 async def approve_proposal(idx: int) -> Dict[str, str]:
@@ -298,6 +345,7 @@ async def approve_proposal(idx: int) -> Dict[str, str]:
     except Exception:
         return {"error": "Invalid approval index"}
 
+
 @app.post("/approvals/{idx}/deny")
 async def deny_proposal(idx: int) -> Dict[str, str]:
     """Deny a proposal by index and record denial."""
@@ -312,6 +360,7 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
         return {"status": "denied"}
     except Exception:
         return {"error": "Invalid approval index"}
+
 
 # --- Adapter deployment endpoints ---
 @app.get("/adapters")
@@ -335,6 +384,18 @@ async def list_adapters() -> List[Dict[str, Any]]:
         pass
     return table
 
+
+@app.get("/adapters/state")
+async def adapters_state() -> Dict[str, Any]:
+    """Raw adapter manager state for detailed UI."""
+    if adapter_manager is None:
+        return {"state": {}}
+    try:
+        return {"state": adapter_manager.state}  # type: ignore
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.post("/adapters/promote/{role}")
 async def promote_adapter(role: str) -> Dict[str, Any]:
     """Promote the challenger adapter to champion for the given role."""
@@ -346,26 +407,51 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-# --- Governor configuration endpoint ---
+
+# --- Governor configuration endpoints ---
+@app.get("/config/governor")
+async def get_governor() -> Dict[str, Any]:
+    """Return current Arbiter governor flags."""
+    if settings is None:
+        return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_GPT4O_ARBITER": None}
+    try:
+        return {
+            "ENABLE_ORACLE_REFINEMENT": bool(getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)),
+            "FORCE_GPT4O_ARBITER": bool(getattr(settings, "FORCE_GPT4O_ARBITER", False)),
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.post("/config/governor")
 async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
     """Update the Arbiter governor configuration.
 
-    Accepts JSON with ENABLE_ORACLE_REFINEMENT and FORCE_GPT4O_ARBITER keys.  The
-    settings object is updated in memory; this will take effect on the next
-    dataset build/training run.
+    Accepts JSON with ENABLE_ORACLE_REFINEMENT and FORCE_GPT4O_ARBITER keys, or
+    shorthand keys {"enabled": bool, "force_gpt4o": bool}. Updates in-memory
+    settings and attempts to persist to the project .env file.
     """
     global settings
     if settings is None:
         return {"error": "Settings unavailable"}
     try:
-        if 'ENABLE_ORACLE_REFINEMENT' in cfg:
-            settings.ENABLE_ORACLE_REFINEMENT = bool(cfg['ENABLE_ORACLE_REFINEMENT'])  # type: ignore
-        if 'FORCE_GPT4O_ARBITER' in cfg:
-            settings.FORCE_GPT4O_ARBITER = bool(cfg['FORCE_GPT4O_ARBITER'])  # type: ignore
+        enable_val = cfg.get("ENABLE_ORACLE_REFINEMENT")
+        force_val = cfg.get("FORCE_GPT4O_ARBITER")
+        # Accept shorthand keys
+        if enable_val is None and "enabled" in cfg:
+            enable_val = cfg["enabled"]
+        if force_val is None and "force_gpt4o" in cfg:
+            force_val = cfg["force_gpt4o"]
+        if enable_val is not None:
+            settings.ENABLE_ORACLE_REFINEMENT = bool(enable_val)  # type: ignore
+            _env_write("ENABLE_ORACLE_REFINEMENT", "true" if bool(enable_val) else "false")
+        if force_val is not None:
+            settings.FORCE_GPT4O_ARBITER = bool(force_val)  # type: ignore
+            _env_write("FORCE_GPT4O_ARBITER", "true" if bool(force_val) else "false")
         return {"status": "updated"}
     except Exception as exc:
         return {"error": str(exc)}
+
 
 # Expose the internal state of the Capsule engine for introspection.  This
 # endpoint returns a summary including memory size, knowledge graph stats and
@@ -376,15 +462,15 @@ async def state() -> dict[str, Any]:
         return {"error": "Engine not ready"}
     return engine.get_state_summary()
 
+
 # WebSocket endpoint for real‑time updates
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Stream periodic state updates to connected clients.
 
     Every 10 seconds this endpoint sends the current state summary under
-    the ``state_update`` event type.  In a production environment this
-    should be extended to push more granular updates (tool auditor
-    results, approval queue changes, etc.).
+    the ``state_update`` event type. Additionally it sends the current
+    approvals list so clients can update in real-time.
     """
     await websocket.accept()
     websockets.append(websocket)  # type: ignore
@@ -395,6 +481,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 if engine is not None:
                     summary = engine.get_state_summary()
                     await websocket.send_json({"type": "state_update", "payload": summary})
+                    approvals = await _get_approvals()
+                    await websocket.send_json({"type": "approvals_update", "payload": approvals})
             except Exception:
                 pass
     except WebSocketDisconnect:
@@ -404,6 +492,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             websockets.remove(websocket)  # type: ignore
         except Exception:
             pass
+
 
 # Allow the operator to trigger the self‑improvement pipeline.  When called,
 # this endpoint will attempt to build a new SFT/DPO dataset from recent run
