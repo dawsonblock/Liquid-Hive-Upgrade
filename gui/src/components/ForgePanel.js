@@ -1,7 +1,7 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
 import { Box, Button, Grid, Paper, Switch, FormControlLabel, Typography, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Stack } from '@mui/material';
-import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraining } from '@services/api';
+import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraining } from '../services/api';
 const ForgePanel = () => {
     const [adapters, setAdapters] = useState({ state: {} });
     const [gov, setGov] = useState({});
