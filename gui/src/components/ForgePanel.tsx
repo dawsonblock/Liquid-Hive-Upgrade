@@ -1,91 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Button, Grid, Switch, FormControlLabel, TextField } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Grid, Paper, Switch, FormControlLabel, Typography, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Stack } from '@mui/material';
+import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraining } from '@services/api';
 
-interface AdapterRow {
-  role: string;
-  champion: string;
-  challenger?: string;
-}
+const ForgePanel: React.FC = () => {
+  const [adapters, setAdapters] = useState<any>({ state: {} });
+  const [gov, setGov] = useState<{ ENABLE_ORACLE_REFINEMENT?: boolean; FORCE_GPT4O_ARBITER?: boolean }>({});
+  const [loadingTrain, setLoadingTrain] = useState(false);
+  const [trainStatus, setTrainStatus] = useState<string | null>(null);
 
-export default function ForgePanel() {
-  const [trainingStatus, setTrainingStatus] = useState('Idle');
-  const [adapterTable, setAdapterTable] = useState<AdapterRow[]>([]);
-  const [enableOracle, setEnableOracle] = useState(true);
-  const [forceGpt4o, setForceGpt4o] = useState(false);
-  const [lastAdapter, setLastAdapter] = useState('');
-
-  const loadAdapters = async () => {
+  const refresh = async () => {
     try {
-      const resp = await fetch('/adapters');
-      const data = await resp.json();
-      setAdapterTable(data);
-    } catch (e) {}
+      setAdapters(await getAdaptersState());
+      setGov(await getGovernor());
+    } catch {}
   };
-  useEffect(() => {
-    loadAdapters();
-  }, []);
-  const igniteTraining = async () => {
-    setTrainingStatus('Building Dataset');
-    try {
-      const resp = await fetch('/train', { method: 'POST' });
-      const data = await resp.json();
-      setTrainingStatus('Complete');
-      setLastAdapter(data.adapter_path || '');
-      loadAdapters();
-    } catch (e) {
-      setTrainingStatus('Error');
-    }
+
+  useEffect(() => { refresh(); }, []);
+
+  const onPromote = async (role: string) => {
+    await promoteAdapter(role);
+    await refresh();
   };
-  const promote = async (role: string) => {
-    await fetch(`/adapters/promote/${role}`, { method: 'POST' });
-    loadAdapters();
+
+  const onToggleGov = async (key: 'ENABLE_ORACLE_REFINEMENT' | 'FORCE_GPT4O_ARBITER', value: boolean) => {
+    const enabled = key === 'ENABLE_ORACLE_REFINEMENT' ? value : !!gov.ENABLE_ORACLE_REFINEMENT;
+    const force = key === 'FORCE_GPT4O_ARBITER' ? value : !!gov.FORCE_GPT4O_ARBITER;
+    await setGovernor(enabled, force);
+    await refresh();
   };
-  const updateGovernor = async (enabled: boolean, force: boolean) => {
-    await fetch('/config/governor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ENABLE_ORACLE_REFINEMENT: enabled, FORCE_GPT4O_ARBITER: force }) });
+
+  const onTrain = async () => {
+    setLoadingTrain(true);
+    setTrainStatus(null);
+    const res = await startTraining();
+    if (res.status === 'success') setTrainStatus(`New adapter at ${res.adapter_path}`);
+    else setTrainStatus('Training error: ' + res.detail);
+    setLoadingTrain(false);
+    await refresh();
   };
-  const handleToggleOracle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEnableOracle(e.target.checked);
-    updateGovernor(e.target.checked, forceGpt4o);
-  };
-  const handleToggleForce = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForceGpt4o(e.target.checked);
-    updateGovernor(enableOracle, e.target.checked);
-  };
+
+  const rows = Object.entries(adapters.state || {});
+
   return (
-    <Box>
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Training Pipeline</Typography>
-          <Button variant="contained" onClick={igniteTraining}>Ignite Training Cycle</Button>
-          <Typography variant="body2" sx={{ mt: 1 }}>Status: {trainingStatus}</Typography>
-          <Typography variant="body2">Last adapter: {lastAdapter || '--'}</Typography>
-        </CardContent>
-      </Card>
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6">Adapter Deployment</Typography>
-          <Grid container spacing={1} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={4}><strong>Role</strong></Grid>
-            <Grid item xs={12} md={4}><strong>Champion</strong></Grid>
-            <Grid item xs={12} md={4}><strong>Challenger</strong></Grid>
-          </Grid>
-          {adapterTable.map((row) => (
-            <Grid container spacing={1} key={row.role} sx={{ mt: 0.5 }}>
-              <Grid item xs={12} md={4}>{row.role}</Grid>
-              <Grid item xs={12} md={4}>{row.champion}</Grid>
-              <Grid item xs={12} md={3}>{row.challenger || '--'}</Grid>
-              <Grid item xs={12} md={1}>{row.challenger && <Button size="small" variant="contained" onClick={() => promote(row.role)}>Promote</Button>}</Grid>
-            </Grid>
-          ))}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent>
-          <Typography variant="h6">Arbiter Governor</Typography>
-          <FormControlLabel control={<Switch checked={enableOracle} onChange={handleToggleOracle} />} label="Enable Oracle Refinement" />
-          <FormControlLabel control={<Switch checked={forceGpt4o} onChange={handleToggleForce} />} label="Force GPT-4o Arbiter" />
-        </CardContent>
-      </Card>
-    </Box>
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <FormControlLabel control={<Switch checked={!!gov.ENABLE_ORACLE_REFINEMENT} onChange={e => onToggleGov('ENABLE_ORACLE_REFINEMENT', e.target.checked)} />} label="Enable Oracle Refinement" />
+            <FormControlLabel control={<Switch checked={!!gov.FORCE_GPT4O_ARBITER} onChange={e => onToggleGov('FORCE_GPT4O_ARBITER', e.target.checked)} />} label="Force GPT‑4o Arbiter" />
+            <Box flexGrow={1} />
+            <Button variant="contained" color="secondary" onClick={onTrain} disabled={loadingTrain}>
+              {loadingTrain ? <><CircularProgress size={18} sx={{ mr: 1 }} />Igniting...</> : 'Ignite Training Cycle'}
+            </Button>
+          </Stack>
+          {trainStatus && <Typography variant="body2" sx={{ mt: 1 }}>{trainStatus}</Typography>}
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>Adapter Deployment Manager</Typography>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Role</TableCell>
+                <TableCell>Champion</TableCell>
+                <TableCell>Challenger</TableCell>
+                <TableCell align="right">Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.map(([role, entry]: any) => (
+                <TableRow key={role}>
+                  <TableCell>{role}</TableCell>
+                  <TableCell>{entry.active || ''}</TableCell>
+                  <TableCell>{entry.challenger || ''}</TableCell>
+                  <TableCell align="right">
+                    <Button variant="outlined" size="small" onClick={() => onPromote(role)} disabled={!entry.challenger}>Promote to Champion</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow><TableCell colSpan={4}><Typography variant="body2" color="text.secondary">No adapters registered.</Typography></TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Paper>
+      </Grid>
+    </Grid>
   );
-}
+};
+
+export default ForgePanel;

@@ -1,84 +1,65 @@
 import React, { useState } from 'react';
-import { Box, Button, Checkbox, FormControlLabel, Paper, TextField, Typography, Divider } from '@mui/material';
+import { Box, Paper, TextField, IconButton, Stack, Typography, Button, Switch, FormControlLabel } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ReactMarkdown from 'react-markdown';
+import { postChat, postVision, fetchState } from '@services/api';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '../store';
+import { addChat } from '../store';
 
-interface Message {
-  sender: 'user' | 'assistant';
-  content: string;
-}
-
-export default function ChatPanel() {
-  const [messages, setMessages] = useState<Message[]>([]);
+const ChatPanel: React.FC = () => {
   const [input, setInput] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [grounding, setGrounding] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [groundingRequired, setGroundingRequired] = useState(false);
+  const dispatch = useDispatch();
+  const history = useSelector((s: RootState) => s.chatHistory);
 
-  const sendMessage = async () => {
-    if (!input && !file) return;
-    const userMsg: Message = { sender: 'user', content: input || (file ? `[Attached: ${file.name}]` : '') };
-    setMessages((msgs) => [...msgs, userMsg]);
-    try {
-      if (file) {
-        const form = new FormData();
-        form.append('question', input || '');
-        form.append('file', file);
-        const url = `/vision${grounding ? '?grounding_required=true' : ''}`;
-        const resp = await fetch(url, { method: 'POST', body: form });
-        const data = await resp.json();
-        setMessages((msgs) => [...msgs, { sender: 'assistant', content: data.answer || JSON.stringify(data) }]);
-      } else {
-        const resp = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: input }) });
-        const data = await resp.json();
-        setMessages((msgs) => [...msgs, { sender: 'assistant', content: data.answer || JSON.stringify(data) }]);
-      }
-    } catch (err) {
-      setMessages((msgs) => [...msgs, { sender: 'assistant', content: 'Error sending message' }]);
-    }
+  const sendText = async () => {
+    if (!input.trim()) return;
+    dispatch(addChat({ role: 'user', content: input }));
+    const res = await postChat(input);
+    dispatch(addChat({ role: 'assistant', content: res.answer }));
+    try { await fetchState(); } catch {}
     setInput('');
-    setFile(null);
+  };
+
+  const sendVision = async () => {
+    if (!imageFile) return;
+    const form = new FormData();
+    form.append('file', imageFile);
+    form.append('question', input || 'What is in this image?');
+    const res = await postVision(form, groundingRequired);
+    dispatch(addChat({ role: 'assistant', content: res.answer }));
+    try { await fetchState(); } catch {}
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
-      <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
-        <Paper sx={{ flex: 1, p: 2, overflowY: 'auto', mb: 2 }}>
-          {messages.map((msg, idx) => (
-            <Box key={idx} sx={{ textAlign: msg.sender === 'user' ? 'right' : 'left', mb: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: msg.sender === 'user' ? 'bold' : 'normal' }}>{msg.content}</Typography>
-            </Box>
-          ))}
-        </Paper>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {file && <Typography variant="caption">Selected: {file.name}</Typography>}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button component="label" variant="outlined">Attach File
-              <input type="file" hidden onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} />
-            </Button>
-            <TextField
-              fullWidth
-              multiline
-              maxRows={4}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-            />
-            <Button variant="contained" onClick={sendMessage}>Send</Button>
+    <Stack spacing={2}>
+      <Paper variant="outlined" sx={{ p: 2, height: 500, overflowY: 'auto', bgcolor: 'background.default' }}>
+        {history.length === 0 && (
+          <Typography variant="body2" color="text.secondary">Start the conversation with the Cognitive Core. Attach an image to ask visual questions.</Typography>
+        )}
+        {history.map((m, i) => (
+          <Box key={i} sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary">{m.role.toUpperCase()}</Typography>
+            <ReactMarkdown>{m.content}</ReactMarkdown>
           </Box>
-          <FormControlLabel
-            control={<Checkbox checked={grounding} onChange={() => setGrounding(!grounding)} />}
-            label="Grounding Required"
-          />
-        </Box>
-      </Box>
-      <Divider orientation="vertical" flexItem />
-      <Box sx={{ flex: 1, p: 2 }}>
-        <Typography variant="h6">Context Awareness</Typography>
-        <Typography variant="subtitle2">Operator Intent:</Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>-- Not loaded --</Typography>
-        <Typography variant="subtitle2">RAG Context:</Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>-- Not loaded --</Typography>
-        <Typography variant="subtitle2">Reasoning Strategy:</Typography>
-        <Typography variant="body2">-- Not loaded --</Typography>
-      </Box>
-    </Box>
+        ))}
+      </Paper>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField fullWidth size="small" placeholder="Type a message..." value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } }} />
+        <IconButton component="label" color={imageFile ? 'secondary' : 'default'}>
+          <AttachFileIcon />
+          <input type="file" hidden accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} />
+        </IconButton>
+        <IconButton color="primary" onClick={sendText}><SendIcon /></IconButton>
+        <Button variant="outlined" onClick={sendVision} disabled={!imageFile}>Send Image</Button>
+      </Stack>
+      <FormControlLabel control={<Switch checked={groundingRequired} onChange={e => setGroundingRequired(e.target.checked)} />} label="Grounding Required" />
+    </Stack>
   );
-}
+};
+
+export default ChatPanel;
