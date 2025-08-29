@@ -20,12 +20,14 @@ from fastapi.staticfiles import StaticFiles
 try:
     from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
     from capsule_brain.planner.plan import plan_once
+    from capsule_brain.core.capsule_engine import CapsuleEngine
+    from capsule_brain.core.intent_modeler import IntentModeler
 except Exception:
     MetricsMiddleware = None  # type: ignore
     metrics_router = None  # type: ignore
     plan_once = None  # type: ignore
-
-from capsule_brain.core.capsule_engine import CapsuleEngine
+    CapsuleEngine = None  # type: ignore
+    IntentModeler = None  # type: ignore
 
 try:
     from hivemind.roles_text import TextRoles
