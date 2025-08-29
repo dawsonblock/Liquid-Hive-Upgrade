@@ -785,7 +785,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
     engine.add_memory("user", question)
     answer: str = "Vision processing unavailable"
     critique: Optional[str] = None
-    grounding: Optional[dict[str, any]] = None
+    grounding: Optional[dict[str, Any]] = None
     try:
         candidates = await vl_roles.vl_committee(question, image_data, k=2)  # type: ignore[attr-defined]
         rankings = await judge.rank_vision(question, image_data, candidates)  # type: ignore[attr-defined]
