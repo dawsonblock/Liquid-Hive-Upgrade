@@ -70,9 +70,15 @@ try:
 except Exception:
     redis = None  # type: ignore
 
+# Curiosity Engine (Genesis Spark)
+try:
+    from hivemind.autonomy.curiosity import CuriosityEngine  # type: ignore
+except Exception:
+    CuriosityEngine = None  # type: ignore
+
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.5")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.6")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -239,7 +245,6 @@ async def startup() -> None:
             if os.path.isdir(foundational_path):
                 if adapter_manager_ is not None:
                     applied = False
-                    # Try common methods defensively
                     for fn_name in ("register_champion", "set_active", "set_champion"):
                         try:
                             fn = getattr(adapter_manager_, fn_name)
@@ -250,14 +255,12 @@ async def startup() -> None:
                             pass
                     if not applied:
                         try:
-                            # Fallback: mutate state dict if available
                             st = getattr(adapter_manager_, "state", None)
                             if isinstance(st, dict):
                                 st.setdefault("implementer", {})["active"] = foundational_path
                                 applied = True
                         except Exception:
                             pass
-                # Also set settings default text adapter path
                 try:
                     settings_.text_adapter_path = foundational_path  # type: ignore
                 except Exception:
@@ -341,6 +344,14 @@ async def startup() -> None:
                 await asyncio.sleep(60)
         try:
             asyncio.get_event_loop().create_task(auditor_loop())
+        except Exception:
+            pass
+
+    # CuriosityEngine loop (Genesis Spark)
+    if CuriosityEngine is not None and engine is not None:
+        try:
+            curiosity = CuriosityEngine(engine, roles=text_roles, retriever=retriever, settings=settings)
+            asyncio.get_event_loop().create_task(curiosity.start())
         except Exception:
             pass
 
