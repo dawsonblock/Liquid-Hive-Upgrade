@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # Optional currently active text adapter path
     text_adapter_path: Optional[str] = None
 
+    # Foundational adapter path (centralized)
+    foundational_adapter_path: str = "/app/adapters/foundational/champion_v1"
+
     # --- Arbiter Governor Controls ---
     ENABLE_ORACLE_REFINEMENT: bool = True
     FORCE_GPT4O_ARBITER: bool = False

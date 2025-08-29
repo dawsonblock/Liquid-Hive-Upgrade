@@ -12,10 +12,12 @@ import uuid
 import json as _json
 import urllib.parse as _u
 import urllib.request as _req
+import httpx
 
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from capsule_brain.security.input_sanitizer import sanitize_input
 
 try:
     from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
@@ -240,7 +242,7 @@ async def startup() -> None:
         intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
 
         # Initialize foundational adapter as champion if present
-        foundational_path = "/app/adapters/foundational/champion_v1"
+        foundational_path = settings_.foundational_adapter_path
         try:
             if os.path.isdir(foundational_path):
                 if adapter_manager_ is not None:
@@ -689,6 +691,7 @@ async def train() -> dict[str, str]:
 
 @app.post(f"{API_PREFIX}/chat")
 async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
+    q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
     engine.add_memory("user", q)
@@ -808,8 +811,12 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                     answer = f"Error generating cross‑modal answer: {exc}"
             else:
                 answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+        except httpx.RequestError as exc:
+            answer = f"Error communicating with the model endpoint: {exc}"
+        except (KeyError, IndexError) as exc:
+            answer = f"Error processing model response or policy: {exc}"
         except Exception as exc:
-            answer = f"Error generating answer: {exc}"
+            answer = f"An unexpected error occurred during answer generation: {exc}"
 
     engine.add_memory("assistant", answer)
 
