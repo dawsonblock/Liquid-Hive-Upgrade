@@ -95,3 +95,7 @@ To force all examples through GPT‑4o for a golden dataset:
 ```bash
 ENABLE_ORACLE_REFINEMENT=True FORCE_GPT4O_ARBITER=True python -m hivemind.training.dataset_build
 ```
+
+## Additional Considerations
+
+See docs/ADDITIONAL_CONSIDERATIONS.md for security, observability, migration, performance, testing, and deployment guidance associated with the latest changes.
