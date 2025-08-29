@@ -802,7 +802,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
             request.scope["adapter_version"] = "vl"
         except Exception:
             pass
-    resp: dict[str, any] = {"answer": answer}
+    resp: dict[str, Any] = {"answer": answer}
     if critique:
         resp["critique"] = critique
     if grounding:
