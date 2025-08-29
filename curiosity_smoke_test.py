@@ -91,8 +91,7 @@ class CuriosityEngineAPITester:
 
     def test_chat_curiosity(self):
         """Test 3: POST /api/chat with form field q="trigger curiosity" -> expect 200 JSON with key answer"""
-        form_data = {"q": "trigger curiosity"}
-        success, response = self.run_test("Chat Curiosity Trigger", "POST", "/api/chat", form_data=form_data)
+        success, response = self.run_test("Chat Curiosity Trigger", "POST", "/api/chat?q=trigger%20curiosity")
         if success and isinstance(response, dict):
             if "answer" in response and isinstance(response["answer"], str):
                 self.log(f"   ✓ Contains 'answer' key (string)")
