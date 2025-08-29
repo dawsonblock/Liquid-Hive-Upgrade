@@ -211,8 +211,13 @@ async def startup() -> None:
     global engine, text_roles, judge, retriever, settings, strategy_selector
     global vl_roles, resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler
     global text_roles_small, text_roles_large
-    engine = CapsuleEngine()
-    await engine.start_background_tasks()
+    
+    # Initialize CapsuleEngine if available
+    if CapsuleEngine is not None:
+        engine = CapsuleEngine()
+        await engine.start_background_tasks()
+    else:
+        engine = None
 
     try:
         if Settings is None:
