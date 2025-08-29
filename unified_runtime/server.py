@@ -59,8 +59,6 @@ except Exception:
     AdapterDeploymentManager = None  # type: ignore
     ToolAuditor = None  # type: ignore
     IntentModeler = None  # type: ignore
-    ConfidenceModeler = None  # type: ignore
-    TrustPolicy = None  # type: ignore
 
 try:
     import redis  # type: ignore
