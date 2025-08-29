@@ -106,9 +106,8 @@ class HiveMindAPITester:
             return False
 
     def test_chat(self):
-        """Test /api/chat endpoint with form field q='hello' - expect HTTP 200 and JSON with key 'answer'"""
-        form_data = {"q": "hello"}
-        success, response = self.run_test("Chat (/api/chat)", "POST", "/api/chat", form_data=form_data)
+        """Test /api/chat endpoint with query param q='hello' - expect HTTP 200 and JSON with key 'answer'"""
+        success, response = self.run_test("Chat (/api/chat)", "POST", "/api/chat?q=hello")
         if success and isinstance(response, dict):
             if "answer" in response:
                 self.log(f"   ✓ Chat response contains 'answer' key")
