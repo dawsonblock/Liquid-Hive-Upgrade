@@ -818,6 +818,9 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
         sr = request.scope.get("selector_reason")
         if sr:
             result["selector_reason"] = sr
+        cm = request.scope.get("chosen_model_alias")
+        if cm:
+            result["chosen_model"] = cm
     except Exception:
         pass
     if context_txt:
