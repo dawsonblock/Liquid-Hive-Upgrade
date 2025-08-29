@@ -55,7 +55,6 @@ except Exception:
     StrategySelector = None  # type: ignore
     Retriever = None      # type: ignore
     format_context = None  # type: ignore
-    Settings = None       # type: ignore
     VLLMClient = None     # type: ignore
     VLClient = None      # type: ignore
     VisionRoles = None   # type: ignore
