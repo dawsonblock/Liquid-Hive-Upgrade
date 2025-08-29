@@ -343,6 +343,17 @@ async def healthz() -> dict[str, bool]:
     return {"ok": engine is not None}
 
 
+@app.get("/secrets/health")
+async def secrets_health() -> dict[str, any]:
+    """Get secrets manager health status."""
+    if settings is None:
+        return {"error": "Settings not initialized"}
+    try:
+        return settings.get_secrets_health()
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 async def _get_approvals() -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     if engine is None:
