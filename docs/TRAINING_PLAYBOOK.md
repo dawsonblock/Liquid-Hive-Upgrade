@@ -100,6 +100,14 @@ Phase 2: Velocity Engine Upgrade (Training Overhaul)
 
 ---
 
+## Continuous Online Learning (LoRAX) and Metacognition
+
+- Online LoRA updates: The AutonomyOrchestrator monitors for refined “platinum” examples (role=arbiter_refined) and submits each example immediately to a LoRAX server via hivemind/training/lorax_client.py for near‑real‑time adaptation.
+- Cognitive Map: After each update cycle, AutonomyOrchestrator parses datasets/training_metadata.jsonl to compute domain confidences and writes them to Neo4j as (Skill) nodes when available, or to runs_dir/cognitive_map.json as a fallback snapshot.
+- Confidence‑Modulated Reasoning: StrategySelector consumes predicted tokens/cost and, when available, a cognitive_map confidence to bias strategies (debate/committee) and route to Courier (small) or Master (large) models.
+- Economic Routing: StrategySelector outputs both strategy and chosen_model alias; the server routes to small/large roles accordingly and returns chosen_model in API responses.
+
+
 ## Notes & Caveats
 
 - Unsloth/QLoRA training requires CUDA and a compatible PyTorch build. bitsandbytes enables 4‑ and 8‑bit optimizations.

@@ -744,6 +744,17 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 pass
         ctx["planner_hints"] = planner_hints or []
         ctx["reasoning_steps"] = reasoning_steps or ""
+        # Cognitive map snapshot (if available)
+        try:
+            import json as __json
+            import pathlib as __pathlib
+            runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
+            snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
+            if snap_path.exists():
+                with open(snap_path, "r", encoding="utf-8") as __f:
+                    ctx["cognitive_map"] = __json.load(__f)
+        except Exception:
+            pass
         decision = None
         if strategy_selector is not None:
             try:
@@ -752,12 +763,15 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 if decision and decision.get("reason"):
                     request.scope["selector_reason"] = decision["reason"]
                 chosen_model = decision.get("model") if decision else None
+                if decision and decision.get("chosen_model"):
+                    request.scope["chosen_model_alias"] = decision["chosen_model"]
             except Exception:
                 decision = None
         if routing:
             if not chosen_model:
                 short = len(q) < 160 and not context_txt
                 chosen_model = "small" if short else "large"
+            # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
             if chosen_model == "small" and text_roles_small is not None:
                 roles_obj = text_roles_small
             elif chosen_model == "large" and text_roles_large is not None:
@@ -815,6 +829,9 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
         sr = request.scope.get("selector_reason")
         if sr:
             result["selector_reason"] = sr
+        cm = request.scope.get("chosen_model_alias")
+        if cm:
+            result["chosen_model"] = cm
     except Exception:
         pass
     if context_txt:
