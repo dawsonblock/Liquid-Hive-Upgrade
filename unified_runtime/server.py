@@ -70,6 +70,8 @@ try:
 except Exception:
     redis = None  # type: ignore
 
+API_PREFIX = "/api"
+
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.5")
 
 if MetricsMiddleware is not None:
@@ -230,6 +232,39 @@ async def startup() -> None:
         adapter_manager_ = AdapterDeploymentManager() if AdapterDeploymentManager else None
         tool_auditor_ = ToolAuditor(settings_.runs_dir) if ToolAuditor and settings_ else None
         intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
+
+        # Initialize foundational adapter as champion if present
+        foundational_path = "/app/adapters/foundational/champion_v1"
+        try:
+            if os.path.isdir(foundational_path):
+                if adapter_manager_ is not None:
+                    applied = False
+                    # Try common methods defensively
+                    for fn_name in ("register_champion", "set_active", "set_champion"):
+                        try:
+                            fn = getattr(adapter_manager_, fn_name)
+                            fn("implementer", foundational_path)  # type: ignore
+                            applied = True
+                            break
+                        except Exception:
+                            pass
+                    if not applied:
+                        try:
+                            # Fallback: mutate state dict if available
+                            st = getattr(adapter_manager_, "state", None)
+                            if isinstance(st, dict):
+                                st.setdefault("implementer", {})["active"] = foundational_path
+                                applied = True
+                        except Exception:
+                            pass
+                # Also set settings default text adapter path
+                try:
+                    settings_.text_adapter_path = foundational_path  # type: ignore
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Default client
         vclient = None
         if VLLMClient is not None:
@@ -349,12 +384,12 @@ async def shutdown() -> None:
         await engine.shutdown()
 
 
-@app.get("/healthz")
+@app.get(f"{API_PREFIX}/healthz")
 async def healthz() -> dict[str, bool]:
     return {"ok": engine is not None}
 
 
-@app.get("/secrets/health")
+@app.get(f"{API_PREFIX}/secrets/health")
 async def secrets_health() -> dict[str, Any]:
     """Get secrets manager health status."""
     if settings is None:
@@ -378,12 +413,12 @@ async def _get_approvals() -> List[Dict[str, Any]]:
     return items
 
 
-@app.get("/approvals")
+@app.get(f"{API_PREFIX}/approvals")
 async def list_approvals() -> List[Dict[str, Any]]:
     return await _get_approvals()
 
 
-@app.post("/approvals/{idx}/approve")
+@app.post(f"{API_PREFIX}/approvals/{{idx}}/approve")
 async def approve_proposal(idx: int) -> Dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
@@ -398,7 +433,7 @@ async def approve_proposal(idx: int) -> Dict[str, str]:
         return {"error": "Invalid approval index"}
 
 
-@app.post("/approvals/{idx}/deny")
+@app.post(f"{API_PREFIX}/approvals/{{idx}}/deny")
 async def deny_proposal(idx: int) -> Dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
@@ -413,7 +448,7 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
         return {"error": "Invalid approval index"}
 
 
-@app.get("/adapters")
+@app.get(f"{API_PREFIX}/adapters")
 async def list_adapters() -> List[Dict[str, Any]]:
     table: List[Dict[str, Any]] = []
     if adapter_manager is None:
@@ -430,7 +465,7 @@ async def list_adapters() -> List[Dict[str, Any]]:
     return table
 
 
-@app.get("/adapters/state")
+@app.get(f"{API_PREFIX}/adapters/state")
 async def adapters_state() -> Dict[str, Any]:
     if adapter_manager is None:
         return {"state": {}}
@@ -440,7 +475,7 @@ async def adapters_state() -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
-@app.post("/adapters/promote/{role}")
+@app.post(f"{API_PREFIX}/adapters/promote/{{role}}")
 async def promote_adapter(role: str) -> Dict[str, Any]:
     if adapter_manager is None:
         return {"error": "Adapter manager unavailable"}
@@ -451,7 +486,7 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
-@app.get("/config/governor")
+@app.get(f"{API_PREFIX}/config/governor")
 async def get_governor() -> Dict[str, Any]:
     if settings is None:
         return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_GPT4O_ARBITER": None}
@@ -464,7 +499,7 @@ async def get_governor() -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
-@app.post("/config/governor")
+@app.post(f"{API_PREFIX}/config/governor")
 async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
     global settings
     if settings is None:
@@ -487,7 +522,7 @@ async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
         return {"error": str(exc)}
 
 
-@app.get("/trust/policy")
+@app.get(f"{API_PREFIX}/trust/policy")
 async def get_trust_policy() -> Dict[str, Any]:
     if settings is None:
         return {"enabled": False}
@@ -500,7 +535,7 @@ async def get_trust_policy() -> Dict[str, Any]:
     }
 
 
-@app.post("/trust/policy")
+@app.post(f"{API_PREFIX}/trust/policy")
 async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
     global settings, confidence_modeler
     if settings is None or ConfidenceModeler is None or TrustPolicy is None:
@@ -535,7 +570,7 @@ async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
-@app.post("/trust/score")
+@app.post(f"{API_PREFIX}/trust/score")
 async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
     if confidence_modeler is None:
         return {"enabled": False, "score": None, "bypass": False, "reason": "modeler_unavailable"}
@@ -552,7 +587,7 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "error": str(exc)}
 
 
-@app.get("/autonomy/autopromote/preview")
+@app.get(f"{API_PREFIX}/autonomy/autopromote/preview")
 async def autopromote_preview() -> dict[str, Any]:
     if settings is None or adapter_manager is None:
         return {"candidates": []}
@@ -583,14 +618,14 @@ async def autopromote_preview() -> dict[str, Any]:
     return {"candidates": out}
 
 
-@app.get("/state")
+@app.get(f"{API_PREFIX}/state")
 async def state() -> dict[str, Any]:
     if engine is None:
         return {"error": "Engine not ready"}
     return engine.get_state_summary()
 
 
-@app.websocket("/ws")
+@app.websocket(f"{API_PREFIX}/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     websockets.append(websocket)  # type: ignore
@@ -614,7 +649,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             pass
 
 
-@app.post("/train")
+@app.post(f"{API_PREFIX}/train")
 async def train() -> dict[str, str]:
     try:
         from hivemind.training.dataset_build import build_text_sft_and_prefs, build_vl_sft
@@ -641,7 +676,7 @@ async def train() -> dict[str, str]:
         return {"status": "error", "detail": str(e)}
 
 
-@app.post("/chat")
+@app.post(f"{API_PREFIX}/chat")
 async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
     if engine is None:
         return {"answer": "Engine not ready"}
@@ -780,7 +815,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
     return result
 
 
-@app.post("/vision")
+@app.post(f"{API_PREFIX}/vision")
 async def vision(question: str, file: UploadFile = File(...), grounding_required: bool = False, request: Request = None):
     if engine is None:
         return {"answer": "Engine not ready"}

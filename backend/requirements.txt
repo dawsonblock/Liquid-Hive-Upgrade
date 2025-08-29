@@ -1,0 +1,18 @@
+# Core web framework
+fastapi
+uvicorn[standard]
+
+# ML training stack
+unsloth
+transformers
+trl
+peft
+datasets
+accelerate
+bitsandbytes
+safetensors
+
+# Utilities
+numpy
+pydantic
+python-dotenv
