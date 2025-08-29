@@ -113,3 +113,23 @@ Phase 2: Velocity Engine Upgrade (Training Overhaul)
 - Unsloth/QLoRA training requires CUDA and a compatible PyTorch build. bitsandbytes enables 4‑ and 8‑bit optimizations.
 - If running on CPU, training scripts will not be performant; use a GPU runner for the Dreaming State.
 - Dataset licenses apply. Review the license of each dataset before commercial use.
+
+## Additional Considerations
+
+- Security & Safety:
+  - /api/chat sanitizes input; consider rate limiting and abuse detection for production.
+  - Store secrets via a manager; avoid committing .env in repos. Keep Approval Queue gating for open‑ended tasks.
+- Observability:
+  - Grafana dashboards now use cb_* metrics; add SLO alerts for p95 latency, 5xx spikes, and token spend anomalies.
+  - Surface Cognitive Map insights in GUI or dashboards to track domain confidence over time.
+- Migration:
+  - Legacy backend/ removed; use unified_runtime as the canonical API entrypoint.
+  - Foundational adapter path centralized in Settings (foundational_adapter_path).
+- Performance & Cost:
+  - Tune COST_PER_1K_TOKENS_*; use quotas and concurrency limits for “Master” model usage.
+  - LoRAX streaming updates can be gated and rolled back quickly if drift appears.
+- Rollback:
+  - Disable MODEL_ROUTING_ENABLED to revert to default routing; point settings.text_adapter_path to a known‑good adapter.
+  - Re‑import prior Grafana JSON to restore dashboards if needed.
+- Testing:
+  - Extend backend tests for sanitize_input and error branches; frontend tests include a vision send flow. Add E2E checks for metrics visibility and /api contract.

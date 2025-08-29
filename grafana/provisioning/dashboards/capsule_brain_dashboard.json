@@ -14,7 +14,7 @@
       "title": "API Request Latency (p95)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))"
+          "expr": "histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket[5m])) by (le))"
         }
       ],
       "datasource": "Prometheus",
@@ -25,7 +25,7 @@
       "title": "Error Ratio (5xx)",
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"
+          "expr": "sum(rate(cb_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(cb_http_requests_total[5m]))"
         }
       ],
       "datasource": "Prometheus",
@@ -36,36 +36,11 @@
       "title": "Token Usage Per Minute",
       "targets": [
         {
-          "expr": "sum(rate(token_usage_total[1m]))"
+          "expr": "sum(rate(cb_tokens_total[1m]))"
         }
       ],
       "datasource": "Prometheus",
       "id": 3
-    },
-    {
-      "type": "graph",
-      "title": "Planner Queue Depth",
-      "targets": [
-        {
-          "expr": "planner_queue_depth"
-        }
-      ],
-      "datasource": "Prometheus",
-      "id": 4
-    },
-    {
-      "type": "graph",
-      "title": "Overseer Approvals vs Rejections",
-      "targets": [
-        {
-          "expr": "sum(rate(overseer_approvals_total[5m]))"
-        },
-        {
-          "expr": "sum(rate(overseer_rejections_total[5m]))"
-        }
-      ],
-      "datasource": "Prometheus",
-      "id": 5
     }
   ]
 }
