@@ -760,6 +760,7 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
             if not chosen_model:
                 short = len(q) < 160 and not context_txt
                 chosen_model = "small" if short else "large"
+            # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
             if chosen_model == "small" and text_roles_small is not None:
                 roles_obj = text_roles_small
             elif chosen_model == "large" and text_roles_large is not None:
