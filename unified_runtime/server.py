@@ -444,7 +444,7 @@ async def approve_proposal(idx: int) -> Dict[str, str]:
         return {"error": "Invalid approval index"}
 
 
-@app.post(f"{API_PREFIX}/approvals/{idx}/deny")
+@app.post(f"{API_PREFIX}/approvals/{{idx}}/deny")
 async def deny_proposal(idx: int) -> Dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
