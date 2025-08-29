@@ -26,3 +26,5 @@ export const setGovernor = (enabled: boolean, force_gpt4o: boolean) =>
   api.post('/config/governor', { enabled, force_gpt4o }).then(r => r.data);
 
 export const startTraining = () => api.post('/train').then(r => r.data);
+
+export const previewAutopromote = () => api.get('/autonomy/autopromote/preview').then(r => r.data);
