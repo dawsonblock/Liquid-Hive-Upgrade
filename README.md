@@ -100,9 +100,5 @@ ENABLE_ORACLE_REFINEMENT=True FORCE_GPT4O_ARBITER=True python -m hivemind.traini
 
 See docs/ADDITIONAL_CONSIDERATIONS.md for security, observability, migration, performance, testing, and deployment guidance associated with the latest changes.
 
-### Operational Considerations (Summary)
-- Security: Input sanitization in /api/chat; keep Approval Queue; use secrets manager (no committed .env).
-- Observability: cb_* metrics in Grafana; consider SLO alerts for p95 latency, 5xx, token spikes.
-- Migration: backend/ removed; unified_runtime is the API entrypoint; foundational_adapter_path centralized.
-- Performance/Cost: Economic routing via StrategySelector; cap “Master” usage; gate LoRAX streaming and add rollback.
-- Testing: New vision test on ChatPanel; add backend tests for sanitize_input and error handling.
+## Final System Analysis & Graduation Report
+- Read the comprehensive, honest assessment here: docs/GRADUATION_REPORT.md
