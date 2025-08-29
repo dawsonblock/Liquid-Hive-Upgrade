@@ -246,12 +246,12 @@ async def startup() -> None:
         text_roles_small_ = None
         text_roles_large_ = None
         try:
-            if getattr(settings_, "vllm_endpoint_small", None):
+            if getattr(settings_, "vllm_endpoint_small", None) and VLLMClient is not None:
                 v_small = VLLMClient(settings_.vllm_endpoint_small, settings_.vllm_api_key, max_new_tokens=settings_.max_new_tokens, adapter=settings_.text_adapter_path, adapter_manager=adapter_manager_, role="implementer")
-                text_roles_small_ = TextRoles(v_small)
-            if getattr(settings_, "vllm_endpoint_large", None):
+                text_roles_small_ = TextRoles(v_small) if TextRoles else None
+            if getattr(settings_, "vllm_endpoint_large", None) and VLLMClient is not None:
                 v_large = VLLMClient(settings_.vllm_endpoint_large, settings_.vllm_api_key, max_new_tokens=settings_.max_new_tokens, adapter=settings_.text_adapter_path, adapter_manager=adapter_manager_, role="implementer")
-                text_roles_large_ = TextRoles(v_large)
+                text_roles_large_ = TextRoles(v_large) if TextRoles else None
         except Exception:
             text_roles_small_ = text_roles_small_ or None
             text_roles_large_ = text_roles_large_ or None
