@@ -486,7 +486,7 @@ async def adapters_state() -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
-@app.post(f"{API_PREFIX}/adapters/promote/{role}")
+@app.post(f"{API_PREFIX}/adapters/promote/{{role}}")
 async def promote_adapter(role: str) -> Dict[str, Any]:
     if adapter_manager is None:
         return {"error": "Adapter manager unavailable"}
