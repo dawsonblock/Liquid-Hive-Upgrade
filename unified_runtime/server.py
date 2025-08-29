@@ -350,7 +350,7 @@ async def healthz() -> dict[str, bool]:
 
 
 @app.get("/secrets/health")
-async def secrets_health() -> dict[str, any]:
+async def secrets_health() -> dict[str, Any]:
     """Get secrets manager health status."""
     if settings is None:
         return {"error": "Settings not initialized"}
