@@ -483,7 +483,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 @app.post("/train")
 async def train() -> dict[str, str]:
     try:
-        from hivemind.training.dataset_build import build_text_sft_and_prefs
+        from hivemind.training.dataset_build import build_text_sft_and_prefs, build_vl_sft
         build_text_sft_and_prefs()
         import subprocess, pathlib, uuid as _uuid
         base = pathlib.Path(settings.adapters_dir if settings else "/app/adapters")  # type: ignore
