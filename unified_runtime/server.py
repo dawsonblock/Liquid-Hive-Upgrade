@@ -744,6 +744,17 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 pass
         ctx["planner_hints"] = planner_hints or []
         ctx["reasoning_steps"] = reasoning_steps or ""
+        # Cognitive map snapshot (if available)
+        try:
+            import json as __json
+            import pathlib as __pathlib
+            runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
+            snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
+            if snap_path.exists():
+                with open(snap_path, "r", encoding="utf-8") as __f:
+                    ctx["cognitive_map"] = __json.load(__f)
+        except Exception:
+            pass
         decision = None
         if strategy_selector is not None:
             try:
