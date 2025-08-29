@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     vllm_endpoint: Optional[str] = None  # legacy/default endpoint
     vllm_endpoint_small: Optional[str] = None
     vllm_endpoint_large: Optional[str] = None
+    MODEL_ROUTING_ENABLED: bool = False
     vllm_api_key: str = "unused"
     redis_url: Optional[str] = None      # e.g., redis://redis:6379
     neo4j_url: Optional[str] = None      # e.g., bolt://neo4j:7687
