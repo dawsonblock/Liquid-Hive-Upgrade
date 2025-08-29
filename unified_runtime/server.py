@@ -257,7 +257,7 @@ async def startup() -> None:
             text_roles_large_ = text_roles_large_ or None
         judge_ = Judge(vclient) if Judge else None
         selector_ = StrategySelector(vclient) if StrategySelector else None
-        retriever_ = Retriever(settings_.rag_index, settings_.embed_model) if Retriever else None
+        retriever_ = Retriever(settings_.rag_index, getattr(settings_, 'embed_model', None)) if Retriever else None
         if VLClient and VisionRoles:
             try:
                 vl_client = VLClient(settings_.vl_model_id)
