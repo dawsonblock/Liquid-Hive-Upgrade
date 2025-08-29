@@ -30,13 +30,17 @@ except Exception:
     IntentModeler = None  # type: ignore
 
 try:
+    from hivemind.config import Settings
+except Exception:
+    Settings = None  # type: ignore
+
+try:
     from hivemind.roles_text import TextRoles
     from hivemind.judge import Judge
     from hivemind.policies import decide_policy
     from hivemind.strategy_selector import StrategySelector
     from hivemind.rag.retriever import Retriever
     from hivemind.rag.citations import format_context
-    from hivemind.config import Settings
     from hivemind.clients.vllm_client import VLLMClient
     from hivemind.clients.vl_client import VLClient
     from hivemind.roles_vl import VisionRoles
