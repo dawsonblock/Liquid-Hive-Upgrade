@@ -752,6 +752,8 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
                 if decision and decision.get("reason"):
                     request.scope["selector_reason"] = decision["reason"]
                 chosen_model = decision.get("model") if decision else None
+                if decision and decision.get("chosen_model"):
+                    request.scope["chosen_model_alias"] = decision["chosen_model"]
             except Exception:
                 decision = None
         if routing:
