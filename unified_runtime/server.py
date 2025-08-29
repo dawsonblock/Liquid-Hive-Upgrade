@@ -485,6 +485,11 @@ async def train() -> dict[str, str]:
     try:
         from hivemind.training.dataset_build import build_text_sft_and_prefs, build_vl_sft
         build_text_sft_and_prefs()
+        # Also build VL dataset if logs include VL interactions
+        try:
+            build_vl_sft()
+        except Exception:
+            pass
         import subprocess, pathlib, uuid as _uuid
         base = pathlib.Path(settings.adapters_dir if settings else "/app/adapters")  # type: ignore
         out_dir = base / "text" / f"adapter_{_uuid.uuid4().hex}"
