@@ -429,7 +429,7 @@ async def list_approvals() -> List[Dict[str, Any]]:
     return await _get_approvals()
 
 
-@app.post(f"{API_PREFIX}/approvals/{idx}/approve")
+@app.post(f"{API_PREFIX}/approvals/{{idx}}/approve")
 async def approve_proposal(idx: int) -> Dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
