@@ -3,7 +3,9 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # External service URLs must come from environment for portability
-    vllm_endpoint: Optional[str] = None  # e.g., http://vllm:8000/v1
+    vllm_endpoint: Optional[str] = None  # legacy/default endpoint
+    vllm_endpoint_small: Optional[str] = None
+    vllm_endpoint_large: Optional[str] = None
     vllm_api_key: str = "unused"
     redis_url: Optional[str] = None      # e.g., redis://redis:6379
     neo4j_url: Optional[str] = None      # e.g., bolt://neo4j:7687
@@ -37,6 +39,12 @@ class Settings(BaseSettings):
     TRUST_THRESHOLD: float = 0.999
     TRUST_MIN_SAMPLES: int = 200
     TRUST_ALLOWLIST: Optional[str] = None  # comma-separated action types
+
+    # --- Auto-Promotion ---
+    AUTOPROMOTE_ENABLED: bool = False
+    AUTOPROMOTE_MIN_SAMPLES: int = 300
+    AUTOPROMOTE_P_THRESHOLD: float = 0.05
+    AUTOPROMOTE_COOLDOWN_HOURS: int = 24
 
     class Config:
         env_prefix = ""
