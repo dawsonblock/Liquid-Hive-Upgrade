@@ -548,7 +548,7 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.get("/autonomy/autopromote/preview")
-async def autopromote_preview() -> dict[str, any]:
+async def autopromote_preview() -> dict[str, Any]:
     if settings is None or adapter_manager is None:
         return {"candidates": []}
     base = getattr(settings, "PROMETHEUS_BASE_URL", None)
