@@ -1,0 +1,18 @@
+# Core web framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# ML training stack
+unsloth>=2025.1.0
+transformers>=4.43.0
+trl>=0.9.6
+peft>=0.11.1
+datasets>=2.20.0
+accelerate>=0.33.0
+bitsandbytes>=0.43.0
+safetensors>=0.4.3
+
+# Utilities
+numpy>=1.26.0
+pydantic>=2.7.0
+python-dotenv>=1.0.1
