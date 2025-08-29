@@ -1,4 +1,3 @@
-
 from time import time
 import re
 from typing import Callable
@@ -58,8 +57,8 @@ class MetricsMiddleware:
             elapsed = time() - start
             norm_path = re.sub(r"/\d+", "/{id}", path)
             # Determine adapter version from scope; default to unknown
-            adapter_version = getattr(scope, "adapter_version", None)
-            if adapter_version is None:
+            adapter_version = scope.get("adapter_version")
+            if not adapter_version:
                 # Try to read from headers (x-adapter-version) if present
                 headers = dict(scope.get("headers") or [])
                 header_val = headers.get(b"x-adapter-version")
