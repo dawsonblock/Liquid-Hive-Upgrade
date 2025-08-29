@@ -43,7 +43,6 @@ try:
     from hivemind.resource_estimator import ResourceEstimator
     from hivemind.adapter_deployment_manager import AdapterDeploymentManager
     from hivemind.tool_auditor import ToolAuditor
-    from capsule_brain.core.intent_modeler import IntentModeler
     from hivemind.confidence_modeler import ConfidenceModeler, TrustPolicy
 except Exception:
     TextRoles = None      # type: ignore
