@@ -231,14 +231,16 @@ async def startup() -> None:
         tool_auditor_ = ToolAuditor(settings_.runs_dir) if ToolAuditor and settings_ else None
         intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
         # Default client
-        vclient = VLLMClient(
-            settings_.vllm_endpoint,
-            settings_.vllm_api_key,
-            max_new_tokens=settings_.max_new_tokens,
-            adapter=settings_.text_adapter_path,
-            adapter_manager=adapter_manager_,
-            role="implementer",
-        )
+        vclient = None
+        if VLLMClient is not None:
+            vclient = VLLMClient(
+                settings_.vllm_endpoint,
+                settings_.vllm_api_key,
+                max_new_tokens=settings_.max_new_tokens,
+                adapter=settings_.text_adapter_path,
+                adapter_manager=adapter_manager_,
+                role="implementer",
+            )
         text_roles_ = TextRoles(vclient) if TextRoles else None
         # Optional small/large
         text_roles_small_ = None
