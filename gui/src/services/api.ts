@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Use same-origin relative paths; backend is served at same host/port.
+// Use /api prefix for backend routes through Vite proxy
 export const api = axios.create({
-  baseURL: '/',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -10,7 +10,7 @@ export const fetchState = () => api.get('/state').then(r => r.data);
 export const postChat = (q: string) => api.post('/chat?q=' + encodeURIComponent(q)).then(r => r.data);
 
 export const postVision = (form: FormData, groundingRequired: boolean) =>
-  axios.post('/vision?grounding_required=' + String(groundingRequired), form, {
+  axios.post('/api/vision?grounding_required=' + String(groundingRequired), form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data);
 
@@ -28,3 +28,6 @@ export const setGovernor = (enabled: boolean, force_gpt4o: boolean) =>
 export const startTraining = () => api.post('/train').then(r => r.data);
 
 export const previewAutopromote = () => api.get('/autonomy/autopromote/preview').then(r => r.data);
+
+// New secrets health endpoint
+export const getSecretsHealth = () => api.get('/secrets/health').then(r => r.data);
