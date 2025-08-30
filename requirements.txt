@@ -20,6 +20,8 @@ pypdf==4.2.0
 
 # For Real Oracle/Arbiter clients
 httpx==0.25.0
+# For quantization support
+bitsandbytes==0.44.1
 
 prometheus_client==0.22.1
 transformers==4.56.0
