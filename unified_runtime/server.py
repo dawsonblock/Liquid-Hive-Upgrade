@@ -537,13 +537,42 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     websockets.append(websocket)  # type: ignore
     try:
         while True:
-            await asyncio.sleep(10)
+            await asyncio.sleep(10) # Or listen to engine.bus for immediate events
             try:
                 if engine is not None:
                     summary = engine.get_state_summary()
                     await websocket.send_json({"type": "state_update", "payload": summary})
+                    
                     approvals = await _get_approvals()
                     await websocket.send_json({"type": "approvals_update", "payload": approvals})
+
+                    # --- Add custom events here ---
+                    # Example: Get recent self_extension memories
+                    recent_autonomy_events = [m for m in list(engine.memory)[-50:] if m.get("role") in ["self_extension", "approval_feedback"]]
+                    if recent_autonomy_events:
+                        await websocket.send_json({"type": "autonomy_events_recent", "payload": recent_autonomy_events})
+                    
+                    # RAG system status
+                    if retriever is not None:
+                        rag_status = {
+                            "is_ready": retriever.is_ready,
+                            "doc_count": len(retriever.doc_store) if retriever.doc_store else 0,
+                            "embedding_model": retriever.embed_model_id
+                        }
+                        await websocket.send_json({"type": "rag_status", "payload": rag_status})
+                    
+                    # Oracle/Arbiter system status
+                    oracle_status = {
+                        "deepseek_available": bool(os.getenv("DEEPSEEK_API_KEY")),
+                        "openai_available": bool(os.getenv("OPENAI_API_KEY")),
+                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False) if settings else False
+                    }
+                    await websocket.send_json({"type": "oracle_status", "payload": oracle_status})
+                    
+                    # You could also listen to engine.bus.get_nowait() or a dedicated queue for events
+                    # and immediately broadcast them.
+                    # -----------------------------
+
             except Exception:
                 pass
     except WebSocketDisconnect:
