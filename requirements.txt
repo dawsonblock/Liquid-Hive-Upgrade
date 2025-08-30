@@ -25,3 +25,7 @@ bitsandbytes>=0.41.0
 
 prometheus_client==0.22.1
 transformers==4.56.0
+
+# Final Apotheosis Dependencies
+redis[hiredis]==5.0.4  # Swarm Protocol with performance boost
+scipy>=1.11.0  # Statistical analysis for promotion engine
