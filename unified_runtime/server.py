@@ -602,10 +602,10 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
 
     context_txt = ""
     prompt = q
-    if retriever is not None and format_context is not None:
+    if retriever is not None:
         try:
-            docs = retriever.search(q, k=5)  # type: ignore[operator]
-            context_txt = format_context(docs)  # type: ignore[operator]
+            docs = await retriever.search(q, k=5)  # Ensure await is used here
+            context_txt = retriever.format_context(docs)  # Use retriever's format_context method
             prompt = (
                 f"[CONTEXT]\n{context_txt}\n\n"
                 f"[QUESTION]\n{q}\n\n"
