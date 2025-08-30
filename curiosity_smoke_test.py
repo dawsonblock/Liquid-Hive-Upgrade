@@ -4,9 +4,9 @@ Backend API Smoke Test for CuriosityEngine and Decorator Fixes
 ==============================================================
 
 This script tests the specific endpoints mentioned in the review request:
-1) GET http://127.0.0.1:8001/api/healthz -> expect 200 JSON with key ok
-2) GET http://127.0.0.1:8001/api/approvals -> expect 200 JSON list
-3) POST http://127.0.0.1:8001/api/chat with form field q="trigger curiosity" -> expect 200 JSON with key answer (string)
+1) GET http://127.0.0.1:8000/api/healthz -> expect 200 JSON with key ok
+2) GET http://127.0.0.1:8000/api/approvals -> expect 200 JSON list
+3) POST http://127.0.0.1:8000/api/chat with form field q="trigger curiosity" -> expect 200 JSON with key answer (string)
 4) Validate adapters endpoints still OK: GET /api/adapters and /api/adapters/state
 """
 
@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 class CuriosityEngineAPITester:
-    def __init__(self, base_url="http://127.0.0.1:8001"):
+    def __init__(self, base_url="http://127.0.0.1:8000"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0

@@ -4,9 +4,9 @@ LIQUID-HIVE Secrets Management Test Suite
 =========================================
 
 This script tests the production-grade secrets management system:
-- GET /secrets/health - Secrets manager health status
-- GET /healthz - Basic health check with secrets integration
-- GET /state - System state
+- GET /api/secrets/health - Secrets manager health status
+- GET /api/healthz - Basic health check with secrets integration
+- GET /api/state - System state
 - Configuration loading with secrets manager
 - Environment fallback functionality
 - Error handling and graceful degradation
@@ -20,7 +20,7 @@ import time
 from datetime import datetime
 
 class SecretsManagementTester:
-    def __init__(self, base_url="http://localhost:8001"):
+    def __init__(self, base_url="http://localhost:8000"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
@@ -69,7 +69,7 @@ class SecretsManagementTester:
 
     def test_secrets_health(self):
         """Test secrets manager health endpoint"""
-        success, response = self.run_test("Secrets Health Check", "GET", "/secrets/health")
+        success, response = self.run_test("Secrets Health Check", "GET", "/api/secrets/health")
         
         if not success:
             return False
@@ -115,7 +115,7 @@ class SecretsManagementTester:
 
     def test_healthz_with_secrets(self):
         """Test basic health check endpoint (should work with secrets integration)"""
-        success, response = self.run_test("Health Check", "GET", "/healthz")
+        success, response = self.run_test("Health Check", "GET", "/api/healthz")
         
         if not success:
             return False
@@ -136,7 +136,7 @@ class SecretsManagementTester:
 
     def test_state_endpoint(self):
         """Test state endpoint (should work with secrets-loaded configuration)"""
-        success, response = self.run_test("State Endpoint", "GET", "/state")
+        success, response = self.run_test("State Endpoint", "GET", "/api/state")
         
         if not success:
             return False
@@ -168,7 +168,7 @@ class SecretsManagementTester:
         self.tests_run += 1
         
         # Check if we can access the secrets health endpoint
-        success, response = self.run_test("Environment Fallback Check", "GET", "/secrets/health")
+        success, response = self.run_test("Environment Fallback Check", "GET", "/api/secrets/health")
         
         if not success:
             return False
@@ -193,7 +193,7 @@ class SecretsManagementTester:
         self.tests_run += 1
         
         # The secrets health endpoint should always work, even if providers fail
-        success, response = self.run_test("Error Handling Check", "GET", "/secrets/health")
+        success, response = self.run_test("Error Handling Check", "GET", "/api/secrets/health")
         
         if success:
             self.tests_passed += 1
@@ -224,9 +224,9 @@ class SecretsManagementTester:
         
         # Test multiple endpoints to ensure configuration is loaded
         endpoints_to_test = [
-            ("/healthz", "Health Check"),
-            ("/secrets/health", "Secrets Health"),
-            ("/state", "State")
+            ("/api/healthz", "Health Check"),
+            ("/api/secrets/health", "Secrets Health"),
+            ("/api/state", "State")
         ]
         
         all_working = True
