@@ -9,16 +9,18 @@ import pathlib
 from typing import List, Dict, Any, Optional, Tuple
 
 try:
-    import faiss # Assuming FAISS is used for indexing, given sentence-transformers
     import numpy as np
+    import faiss # FAISS for vector indexing
     from sentence_transformers import SentenceTransformer # For embedding
     from pypdf import PdfReader # For PDF parsing (if installed)
-except ImportError:
+    DEPS_AVAILABLE = True
+except ImportError as e:
     faiss = None
     np = None
     SentenceTransformer = None
     PdfReader = None
-    logging.getLogger(__name__).warning("FAISS, NumPy, Sentence Transformers, or PyPDF not installed. RAG indexing will be disabled.")
+    DEPS_AVAILABLE = False
+    logging.getLogger(__name__).warning(f"FAISS, NumPy, Sentence Transformers, or PyPDF not installed: {e}. RAG indexing will be disabled.")
 
 
 # Assuming you have a settings object available
