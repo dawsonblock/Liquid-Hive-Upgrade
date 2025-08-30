@@ -9,8 +9,11 @@ from typing import Any, Dict, Optional
 
 try:
     from ..training.lorax_client import LoRAXClient
+    from ..confidence_modeler import ConfidenceModeler, TrustPolicy
 except Exception:  # pragma: no cover
     LoRAXClient = None  # type: ignore
+    ConfidenceModeler = None  # type: ignore
+    TrustPolicy = None  # type: ignore
 
 
 class AutonomyOrchestrator:
