@@ -74,6 +74,8 @@ class AutonomyOrchestrator:
             try:
                 await self._process_platinum_examples()
                 await self._update_cognitive_map()
+                await self._monitor_challenger()
+                await self._process_trust_protocol()
             except Exception:
                 pass
             await asyncio.sleep(15)
