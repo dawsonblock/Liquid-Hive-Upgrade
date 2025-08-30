@@ -863,7 +863,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     except Exception:
         pass
 
-    result: dict[str, str | dict[str, str]] = {"answer": answer}
+    result: dict[str, Any] = {"answer": answer}
     
     # Add DS-Router specific information
     if provider_used:
