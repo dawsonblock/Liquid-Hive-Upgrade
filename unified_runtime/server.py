@@ -109,6 +109,7 @@ adapter_manager: Optional[AdapterDeploymentManager] = None
 tool_auditor: Optional[ToolAuditor] = None
 intent_modeler: Optional[IntentModeler] = None
 confidence_modeler: Optional[ConfidenceModeler] = None
+ds_router: Optional[DSRouter] = None
 
 try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
