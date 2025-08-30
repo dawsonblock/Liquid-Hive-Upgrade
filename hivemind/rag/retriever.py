@@ -55,7 +55,7 @@ class Retriever:
         self.doc_store: List[Document] = []
         self.is_ready = False
 
-        if self.embed_model_id and SentenceTransformer is not None and faiss is not None and np is not None:
+        if self.embed_model_id and DEPS_AVAILABLE:
             try:
                 self.embedding_model = SentenceTransformer(self.embed_model_id)
                 self.load_or_create_index()
