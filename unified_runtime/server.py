@@ -488,6 +488,75 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "error": str(exc)}
 
 
+@app.post(f"{API_PREFIX}/internal/delegate_task")
+async def delegate_task(task_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
+    Internal-only endpoint for swarm coordination.
+    """
+    try:
+        from hivemind.swarm_protocol import get_swarm_coordinator
+        
+        swarm = await get_swarm_coordinator()
+        if not swarm:
+            return {"error": "Swarm protocol not available"}
+        
+        task_type = task_data.get("task_type")
+        payload = task_data.get("payload", {})
+        priority = task_data.get("priority", 1)
+        timeout = task_data.get("timeout", 300)
+        
+        if not task_type:
+            return {"error": "task_type required"}
+        
+        # Delegate task to swarm
+        result = await swarm.delegate_task(task_type, payload, priority, timeout)
+        
+        if result:
+            return {"status": "completed", "result": result}
+        else:
+            return {"status": "failed", "error": "Task delegation failed"}
+            
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@app.get(f"{API_PREFIX}/swarm/status")
+async def swarm_status() -> Dict[str, Any]:
+    """Get swarm coordination status and node information."""
+    try:
+        from hivemind.swarm_protocol import get_swarm_coordinator
+        
+        swarm = await get_swarm_coordinator()
+        if not swarm:
+            return {"swarm_enabled": False, "reason": "coordinator_unavailable"}
+        
+        # Get swarm state
+        if swarm.redis_client:
+            nodes_data = await swarm.redis_client.hgetall("swarm:nodes")
+            nodes = []
+            for node_id, node_json in nodes_data.items():
+                try:
+                    node_info = json.loads(node_json)
+                    nodes.append(node_info)
+                except Exception:
+                    continue
+            
+            return {
+                "swarm_enabled": True,
+                "node_id": swarm.node_id,
+                "active_nodes": len(nodes),
+                "nodes": nodes,
+                "active_tasks": len(swarm.active_tasks),
+                "capabilities": swarm.capabilities
+            }
+        else:
+            return {"swarm_enabled": False, "reason": "redis_unavailable"}
+            
+    except Exception as exc:
+        return {"swarm_enabled": False, "error": str(exc)}
+
+
 @app.get(f"{API_PREFIX}/providers")
 async def get_providers_status() -> Dict[str, Any]:
     """Get status of all DS-Router providers."""
