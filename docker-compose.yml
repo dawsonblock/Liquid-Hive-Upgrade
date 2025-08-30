@@ -95,7 +95,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_JSON=${LOG_JSON:-1}
     volumes:
-      - ./data/ingest:/data/ingest
+      - ./data/ingest:/app/data/ingest
       - ./data/rag_index:/app/rag_index
       - ./hivemind/rag:/app/hivemind/rag
       - ./capsule_brain:/app/capsule_brain
