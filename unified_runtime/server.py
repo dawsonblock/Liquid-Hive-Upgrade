@@ -37,6 +37,14 @@ except Exception:
     Settings = None  # type: ignore
 
 try:
+    from .model_router import DSRouter, RouterConfig
+    from .providers import GenRequest
+except Exception:
+    DSRouter = None  # type: ignore
+    RouterConfig = None  # type: ignore
+    GenRequest = None  # type: ignore
+
+try:
     from hivemind.roles_text import TextRoles
     from hivemind.judge import Judge
     from hivemind.policies import decide_policy
