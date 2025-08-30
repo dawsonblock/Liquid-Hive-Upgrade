@@ -831,6 +831,28 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                     a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
                     rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
                     answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
+                elif policy == "ethical_deliberation":
+                    # Ethical Synthesizer: Handle ethical dilemmas
+                    if engine is not None:
+                        ethical_analysis = decision.get("ethical_analysis", {}) if decision else {}
+                        dilemma_type = ethical_analysis.get("dilemma_type", "unknown")
+                        severity = ethical_analysis.get("severity", "medium")
+                        
+                        # Create ethical deliberation proposal
+                        ethical_proposal = f"""ETHICAL DILEMMA DETECTED: {dilemma_type.upper()}
+Severity: {severity}
+Original Query: {q}
+Detected Issues: {', '.join(ethical_analysis.get('all_detected', []))}
+
+This query has been flagged for ethical review. Please provide guidance on how to respond appropriately while maintaining ethical standards. [action:ethical_review]"""
+                        
+                        # Add to approval queue instead of answering directly
+                        engine.add_memory("approval", ethical_proposal)
+                        answer = f"This request requires ethical review due to potential {dilemma_type} concerns. It has been submitted for operator guidance."
+                        request.scope["ethical_flag"] = True
+                        request.scope["dilemma_type"] = dilemma_type
+                    else:
+                        answer = "This request contains potentially sensitive content and cannot be processed automatically."
                 elif policy == "clone_dispatch":
                     answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
                 elif policy == "self_extension_prompt":
