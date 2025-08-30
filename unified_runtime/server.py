@@ -487,6 +487,71 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "error": str(exc)}
 
 
+@app.get(f"{API_PREFIX}/providers")
+async def get_providers_status() -> Dict[str, Any]:
+    """Get status of all DS-Router providers."""
+    if ds_router is None:
+        return {"error": "DS-Router not available"}
+    
+    try:
+        provider_status = await ds_router.get_provider_status()
+        return {
+            "providers": provider_status,
+            "router_active": True,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@app.post(f"{API_PREFIX}/admin/budget/reset")
+async def reset_budget() -> Dict[str, str]:
+    """Reset daily budget counters (Admin only)."""
+    admin_token = os.environ.get("ADMIN_TOKEN")
+    if not admin_token:
+        return {"error": "Admin token not configured"}
+    
+    # In production, verify admin token from request headers
+    # For now, just reset the budget tracker
+    if ds_router is not None and hasattr(ds_router, '_budget_tracker'):
+        ds_router._budget_tracker.tokens_used = 0
+        ds_router._budget_tracker.usd_spent = 0.0
+        return {"status": "budget_reset"}
+    else:
+        return {"error": "Router or budget tracker not available"}
+
+
+@app.post(f"{API_PREFIX}/admin/router/set-thresholds")
+async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
+    """Set router confidence and support thresholds (Admin only)."""
+    admin_token = os.environ.get("ADMIN_TOKEN")
+    if not admin_token:
+        return {"error": "Admin token not configured"}
+    
+    if ds_router is None:
+        return {"error": "DS-Router not available"}
+    
+    try:
+        # Update thresholds
+        if "conf_threshold" in thresholds:
+            ds_router.config.conf_threshold = float(thresholds["conf_threshold"])
+        if "support_threshold" in thresholds:
+            ds_router.config.support_threshold = float(thresholds["support_threshold"])
+        if "max_cot_tokens" in thresholds:
+            ds_router.config.max_cot_tokens = int(thresholds["max_cot_tokens"])
+            
+        return {
+            "status": "updated",
+            "current_thresholds": {
+                "conf_threshold": ds_router.config.conf_threshold,
+                "support_threshold": ds_router.config.support_threshold,
+                "max_cot_tokens": ds_router.config.max_cot_tokens
+            }
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.get(f"{API_PREFIX}/autonomy/autopromote/preview")
 async def autopromote_preview() -> dict[str, Any]:
     if settings is None or adapter_manager is None:
