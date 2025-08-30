@@ -43,7 +43,22 @@ This will launch all required services and expose the API on port 8000.  You can
 query it via:
 
 ```bash
-curl -X POST http://localhost:8000/chat -d 'q=What is the capital of France?'
+curl -X POST http://localhost:8000/api/chat -d 'q=What is the capital of France?'
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/api/healthz
+```
+
+Vision example (multipart):
+
+```bash
+curl -X POST "http://localhost:8000/api/vision" \
+  -F "question=Describe this image" \
+  -F "file=@/path/to/image.png" \
+  -F "grounding_required=false"
 ```
 
 ## Training and Self‑Improvement
@@ -106,3 +121,6 @@ See docs/ADDITIONAL_CONSIDERATIONS.md for security, observability, migration, pe
 - Migration: backend/ removed; unified_runtime is the API entrypoint; foundational_adapter_path centralized.
 - Performance/Cost: Economic routing via StrategySelector; cap “Master” usage; gate LoRAX streaming and add rollback.
 - Testing: New vision test on ChatPanel; add backend tests for sanitize_input and error handling.
+
+## Final System Analysis & Graduation Report
+- Read the comprehensive, honest assessment here: docs/GRADUATION_REPORT.md

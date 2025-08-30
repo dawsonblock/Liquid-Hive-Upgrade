@@ -80,7 +80,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.6")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -196,16 +196,27 @@ async def _start_autonomy_with_leader_election() -> None:
         await autonomy_orchestrator.start()
 
         async def renew_lock() -> None:
+            backoff = 1
             while True:
                 try:
                     lock.extend(120)
+                    backoff = 1  # reset on success
                 except Exception:
+                    # Attempt graceful stop and try to re-acquire with backoff
                     try:
                         if autonomy_orchestrator is not None:
                             await autonomy_orchestrator.stop()
                     except Exception:
                         pass
-                    return
+                    try:
+                        reacquired = lock.acquire(blocking=False)
+                        if not reacquired:
+                            return  # give up leadership
+                        backoff = 1
+                    except Exception:
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 2, 60)
+                        continue
                 await asyncio.sleep(60)
         asyncio.get_event_loop().create_task(renew_lock())
     except Exception:
@@ -219,187 +230,23 @@ async def _start_autonomy_with_leader_election() -> None:
         return
 
 
-@app.on_event("startup")
-async def startup() -> None:
-    global engine, text_roles, judge, retriever, settings, strategy_selector
-    global vl_roles, resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler
-    global text_roles_small, text_roles_large
-    
-    # Initialize CapsuleEngine if available
-    if CapsuleEngine is not None:
-        engine = CapsuleEngine()
-        await engine.start_background_tasks()
-    else:
-        engine = None
-
-    try:
-        if Settings is None:
-            raise RuntimeError("HiveMind settings unavailable")
-        settings_ = Settings()  # type: ignore
-        resource_estimator_ = ResourceEstimator() if ResourceEstimator else None
-        adapter_manager_ = AdapterDeploymentManager() if AdapterDeploymentManager else None
-        tool_auditor_ = ToolAuditor(settings_.runs_dir) if ToolAuditor and settings_ else None
-        intent_modeler_ = IntentModeler(engine) if IntentModeler and engine else None
-
-        # Initialize foundational adapter as champion if present
-        foundational_path = settings_.foundational_adapter_path
-        try:
-            if os.path.isdir(foundational_path):
-                if adapter_manager_ is not None:
-                    applied = False
-                    for fn_name in ("register_champion", "set_active", "set_champion"):
-                        try:
-                            fn = getattr(adapter_manager_, fn_name)
-                            fn("implementer", foundational_path)  # type: ignore
-                            applied = True
-                            break
-                        except Exception:
-                            pass
-                    if not applied:
-                        try:
-                            st = getattr(adapter_manager_, "state", None)
-                            if isinstance(st, dict):
-                                st.setdefault("implementer", {})["active"] = foundational_path
-                                applied = True
-                        except Exception:
-                            pass
-                try:
-                    settings_.text_adapter_path = foundational_path  # type: ignore
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        # Default client
-        vclient = None
-        if VLLMClient is not None:
-            vclient = VLLMClient(
-                settings_.vllm_endpoint,
-                settings_.vllm_api_key,
-                max_new_tokens=settings_.max_new_tokens,
-                adapter=settings_.text_adapter_path,
-                adapter_manager=adapter_manager_,
-                role="implementer",
-            )
-        text_roles_ = TextRoles(vclient) if TextRoles else None
-        # Optional small/large
-        text_roles_small_ = None
-        text_roles_large_ = None
-        try:
-            if getattr(settings_, "vllm_endpoint_small", None) and VLLMClient is not None:
-                v_small = VLLMClient(settings_.vllm_endpoint_small, settings_.vllm_api_key, max_new_tokens=settings_.max_new_tokens, adapter=settings_.text_adapter_path, adapter_manager=adapter_manager_, role="implementer")
-                text_roles_small_ = TextRoles(v_small) if TextRoles else None
-            if getattr(settings_, "vllm_endpoint_large", None) and VLLMClient is not None:
-                v_large = VLLMClient(settings_.vllm_endpoint_large, settings_.vllm_api_key, max_new_tokens=settings_.max_new_tokens, adapter=settings_.text_adapter_path, adapter_manager=adapter_manager_, role="implementer")
-                text_roles_large_ = TextRoles(v_large) if TextRoles else None
-        except Exception:
-            text_roles_small_ = text_roles_small_ or None
-            text_roles_large_ = text_roles_large_ or None
-        judge_ = Judge(vclient) if Judge else None
-        selector_ = StrategySelector(vclient) if StrategySelector else None
-        retriever_ = Retriever(settings_.rag_index, getattr(settings_, 'embed_model', None)) if Retriever else None
-        if VLClient and VisionRoles:
-            try:
-                vl_client = VLClient(settings_.vl_model_id)
-                vl_roles_ = VisionRoles(vl_client)
-            except Exception:
-                vl_roles_ = None
-        else:
-            vl_roles_ = None
-        # Assign
-        settings = settings_
-        text_roles = text_roles_
-        text_roles_small = text_roles_small_
-        text_roles_large = text_roles_large_
-        judge = judge_
-        retriever = retriever_
-        strategy_selector = selector_
-        vl_roles = vl_roles_
-        resource_estimator = resource_estimator_
-        adapter_manager = adapter_manager_
-        tool_auditor = tool_auditor_
-        intent_modeler = intent_modeler_
-    except Exception:
-        text_roles = None
-        text_roles_small = None
-        text_roles_large = None
-        judge = None
-        retriever = None
-        settings = None
-        vl_roles = None
-        resource_estimator = None
-        adapter_manager = None
-        tool_auditor = None
-        intent_modeler = None
-        confidence_modeler = None
-
-    # tool auditor loop
-    if tool_auditor is not None and engine is not None:
-        async def auditor_loop() -> None:
-            while True:
-                try:
-                    underperforming = tool_auditor.flag_underperforming()
-                    for tool_name in underperforming:
-                        engine.add_memory("self_extension", f"Analyze tool '{tool_name}' and propose a more resilient version.")
-                except Exception:
-                    pass
-                await asyncio.sleep(60)
-        try:
-            asyncio.get_event_loop().create_task(auditor_loop())
-        except Exception:
-            pass
-
-    # CuriosityEngine loop (Genesis Spark)
-    if CuriosityEngine is not None and engine is not None:
-        try:
-            curiosity = CuriosityEngine(engine, roles=text_roles, retriever=retriever, settings=settings)
-            asyncio.get_event_loop().create_task(curiosity.start())
-        except Exception:
-            pass
-
-    # trust modeler loop
-    if confidence_modeler is not None and engine is not None:
-        async def trust_update_loop() -> None:
-            while True:
-                try:
-                    events = []
-                    try:
-                        events = list(engine.memory)  # type: ignore
-                    except Exception:
-                        events = []
-                    confidence_modeler.update_from_events(events)
-                except Exception:
-                    pass
-                await asyncio.sleep(120)
-        try:
-            asyncio.get_event_loop().create_task(trust_update_loop())
-        except Exception:
-            pass
-
-    await _start_autonomy_with_leader_election()
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    global _autonomy_lock
-    if autonomy_orchestrator is not None:
-        try:
-            await autonomy_orchestrator.stop()
-        except Exception:
-            pass
-    if _autonomy_lock is not None:
-        try:
-            _autonomy_lock.release()
-        except Exception:
-            pass
-        _autonomy_lock = None
-    if engine is not None:
-        await engine.shutdown()
-
-
 @app.get(f"{API_PREFIX}/healthz")
 async def healthz() -> dict[str, bool]:
     return {"ok": engine is not None}
+
+
+@app.get(f"{API_PREFIX}/vllm/models")
+async def vllm_models() -> Dict[str, Any]:
+    """Helper endpoint to query vLLM service for loaded models."""
+    try:
+        if settings is None or settings.vllm_endpoint is None:
+            return {"error": "vLLM endpoint not configured"}
+        url = settings.vllm_endpoint.rstrip("/") + "/v1/models"
+        with _req.urlopen(url, timeout=5) as r:
+            data = _json.loads(r.read().decode())
+            return data
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 @app.get(f"{API_PREFIX}/secrets/health")
@@ -608,6 +455,16 @@ async def autopromote_preview() -> dict[str, Any]:
     window = "5m"
     min_samples = int(getattr(settings, "AUTOPROMOTE_MIN_SAMPLES", 300))
     out = []
+    # Build a representative prompt from recent user inputs to estimate costs
+    representative_prompt = ""
+    try:
+        if engine is not None:
+            user_msgs = [m.get("content", "") for m in list(engine.memory)[-200:] if m.get("role") == "user"]  # type: ignore
+            snippet = "\n".join(user_msgs[-5:])
+            representative_prompt = snippet[:2000]
+    except Exception:
+        representative_prompt = "Evaluate adapter performance under typical conversational load."
+
     for role, entry in getattr(adapter_manager, "state", {}).items():  # type: ignore
         active = (entry or {}).get("active")
         challenger = (entry or {}).get("challenger")
@@ -620,14 +477,24 @@ async def autopromote_preview() -> dict[str, Any]:
         p95_a = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{active}"}}[{window}])) by (le))')) or 9e9
         p95_c = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{challenger}"}}[{window}])) by (le))')) or 9e9
         try:
-            cost_a = resource_estimator.estimate_cost("implementer", "large", active) if resource_estimator else 1.0
-            cost_c = resource_estimator.estimate_cost("implementer", "large", challenger) if resource_estimator else 1.0
+            cost_small = resource_estimator.estimate_cost("implementer", "small", representative_prompt) if resource_estimator else {"predicted_cost_small": 1.0}
+            cost_large = resource_estimator.estimate_cost("implementer", "large", representative_prompt) if resource_estimator else {"predicted_cost_large": 1.0}
         except Exception:
-            cost_a = cost_c = 1.0
+            cost_small = {"predicted_cost_small": 1.0}
+            cost_large = {"predicted_cost_large": 1.0}
         better_latency = p95_c <= (p95_a * 0.9)
-        better_cost = cost_c <= (cost_a * 0.9)
+        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (cost_small.get("predicted_cost_small", 1.0))
         if better_latency or better_cost:
-            out.append({"role": role, "active": active, "challenger": challenger, "p95_a": p95_a, "p95_c": p95_c, "cost_a": cost_a, "cost_c": cost_c, "reason": "latency" if better_latency else "cost"})
+            out.append({
+                "role": role,
+                "active": active,
+                "challenger": challenger,
+                "p95_a": p95_a,
+                "p95_c": p95_c,
+                "predicted_cost_small": cost_small.get("predicted_cost_small"),
+                "predicted_cost_large": cost_large.get("predicted_cost_large"),
+                "reason": "latency" if better_latency else "cost",
+            })
     return {"candidates": out}
 
 

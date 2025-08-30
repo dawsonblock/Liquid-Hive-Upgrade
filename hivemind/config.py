@@ -16,7 +16,8 @@ except ImportError:
 
 class Settings(BaseSettings):
     # External service URLs must come from environment for portability
-    vllm_endpoint: Optional[str] = None  # legacy/default endpoint
+    # Provide sensible defaults for docker-compose network
+    vllm_endpoint: Optional[str] = "http://vllm:8000"  # default for local compose
     vllm_endpoint_small: Optional[str] = None
     vllm_endpoint_large: Optional[str] = None
     MODEL_ROUTING_ENABLED: bool = False
@@ -28,6 +29,9 @@ class Settings(BaseSettings):
     PROMETHEUS_BASE_URL: Optional[str] = None
     COST_PER_1K_TOKENS_SMALL: float = 0.0008
     COST_PER_1K_TOKENS_LARGE: float = 0.0030
+
+    # RAG / Embeddings
+    embed_model: Optional[str] = "sentence-transformers/all-MiniLM-L6-v2"
 
     vl_model_id: str = "LiquidAI/LFM2-VL-1.6B"
     committee_k: int = 3

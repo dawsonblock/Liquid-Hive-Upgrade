@@ -20,7 +20,7 @@ services:
     image: prom/prometheus:latest
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+    - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
     ports:
       - "9090:9090"
     networks: [fusionnet]
@@ -90,7 +90,9 @@ services:
     environment:
       - INGEST_WATCH_DIR=/data/ingest
     volumes:
-      - .:/app
+      - ./data/ingest:/data/ingest
+      - ./hivemind/rag:/app/hivemind/rag
+      - ./capsule_brain:/app/capsule_brain
     depends_on:
       - api
     networks: [fusionnet]

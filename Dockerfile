@@ -36,4 +36,4 @@ COPY --from=guibuilder /app/gui/dist /app/gui/dist
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000
-CMD ["python", "-m", "unified_runtime.server"]
+CMD ["python", "-m", "unified_runtime.__main__"]

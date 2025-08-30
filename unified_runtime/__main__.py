@@ -11,6 +11,7 @@ import os
 import uvicorn
 
 from .server import app
+from .logging_config import setup_logging
 
 
 def main() -> None:
@@ -21,6 +22,7 @@ def main() -> None:
     port 8000 by default ensures compatibility with the Prometheus
     configuration bundled with this repository.
     """
+    setup_logging()
     host = os.getenv("HOST", "0.0.0.0")
     # Default to port 8000 to align with Prometheus scrape configuration
     port = int(os.getenv("PORT", "8000"))
