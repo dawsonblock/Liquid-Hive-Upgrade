@@ -115,6 +115,32 @@ _autonomy_id = uuid.uuid4().hex
 websockets: list[WebSocket] = []
 
 
+@app.on_event("startup")
+async def startup() -> None:
+    """Initialize global components on startup."""
+    global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
+    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler
+    
+    # Initialize settings
+    if Settings is not None:
+        settings = Settings()
+    
+    # Initialize retriever
+    if Retriever is not None and settings is not None:
+        retriever = Retriever(settings.rag_index, settings.embed_model)
+    
+    # Initialize engine
+    if CapsuleEngine is not None:
+        engine = CapsuleEngine()
+    
+    # Initialize text roles
+    if TextRoles is not None and settings is not None:
+        text_roles = TextRoles(settings)
+    
+    # Initialize other components as needed
+    # ... (additional component initialization can be added here)
+
+
 def _env_write(key: str, value: str) -> None:
     try:
         env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
