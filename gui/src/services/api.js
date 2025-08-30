@@ -6,7 +6,7 @@ export const api = axios.create({
 });
 export const fetchState = () => api.get('/state').then(r => r.data);
 export const postChat = (q) => api.post('/chat?q=' + encodeURIComponent(q)).then(r => r.data);
-export const postVision = (form, groundingRequired) => axios.post('/vision?grounding_required=' + String(groundingRequired), form, {
+export const postVision = (form, groundingRequired) => axios.post('/api/vision?grounding_required=' + String(groundingRequired), form, {
     headers: { 'Content-Type': 'multipart/form-data' },
 }).then(r => r.data);
 export const getApprovals = () => api.get('/approvals').then(r => r.data);
