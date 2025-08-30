@@ -41,6 +41,21 @@ class AutonomyOrchestrator:
                 self.lorax = None
         except Exception:
             self.lorax = None
+            
+        # Trust Protocol: Initialize Confidence Modeler
+        self.confidence_modeler = None
+        if ConfidenceModeler and TrustPolicy and settings:
+            try:
+                # Load trust policy from settings
+                trust_policy = TrustPolicy(
+                    enabled=bool(getattr(settings, "TRUSTED_AUTONOMY_ENABLED", False)),
+                    threshold=float(getattr(settings, "TRUST_THRESHOLD", 0.999)),
+                    min_samples=int(getattr(settings, "TRUST_MIN_SAMPLES", 200)),
+                    allowlist=tuple([s.strip() for s in (getattr(settings, "TRUST_ALLOWLIST", "") or "").split(",") if s.strip()])
+                )
+                self.confidence_modeler = ConfidenceModeler(trust_policy)
+            except Exception:
+                self.confidence_modeler = None
 
     async def start(self) -> None:
         if self._running:
