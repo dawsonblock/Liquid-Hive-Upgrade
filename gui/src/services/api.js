@@ -1,7 +1,7 @@
 import axios from 'axios';
 // Use same-origin relative paths; backend is served at same host/port.
 export const api = axios.create({
-    baseURL: '/',
+    baseURL: '/api',
     headers: { 'Content-Type': 'application/json' }
 });
 export const fetchState = () => api.get('/state').then(r => r.data);
