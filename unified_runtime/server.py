@@ -691,7 +691,7 @@ async def train() -> dict[str, str]:
 
 
 @app.post(f"{API_PREFIX}/chat")
-async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
+async def chat(q: str, request: Request) -> dict[str, Any]:
     q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
