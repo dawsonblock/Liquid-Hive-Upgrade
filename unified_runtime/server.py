@@ -723,101 +723,134 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
             prompt = q
 
     answer = "Placeholder: HiveMind unavailable"
-    policy_used = None
+    provider_used = None
+    confidence = None
+    escalated = False
 
-    # Model routing: choose roles object
-    roles_obj = text_roles
-    try:
-        routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
-        chosen_model = None
-        ctx: dict[str, Any] = {}
-        if resource_estimator is not None:
-            try:
-                ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer", "large")
-            except Exception:
-                pass
-        if intent_modeler is not None:
-            try:
-                ctx["operator_intent"] = intent_modeler.current_intent
-            except Exception:
-                pass
-        if engine is not None:
-            try:
-                ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
-            except Exception:
-                pass
-        ctx["planner_hints"] = planner_hints or []
-        ctx["reasoning_steps"] = reasoning_steps or ""
-        # Cognitive map snapshot (if available)
+    # Use DS-Router if available, otherwise fallback to legacy routing
+    if ds_router is not None and GenRequest is not None:
         try:
-            import json as __json
-            import pathlib as __pathlib
-            runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
-            snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
-            if snap_path.exists():
-                with open(snap_path, "r", encoding="utf-8") as __f:
-                    ctx["cognitive_map"] = __json.load(__f)
-        except Exception:
-            pass
-        decision = None
-        if strategy_selector is not None:
-            try:
-                decision = await strategy_selector.decide(prompt, ctx)
-                policy_used = decision.get("strategy") if decision else None
-                if decision and decision.get("reason"):
-                    request.scope["selector_reason"] = decision["reason"]
-                chosen_model = decision.get("model") if decision else None
-                if decision and decision.get("chosen_model"):
-                    request.scope["chosen_model_alias"] = decision["chosen_model"]
-            except Exception:
-                decision = None
-        if routing:
-            if not chosen_model:
-                short = len(q) < 160 and not context_txt
-                chosen_model = "small" if short else "large"
-            # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
-            if chosen_model == "small" and text_roles_small is not None:
-                roles_obj = text_roles_small
-            elif chosen_model == "large" and text_roles_large is not None:
-                roles_obj = text_roles_large
-    except Exception:
-        roles_obj = text_roles
-
-    if roles_obj is not None and judge is not None and settings is not None:
-        try:
-            policy = policy_used
-            if not policy and decide_policy is not None:
-                policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
-            if policy == "committee":
-                tasks: List[str] = await asyncio.gather(*[
-                    roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                    for _ in range(settings.committee_k)
-                ])
-                rankings = await judge.rank(tasks, prompt=prompt)  # type: ignore[attr-defined]
-                answer = judge.merge(tasks, rankings)  # type: ignore[attr-defined]
-            elif policy == "debate":
-                a1 = await roles_obj.architect(prompt)  # type: ignore[attr-defined]
-                a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
-                answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
-            elif policy == "clone_dispatch":
-                answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-            elif policy == "self_extension_prompt":
-                answer = "Self‑extension requests are not supported by this endpoint"
-            elif policy == "cross_modal_synthesis":
-                img_desc = context_txt if context_txt else None
-                try:
-                    answer = await roles_obj.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
-                except Exception as exc:
-                    answer = f"Error generating cross‑modal answer: {exc}"
-            else:
-                answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-        except httpx.RequestError as exc:
-            answer = f"Error communicating with the model endpoint: {exc}"
-        except (KeyError, IndexError) as exc:
-            answer = f"Error processing model response or policy: {exc}"
+            # Create DS-Router request
+            gen_request = GenRequest(
+                prompt=prompt,
+                system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
+                max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
+                temperature=0.7
+            )
+            
+            # Generate using DS-Router
+            gen_response = await ds_router.generate(gen_request)
+            
+            answer = gen_response.content
+            provider_used = gen_response.provider
+            confidence = gen_response.confidence
+            escalated = gen_response.metadata.get("escalated", False)
+            
+            # Add routing info to request scope for metrics
+            request.scope["provider_used"] = provider_used
+            request.scope["router_confidence"] = confidence
+            request.scope["escalated"] = escalated
+            
         except Exception as exc:
-            answer = f"An unexpected error occurred during answer generation: {exc}"
+            answer = f"Error with DS-Router: {exc}. Falling back to legacy routing."
+            
+    # Legacy routing fallback if DS-Router not available or failed
+    if provider_used is None:
+        policy_used = None
+        roles_obj = text_roles
+        try:
+            routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
+            chosen_model = None
+            ctx: dict[str, Any] = {}
+            if resource_estimator is not None:
+                try:
+                    ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer", "large")
+                except Exception:
+                    pass
+            if intent_modeler is not None:
+                try:
+                    ctx["operator_intent"] = intent_modeler.current_intent
+                except Exception:
+                    pass
+            if engine is not None:
+                try:
+                    ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
+                except Exception:
+                    pass
+            ctx["planner_hints"] = planner_hints or []
+            ctx["reasoning_steps"] = reasoning_steps or ""
+            # Cognitive map snapshot (if available)
+            try:
+                import json as __json
+                import pathlib as __pathlib
+                runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
+                snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
+                if snap_path.exists():
+                    with open(snap_path, "r", encoding="utf-8") as __f:
+                        ctx["cognitive_map"] = __json.load(__f)
+            except Exception:
+                pass
+            decision = None
+            if strategy_selector is not None:
+                try:
+                    decision = await strategy_selector.decide(prompt, ctx)
+                    policy_used = decision.get("strategy") if decision else None
+                    if decision and decision.get("reason"):
+                        request.scope["selector_reason"] = decision["reason"]
+                    chosen_model = decision.get("model") if decision else None
+                    if decision and decision.get("chosen_model"):
+                        request.scope["chosen_model_alias"] = decision["chosen_model"]
+                except Exception:
+                    decision = None
+            if routing:
+                if not chosen_model:
+                    short = len(q) < 160 and not context_txt
+                    chosen_model = "small" if short else "large"
+                # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
+                if chosen_model == "small" and text_roles_small is not None:
+                    roles_obj = text_roles_small
+                elif chosen_model == "large" and text_roles_large is not None:
+                    roles_obj = text_roles_large
+        except Exception:
+            roles_obj = text_roles
+
+        if roles_obj is not None and judge is not None and settings is not None:
+            try:
+                policy = policy_used
+                if not policy and decide_policy is not None:
+                    policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
+                if policy == "committee":
+                    tasks: List[str] = await asyncio.gather(*[
+                        roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                        for _ in range(settings.committee_k)
+                    ])
+                    rankings = await judge.rank(tasks, prompt=prompt)  # type: ignore[attr-defined]
+                    answer = judge.merge(tasks, rankings)  # type: ignore[attr-defined]
+                elif policy == "debate":
+                    a1 = await roles_obj.architect(prompt)  # type: ignore[attr-defined]
+                    a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                    rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
+                    answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
+                elif policy == "clone_dispatch":
+                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                elif policy == "self_extension_prompt":
+                    answer = "Self‑extension requests are not supported by this endpoint"
+                elif policy == "cross_modal_synthesis":
+                    img_desc = context_txt if context_txt else None
+                    try:
+                        answer = await roles_obj.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
+                    except Exception as exc:
+                        answer = f"Error generating cross‑modal answer: {exc}"
+                else:
+                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                    
+                provider_used = "legacy_routing"
+            except httpx.RequestError as exc:
+                answer = f"Error communicating with the model endpoint: {exc}"
+            except (KeyError, IndexError) as exc:
+                answer = f"Error processing model response or policy: {exc}"
+            except Exception as exc:
+                answer = f"An unexpected error occurred during answer generation: {exc}"
 
     engine.add_memory("assistant", answer)
 
@@ -831,8 +864,16 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
         pass
 
     result: dict[str, str | dict[str, str]] = {"answer": answer}
-    if policy_used:
-        result["reasoning_strategy"] = str(policy_used)
+    
+    # Add DS-Router specific information
+    if provider_used:
+        result["provider"] = provider_used
+    if confidence is not None:
+        result["confidence"] = confidence
+    if escalated:
+        result["escalated"] = escalated
+    
+    # Legacy information
     try:
         sr = request.scope.get("selector_reason")
         if sr:
