@@ -128,12 +128,17 @@ websockets: list[WebSocket] = []
 async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler
+    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router
     
     # Initialize settings
     if Settings is not None:
         settings = Settings()
     
+    # Initialize DS-Router
+    if DSRouter is not None and RouterConfig is not None:
+        router_config = RouterConfig.from_env()
+        ds_router = DSRouter(router_config)
+        
     # Initialize retriever
     if Retriever is not None and settings is not None:
         retriever = Retriever(settings.rag_index, settings.embed_model)
