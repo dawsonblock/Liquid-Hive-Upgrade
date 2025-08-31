@@ -1,13 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Button, Snackbar, Alert } from '@mui/material';
+import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Snackbar, Alert } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { getApprovals, approveProposal, denyProposal, fetchState } from '../services/api';
 
+const resolveWsUrl = () => {
+  const base = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.REACT_APP_BACKEND_URL)
+    || (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL);
+  if (!base) {
+    console.error('REACT_APP_BACKEND_URL missing; cannot connect WebSocket');
+    return null;
+  }
+  if (base.startsWith('/')) {
+    return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/ws';
+  }
+  try {
+    const u = new URL(base);
+    const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    const path = (u.pathname.endsWith('/') ? u.pathname.slice(0, -1) : u.pathname) + '/ws';
+    return `${wsProto}//${u.host}${path}`;
+  } catch (e) {
+    console.error('Invalid REACT_APP_BACKEND_URL for WebSocket:', e);
+    return null;
+  }
+};
+
 const SystemPanel = () => {
   const [approvals, setApprovals] = useState([]);
   const [stateSummary, setStateSummary] = useState(null);
-  const [events, setEvents] = useState([]);
   const [snack, setSnack] = useState([]);
 
   useEffect(() => {
@@ -19,20 +39,6 @@ const SystemPanel = () => {
     };
     load();
 
-    // Compute WebSocket URL from environment variable
-    const resolveWsUrl = () => {
-      const base = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL);
-      if (!base) {
-        console.error('REACT_APP_BACKEND_URL missing; cannot connect WebSocket');
-        return null;
-      }
-      // Convert /api to ws://host/api/ws
-      if (base.startsWith('/')) {
-        return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/ws';
-      }
-      return base.replace(/^http/, 'ws') + '/ws';
-    };
-
     const wsUrl = resolveWsUrl();
     if (!wsUrl) return;
 
@@ -42,14 +48,6 @@ const SystemPanel = () => {
         const msg = JSON.parse(ev.data);
         if (msg.type === 'state_update') setStateSummary(msg.payload);
         if (msg.type === 'approvals_update') setApprovals(msg.payload);
-        if (msg.type === 'autonomy_events') {
-          setEvents(msg.payload || []);
-          // Show a toast for each event
-          (msg.payload || []).forEach((e) => {
-            const text = e?.message || `Auto‑promotion: role ${e?.role} → ${e?.new_active}`;
-            setSnack(prev => [...prev, { open: true, msg: text }]);
-          });
-        }
       } catch {}
     };
     return () => ws.close();

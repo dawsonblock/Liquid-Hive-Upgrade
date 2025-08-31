@@ -98,7 +98,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.10")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.11")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -148,7 +148,6 @@ async def startup() -> None:
     if DSRouter is not None and RouterConfig is not None:
         router_config = RouterConfig.from_env()
         ds_router = DSRouter(router_config)
-        # Warm-up provider health checks in background to avoid first-call latency
         try:
             asyncio.get_event_loop().create_task(ds_router.get_provider_status())
         except Exception:
@@ -156,9 +155,12 @@ async def startup() -> None:
         
     # Initialize retriever
     if Retriever is not None and settings is not None:
-        retriever = Retriever(settings.rag_index, settings.embed_model)
+        try:
+            retriever = Retriever(settings.rag_index, settings.embed_model)
+        except Exception:
+            retriever = None
     
-    # Initialize engine
+    # Initialize engine (optional)
     if CapsuleEngine is not None:
         try:
             engine = CapsuleEngine()
@@ -241,28 +243,18 @@ def _scalar(data: Optional[dict]) -> Optional[float]:
         return None
 
 
-async def _broadcast_autonomy_event(event: dict) -> None:
-    dead = []
-    for ws in list(websockets):
-        try:
-            await ws.send_json({"type": "autonomy_events", "payload": [event]})
-        except Exception:
-            dead.append(ws)
-    for ws in dead:
-        try:
-            websockets.remove(ws)
-        except Exception:
-            pass
-
-
 @app.get(f"{API_PREFIX}/healthz")
-async def healthz() -> dict[str, bool]:
-    return {"ok": engine is not None}
+async def healthz() -> dict[str, Any]:
+    """Expose readiness that reflects router availability, not just engine."""
+    return {
+        "ok": bool(ds_router is not None),
+        "engine_ready": bool(engine is not None),
+        "router_ready": bool(ds_router is not None)
+    }
 
 
 @app.get(f"{API_PREFIX}/vllm/models")
 async def vllm_models() -> Dict[str, Any]:
-    """Helper endpoint to query vLLM service for loaded models."""
     try:
         if settings is None or settings.vllm_endpoint is None:
             return {"error": "vLLM endpoint not configured"}
@@ -276,7 +268,6 @@ async def vllm_models() -> Dict[str, Any]:
 
 @app.get(f"{API_PREFIX}/secrets/health")
 async def secrets_health() -> dict[str, Any]:
-    """Get secrets manager health status."""
     if settings is None:
         return {"error": "Settings not initialized"}
     try:
@@ -335,10 +326,8 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
 
 @app.get(f"{API_PREFIX}/providers")
 async def get_providers_status() -> Dict[str, Any]:
-    """Get status of all DS-Router providers."""
     if ds_router is None:
         return {"error": "DS-Router not available"}
-    
     try:
         return {
             "providers": await ds_router.get_provider_status(),
@@ -364,19 +353,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while True:
             await asyncio.sleep(10)
             try:
-                # Always send heartbeat and engine status
                 await websocket.send_json({
                     "type": "heartbeat",
                     "payload": {"ts": asyncio.get_event_loop().time(), "engine_ready": engine is not None}
                 })
-
                 if engine is not None:
                     summary = engine.get_state_summary()
                     await websocket.send_json({"type": "state_update", "payload": summary})
                     approvals = await _get_approvals()
                     await websocket.send_json({"type": "approvals_update", "payload": approvals})
                 else:
-                    # Send minimal state when engine not ready
                     await websocket.send_json({"type": "state_update", "payload": {"engine_ready": False}})
                     await websocket.send_json({"type": "approvals_update", "payload": []})
             except Exception:
@@ -419,14 +405,10 @@ async def train() -> dict[str, str]:
 
 @app.post(f"{API_PREFIX}/chat")
 async def chat(q: str, request: Request) -> dict[str, Any]:
-    """Unified chat endpoint relying exclusively on DS-Router.
-    The router encapsulates safety (Pre/Post guards), routing, confidence, and fallbacks.
-    """
     q = sanitize_input(q)
     if engine is not None:
         engine.add_memory("user", q)
 
-    # Optional planning hints (non-blocking)
     planner_hints = None
     reasoning_steps = None
     if plan_once is not None:
@@ -438,7 +420,6 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             planner_hints = None
             reasoning_steps = None
 
-    # RAG enrichment
     context_txt = ""
     prompt = q
     if retriever is not None:
@@ -453,7 +434,6 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
         except Exception:
             prompt = q
 
-    # DS-Router only
     if ds_router is None or GenRequest is None:
         answer = "Router unavailable"
         if engine is not None:
@@ -471,15 +451,13 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
             temperature=0.7
         )
-        # Hard cap to avoid p95 &gt; 10s due to cold-starts
-        chat_timeout = float(os.getenv("CHAT_TIMEOUT_SECS", "9.5"))
+        chat_timeout = float(os.getenv("CHAT_TIMEOUT_SECS", "15"))
         gen_response = await asyncio.wait_for(ds_router.generate(gen_request), timeout=chat_timeout)
         answer = gen_response.content
         provider_used = gen_response.provider
         confidence = gen_response.confidence
         escalated = gen_response.metadata.get("escalated", False)
 
-        # Annotate request scope for metrics
         request.scope["provider_used"] = provider_used
         request.scope["router_confidence"] = confidence
         request.scope["escalated"] = escalated
@@ -493,7 +471,6 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
         confidence = 0.0
         escalated = False
     except Exception:
-        # Trust DS-Router's internal fallback chain; if it still fails, return a resilient static message
         answer = (
             "I apologize, but I'm currently unable to process your request due to temporary "
             "system limitations. Please try again shortly."
