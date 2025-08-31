@@ -185,7 +185,7 @@ class LiquidHiveAPITester:
             # Since we're testing from backend, we need to use the actual URL
             ws_url = "ws://localhost:8001/api/ws"
             
-            async with websockets.connect(ws_url, timeout=10) as websocket:
+            async with websockets.connect(ws_url, open_timeout=10) as websocket:
                 print(f"Connected to WebSocket: {ws_url}")
                 
                 # Wait for messages within 15 seconds
