@@ -143,7 +143,7 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     if render_js and PERMS.get("render_js", {}).get("require_consent", True):
         for u in urls:
-            dom = _domain_of(u)
+            dom = _normalize_target(_domain_of(u))
             if not _has_consent("render_js", dom):
                 raise HTTPException(status_code=403, detail="consent_required")
 
