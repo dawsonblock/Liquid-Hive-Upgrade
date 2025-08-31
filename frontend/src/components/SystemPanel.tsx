@@ -20,7 +20,7 @@ const SystemPanel: React.FC = () => {
     };
     load();
 
-    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
