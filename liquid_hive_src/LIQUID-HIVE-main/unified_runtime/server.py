@@ -118,7 +118,7 @@ app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.12")
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
-    app.include_router(metrics_router)
+    app.include_router(metrics_router, prefix=API_PREFIX)
 
 engine: Optional[CapsuleEngine] = None
 text_roles: Optional[TextRoles] = None
