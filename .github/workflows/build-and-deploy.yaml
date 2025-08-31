@@ -1,0 +1,94 @@
+name: Build and Deploy (Docker + Helm)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_repository:
+        description: "Container image repository (e.g., ghcr.io/your-org/liquid-hive)"
+        required: true
+        default: ghcr.io/your-org/liquid-hive
+      image_tag:
+        description: "Image tag"
+        required: true
+        default: latest
+      namespace:
+        description: "Kubernetes namespace"
+        required: true
+        default: default
+      helm_values:
+        description: "Helm values file"
+        required: true
+        default: helm/liquid-hive/values-dev.yaml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./liquid_hive_src/LIQUID-HIVE-main
+          file: ./liquid_hive_src/LIQUID-HIVE-main/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ github.event.inputs.image_repository }}:${{ github.event.inputs.image_tag }}
+          cache-from: type=registry,ref=${{ github.event.inputs.image_repository }}:buildcache
+          cache-to: type=registry,ref=${{ github.event.inputs.image_repository }}:buildcache,mode=max
+
+  helm-deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ secrets.KUBECONFIG_B64 != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Configure Kubeconfig
+        run: |
+          echo "${KUBECONFIG_B64}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$PWD/kubeconfig" >> $GITHUB_ENV
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+
+      - name: Helm template (dry-run)
+        run: |
+          helm template lh helm/liquid-hive \
+            --set image.repository="${{ github.event.inputs.image_repository }}" \
+            --set image.tag="${{ github.event.inputs.image_tag }}" \
+            -f ${{ github.event.inputs.helm_values }} > /dev/null
+
+      - name: Helm upgrade/install
+        run: |
+          helm upgrade --install lh helm/liquid-hive \
+            -n ${{ github.event.inputs.namespace }} \
+            --create-namespace \
+            --set image.repository="${{ github.event.inputs.image_repository }}" \
+            --set image.tag="${{ github.event.inputs.image_tag }}" \
+            -f ${{ github.event.inputs.helm_values }}
+
+      - name: Rollout status
+        run: |
+          kubectl -n ${{ github.event.inputs.namespace }} rollout status deploy/liquid-hive --timeout=180s
