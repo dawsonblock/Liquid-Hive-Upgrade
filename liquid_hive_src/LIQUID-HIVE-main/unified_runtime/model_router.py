@@ -41,6 +41,9 @@ class RouterConfig:
     deepseek_api_key: Optional[str] = None
     hf_token: Optional[str] = None
 
+    # Features
+    enable_r1_escalation: bool = False
+
     # Timeouts (seconds)
     provider_timeout_secs: float = 8.0
     health_timeout_secs: float = 8.0
