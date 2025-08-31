@@ -32,6 +32,25 @@ except Exception:
 # Load permissions
 import pathlib
 
+def _normalize_scope(scope: str) -> str:
+    s = (scope or "").strip().lower()
+    if s in ("internet_fetch_js", "js_render", "render_js"):
+        return "render_js"
+    if s in ("ingest", "ingest_index", "index"):
+        return "ingest_index"
+    return s
+
+
+def _normalize_target(target: str) -> str:
+    t = (target or "").strip()
+    try:
+        host = urlparse(t).hostname
+        if host:
+            return host.lower()
+    except Exception:
+        pass
+    return t.lower()
+
 CONFIG_PATH = pathlib.Path(__file__).resolve().parent / "config" / "permissions.yaml"
 DEFAULT_PERMISSIONS = {
     "render_js": {"require_consent": True},
