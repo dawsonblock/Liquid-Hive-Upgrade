@@ -120,6 +120,18 @@ resource_estimator: Optional[ResourceEstimator] = None
 adapter_manager: Optional[AdapterDeploymentManager] = None
 tool_auditor: Optional[ToolAuditor] = None
 intent_modeler: Optional[IntentModeler] = None
+# Optional: integrate internet_agent_advanced plugin routes and metrics if available
+try:
+    from internet_agent_advanced.fastapi_plugin import router as tools_router, metrics_app as ia_metrics_app, test_router as ia_test_router  # type: ignore
+    app.include_router(tools_router, prefix=API_PREFIX)
+    app.include_router(ia_test_router, prefix=API_PREFIX)
+    try:
+        app.mount(f"{API_PREFIX}/internet-agent-metrics", ia_metrics_app)
+    except Exception:
+        pass
+except Exception:
+    pass
+
 confidence_modeler: Optional[ConfidenceModeler] = None
 ds_router: Optional[DSRouter] = None
 
