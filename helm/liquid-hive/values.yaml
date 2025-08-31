@@ -67,6 +67,14 @@ config:
     redisUrl: ""
     neo4jUrl: ""
     
+    # Optional dev integrations: Qdrant & MinIO
+    qdrantUrl: ""
+    minioEndpoint: ""
+    minioAccessKey: ""
+    minioSecretKey: ""
+    minioBucket: ""
+    minioSecure: false
+    
   # AI/ML endpoints
   ai:
     vllmEndpoint: ""
