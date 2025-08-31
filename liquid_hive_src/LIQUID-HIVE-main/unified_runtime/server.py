@@ -98,6 +98,21 @@ except Exception:
 
 API_PREFIX = "/api"
 
+# Optional: integrate internet_agent_advanced plugin routes and metrics if available
+try:
+    from internet_agent_advanced.fastapi_plugin import router as tools_router, metrics_app as ia_metrics_app, test_router as ia_test_router  # type: ignore
+    # Mount tool/test routers under API prefix to satisfy ingress rules
+    app.include_router(tools_router, prefix=API_PREFIX)
+    app.include_router(ia_test_router, prefix=API_PREFIX)
+    # Mount metrics app under API prefix; avoid conflict with existing /api/metrics
+    try:
+        app.mount(f"{API_PREFIX}/internet-agent-metrics", ia_metrics_app)
+    except Exception:
+        pass
+except Exception:
+    # Plugin not present; continue without IA advanced features
+    pass
+
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.12")
 
 if MetricsMiddleware is not None:
