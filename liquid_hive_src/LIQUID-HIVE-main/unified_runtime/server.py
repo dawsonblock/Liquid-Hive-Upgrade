@@ -828,7 +828,8 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     # DS-Router only
     if ds_router is None or GenRequest is None:
         answer = "Router unavailable"
-        engine.add_memory("assistant", answer)
+        if engine is not None:
+            engine.add_memory("assistant", answer)
         return {"answer": answer}
 
     provider_used = None
