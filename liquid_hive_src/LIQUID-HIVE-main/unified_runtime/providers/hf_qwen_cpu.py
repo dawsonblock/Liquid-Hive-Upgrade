@@ -223,19 +223,20 @@ class QwenCPUProvider(BaseProvider):
     
     async def health_check(self) -> Dict[str, Any]:
         """Check Qwen local model health."""
-        if not HF_AVAILABLE:
-            return {
-                "status": "unavailable",
-                "reason": "transformers_not_installed",
-                "provider": self.name
-            }
-        
+        # Report disabled first to avoid alarming 'unavailable' when intentionally off
         if not self.enable_local:
             return {
                 "status": "disabled",
                 "reason": "not_enabled",
                 "provider": self.name,
                 "model": self.model_name
+            }
+        
+        if not HF_AVAILABLE:
+            return {
+                "status": "unavailable",
+                "reason": "transformers_not_installed",
+                "provider": self.name
             }
         
         if not self.is_loaded:
