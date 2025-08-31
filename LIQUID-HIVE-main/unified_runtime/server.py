@@ -9,6 +9,7 @@ from typing import Optional, List, Any, Dict
 import sys
 import os
 import uuid
+import json
 import json as _json
 import urllib.parse as _u
 import urllib.request as _req
@@ -35,6 +36,14 @@ try:
     from hivemind.config import Settings
 except Exception:
     Settings = None  # type: ignore
+
+try:
+    from .model_router import DSRouter, RouterConfig
+    from .providers import GenRequest
+except Exception:
+    DSRouter = None  # type: ignore
+    RouterConfig = None  # type: ignore
+    GenRequest = None  # type: ignore
 
 try:
     from hivemind.roles_text import TextRoles
@@ -101,6 +110,7 @@ adapter_manager: Optional[AdapterDeploymentManager] = None
 tool_auditor: Optional[ToolAuditor] = None
 intent_modeler: Optional[IntentModeler] = None
 confidence_modeler: Optional[ConfidenceModeler] = None
+ds_router: Optional[DSRouter] = None
 
 try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
@@ -113,6 +123,37 @@ _autonomy_lock_key = "liquid_hive:autonomy_leader"
 _autonomy_id = uuid.uuid4().hex
 
 websockets: list[WebSocket] = []
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    """Initialize global components on startup."""
+    global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
+    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router
+    
+    # Initialize settings
+    if Settings is not None:
+        settings = Settings()
+    
+    # Initialize DS-Router
+    if DSRouter is not None and RouterConfig is not None:
+        router_config = RouterConfig.from_env()
+        ds_router = DSRouter(router_config)
+        
+    # Initialize retriever
+    if Retriever is not None and settings is not None:
+        retriever = Retriever(settings.rag_index, settings.embed_model)
+    
+    # Initialize engine
+    if CapsuleEngine is not None:
+        engine = CapsuleEngine()
+    
+    # Initialize text roles
+    if TextRoles is not None and settings is not None:
+        text_roles = TextRoles(settings)
+    
+    # Initialize other components as needed
+    # ... (additional component initialization can be added here)
 
 
 def _env_write(key: str, value: str) -> None:
@@ -447,6 +488,140 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "error": str(exc)}
 
 
+@app.post(f"{API_PREFIX}/internal/delegate_task")
+async def delegate_task(task_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
+    Internal-only endpoint for swarm coordination.
+    """
+    try:
+        from hivemind.swarm_protocol import get_swarm_coordinator
+        
+        swarm = await get_swarm_coordinator()
+        if not swarm:
+            return {"error": "Swarm protocol not available"}
+        
+        task_type = task_data.get("task_type")
+        payload = task_data.get("payload", {})
+        priority = task_data.get("priority", 1)
+        timeout = task_data.get("timeout", 300)
+        
+        if not task_type:
+            return {"error": "task_type required"}
+        
+        # Delegate task to swarm
+        result = await swarm.delegate_task(task_type, payload, priority, timeout)
+        
+        if result:
+            return {"status": "completed", "result": result}
+        else:
+            return {"status": "failed", "error": "Task delegation failed"}
+            
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@app.get(f"{API_PREFIX}/swarm/status")
+async def swarm_status() -> Dict[str, Any]:
+    """Get swarm coordination status and node information."""
+    try:
+        from hivemind.swarm_protocol import get_swarm_coordinator
+        
+        swarm = await get_swarm_coordinator()
+        if not swarm:
+            return {"swarm_enabled": False, "reason": "coordinator_unavailable"}
+        
+        # Get swarm state
+        if swarm.redis_client:
+            nodes_data = await swarm.redis_client.hgetall("swarm:nodes")
+            nodes = []
+            for node_id, node_json in nodes_data.items():
+                try:
+                    node_info = json.loads(node_json)
+                    nodes.append(node_info)
+                except Exception:
+                    continue
+            
+            return {
+                "swarm_enabled": True,
+                "node_id": swarm.node_id,
+                "active_nodes": len(nodes),
+                "nodes": nodes,
+                "active_tasks": len(swarm.active_tasks),
+                "capabilities": swarm.capabilities
+            }
+        else:
+            return {"swarm_enabled": False, "reason": "redis_unavailable"}
+            
+    except Exception as exc:
+        return {"swarm_enabled": False, "error": str(exc)}
+
+
+@app.get(f"{API_PREFIX}/providers")
+async def get_providers_status() -> Dict[str, Any]:
+    """Get status of all DS-Router providers."""
+    if ds_router is None:
+        return {"error": "DS-Router not available"}
+    
+    try:
+        provider_status = await ds_router.get_provider_status()
+        return {
+            "providers": provider_status,
+            "router_active": True,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@app.post(f"{API_PREFIX}/admin/budget/reset")
+async def reset_budget() -> Dict[str, str]:
+    """Reset daily budget counters (Admin only)."""
+    admin_token = os.environ.get("ADMIN_TOKEN")
+    if not admin_token:
+        return {"error": "Admin token not configured"}
+    
+    # In production, verify admin token from request headers
+    # For now, just reset the budget tracker
+    if ds_router is not None and hasattr(ds_router, '_budget_tracker'):
+        ds_router._budget_tracker.tokens_used = 0
+        ds_router._budget_tracker.usd_spent = 0.0
+        return {"status": "budget_reset"}
+    else:
+        return {"error": "Router or budget tracker not available"}
+
+
+@app.post(f"{API_PREFIX}/admin/router/set-thresholds")
+async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
+    """Set router confidence and support thresholds (Admin only)."""
+    admin_token = os.environ.get("ADMIN_TOKEN")
+    if not admin_token:
+        return {"error": "Admin token not configured"}
+    
+    if ds_router is None:
+        return {"error": "DS-Router not available"}
+    
+    try:
+        # Update thresholds
+        if "conf_threshold" in thresholds:
+            ds_router.config.conf_threshold = float(thresholds["conf_threshold"])
+        if "support_threshold" in thresholds:
+            ds_router.config.support_threshold = float(thresholds["support_threshold"])
+        if "max_cot_tokens" in thresholds:
+            ds_router.config.max_cot_tokens = int(thresholds["max_cot_tokens"])
+            
+        return {
+            "status": "updated",
+            "current_thresholds": {
+                "conf_threshold": ds_router.config.conf_threshold,
+                "support_threshold": ds_router.config.support_threshold,
+                "max_cot_tokens": ds_router.config.max_cot_tokens
+            }
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.get(f"{API_PREFIX}/autonomy/autopromote/preview")
 async def autopromote_preview() -> dict[str, Any]:
     if settings is None or adapter_manager is None:
@@ -511,13 +686,42 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     websockets.append(websocket)  # type: ignore
     try:
         while True:
-            await asyncio.sleep(10)
+            await asyncio.sleep(10) # Or listen to engine.bus for immediate events
             try:
                 if engine is not None:
                     summary = engine.get_state_summary()
                     await websocket.send_json({"type": "state_update", "payload": summary})
+                    
                     approvals = await _get_approvals()
                     await websocket.send_json({"type": "approvals_update", "payload": approvals})
+
+                    # --- Add custom events here ---
+                    # Example: Get recent self_extension memories
+                    recent_autonomy_events = [m for m in list(engine.memory)[-50:] if m.get("role") in ["self_extension", "approval_feedback"]]
+                    if recent_autonomy_events:
+                        await websocket.send_json({"type": "autonomy_events_recent", "payload": recent_autonomy_events})
+                    
+                    # RAG system status
+                    if retriever is not None:
+                        rag_status = {
+                            "is_ready": retriever.is_ready,
+                            "doc_count": len(retriever.doc_store) if retriever.doc_store else 0,
+                            "embedding_model": retriever.embed_model_id
+                        }
+                        await websocket.send_json({"type": "rag_status", "payload": rag_status})
+                    
+                    # Oracle/Arbiter system status
+                    oracle_status = {
+                        "deepseek_available": bool(os.getenv("DEEPSEEK_API_KEY")),
+                        "openai_available": bool(os.getenv("OPENAI_API_KEY")),
+                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False) if settings else False
+                    }
+                    await websocket.send_json({"type": "oracle_status", "payload": oracle_status})
+                    
+                    # You could also listen to engine.bus.get_nowait() or a dedicated queue for events
+                    # and immediately broadcast them.
+                    # -----------------------------
+
             except Exception:
                 pass
     except WebSocketDisconnect:
@@ -557,7 +761,7 @@ async def train() -> dict[str, str]:
 
 
 @app.post(f"{API_PREFIX}/chat")
-async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
+async def chat(q: str, request: Request) -> dict[str, Any]:
     q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
@@ -576,10 +780,10 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
 
     context_txt = ""
     prompt = q
-    if retriever is not None and format_context is not None:
+    if retriever is not None:
         try:
-            docs = retriever.search(q, k=5)  # type: ignore[operator]
-            context_txt = format_context(docs)  # type: ignore[operator]
+            docs = await retriever.search(q, k=5)  # Ensure await is used here
+            context_txt = retriever.format_context(docs)  # Use retriever's format_context method
             prompt = (
                 f"[CONTEXT]\n{context_txt}\n\n"
                 f"[QUESTION]\n{q}\n\n"
@@ -589,101 +793,156 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
             prompt = q
 
     answer = "Placeholder: HiveMind unavailable"
-    policy_used = None
+    provider_used = None
+    confidence = None
+    escalated = False
 
-    # Model routing: choose roles object
-    roles_obj = text_roles
-    try:
-        routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
-        chosen_model = None
-        ctx: dict[str, Any] = {}
-        if resource_estimator is not None:
-            try:
-                ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer", "large")
-            except Exception:
-                pass
-        if intent_modeler is not None:
-            try:
-                ctx["operator_intent"] = intent_modeler.current_intent
-            except Exception:
-                pass
-        if engine is not None:
-            try:
-                ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
-            except Exception:
-                pass
-        ctx["planner_hints"] = planner_hints or []
-        ctx["reasoning_steps"] = reasoning_steps or ""
-        # Cognitive map snapshot (if available)
+    # Use DS-Router if available, otherwise fallback to legacy routing
+    if ds_router is not None and GenRequest is not None:
         try:
-            import json as __json
-            import pathlib as __pathlib
-            runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
-            snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
-            if snap_path.exists():
-                with open(snap_path, "r", encoding="utf-8") as __f:
-                    ctx["cognitive_map"] = __json.load(__f)
-        except Exception:
-            pass
-        decision = None
-        if strategy_selector is not None:
-            try:
-                decision = await strategy_selector.decide(prompt, ctx)
-                policy_used = decision.get("strategy") if decision else None
-                if decision and decision.get("reason"):
-                    request.scope["selector_reason"] = decision["reason"]
-                chosen_model = decision.get("model") if decision else None
-                if decision and decision.get("chosen_model"):
-                    request.scope["chosen_model_alias"] = decision["chosen_model"]
-            except Exception:
-                decision = None
-        if routing:
-            if not chosen_model:
-                short = len(q) < 160 and not context_txt
-                chosen_model = "small" if short else "large"
-            # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
-            if chosen_model == "small" and text_roles_small is not None:
-                roles_obj = text_roles_small
-            elif chosen_model == "large" and text_roles_large is not None:
-                roles_obj = text_roles_large
-    except Exception:
-        roles_obj = text_roles
-
-    if roles_obj is not None and judge is not None and settings is not None:
-        try:
-            policy = policy_used
-            if not policy and decide_policy is not None:
-                policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
-            if policy == "committee":
-                tasks: List[str] = await asyncio.gather(*[
-                    roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                    for _ in range(settings.committee_k)
-                ])
-                rankings = await judge.rank(tasks, prompt=prompt)  # type: ignore[attr-defined]
-                answer = judge.merge(tasks, rankings)  # type: ignore[attr-defined]
-            elif policy == "debate":
-                a1 = await roles_obj.architect(prompt)  # type: ignore[attr-defined]
-                a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
-                answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
-            elif policy == "clone_dispatch":
-                answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-            elif policy == "self_extension_prompt":
-                answer = "Self‑extension requests are not supported by this endpoint"
-            elif policy == "cross_modal_synthesis":
-                img_desc = context_txt if context_txt else None
-                try:
-                    answer = await roles_obj.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
-                except Exception as exc:
-                    answer = f"Error generating cross‑modal answer: {exc}"
-            else:
-                answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-        except httpx.RequestError as exc:
-            answer = f"Error communicating with the model endpoint: {exc}"
-        except (KeyError, IndexError) as exc:
-            answer = f"Error processing model response or policy: {exc}"
+            # Create DS-Router request
+            gen_request = GenRequest(
+                prompt=prompt,
+                system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
+                max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
+                temperature=0.7
+            )
+            
+            # Generate using DS-Router
+            gen_response = await ds_router.generate(gen_request)
+            
+            answer = gen_response.content
+            provider_used = gen_response.provider
+            confidence = gen_response.confidence
+            escalated = gen_response.metadata.get("escalated", False)
+            
+            # Add routing info to request scope for metrics
+            request.scope["provider_used"] = provider_used
+            request.scope["router_confidence"] = confidence
+            request.scope["escalated"] = escalated
+            
         except Exception as exc:
-            answer = f"An unexpected error occurred during answer generation: {exc}"
+            answer = f"Error with DS-Router: {exc}. Falling back to legacy routing."
+            
+    # Legacy routing fallback if DS-Router not available or failed
+    if provider_used is None:
+        policy_used = None
+        roles_obj = text_roles
+        try:
+            routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
+            chosen_model = None
+            ctx: dict[str, Any] = {}
+            if resource_estimator is not None:
+                try:
+                    ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer", "large")
+                except Exception:
+                    pass
+            if intent_modeler is not None:
+                try:
+                    ctx["operator_intent"] = intent_modeler.current_intent
+                except Exception:
+                    pass
+            if engine is not None:
+                try:
+                    ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
+                except Exception:
+                    pass
+            ctx["planner_hints"] = planner_hints or []
+            ctx["reasoning_steps"] = reasoning_steps or ""
+            # Cognitive map snapshot (if available)
+            try:
+                import json as __json
+                import pathlib as __pathlib
+                runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
+                snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
+                if snap_path.exists():
+                    with open(snap_path, "r", encoding="utf-8") as __f:
+                        ctx["cognitive_map"] = __json.load(__f)
+            except Exception:
+                pass
+            decision = None
+            if strategy_selector is not None:
+                try:
+                    decision = await strategy_selector.decide(prompt, ctx)
+                    policy_used = decision.get("strategy") if decision else None
+                    if decision and decision.get("reason"):
+                        request.scope["selector_reason"] = decision["reason"]
+                    chosen_model = decision.get("model") if decision else None
+                    if decision and decision.get("chosen_model"):
+                        request.scope["chosen_model_alias"] = decision["chosen_model"]
+                except Exception:
+                    decision = None
+            if routing:
+                if not chosen_model:
+                    short = len(q) < 160 and not context_txt
+                    chosen_model = "small" if short else "large"
+                # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
+                if chosen_model == "small" and text_roles_small is not None:
+                    roles_obj = text_roles_small
+                elif chosen_model == "large" and text_roles_large is not None:
+                    roles_obj = text_roles_large
+        except Exception:
+            roles_obj = text_roles
+
+        if roles_obj is not None and judge is not None and settings is not None:
+            try:
+                policy = policy_used
+                if not policy and decide_policy is not None:
+                    policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
+                if policy == "committee":
+                    tasks: List[str] = await asyncio.gather(*[
+                        roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                        for _ in range(settings.committee_k)
+                    ])
+                    rankings = await judge.rank(tasks, prompt=prompt)  # type: ignore[attr-defined]
+                    answer = judge.merge(tasks, rankings)  # type: ignore[attr-defined]
+                elif policy == "debate":
+                    a1 = await roles_obj.architect(prompt)  # type: ignore[attr-defined]
+                    a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                    rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
+                    answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
+                elif policy == "ethical_deliberation":
+                    # Ethical Synthesizer: Handle ethical dilemmas
+                    if engine is not None:
+                        ethical_analysis = decision.get("ethical_analysis", {}) if decision else {}
+                        dilemma_type = ethical_analysis.get("dilemma_type", "unknown")
+                        severity = ethical_analysis.get("severity", "medium")
+                        
+                        # Create ethical deliberation proposal
+                        ethical_proposal = f"""ETHICAL DILEMMA DETECTED: {dilemma_type.upper()}
+Severity: {severity}
+Original Query: {q}
+Detected Issues: {', '.join(ethical_analysis.get('all_detected', []))}
+
+This query has been flagged for ethical review. Please provide guidance on how to respond appropriately while maintaining ethical standards. [action:ethical_review]"""
+                        
+                        # Add to approval queue instead of answering directly
+                        engine.add_memory("approval", ethical_proposal)
+                        answer = f"This request requires ethical review due to potential {dilemma_type} concerns. It has been submitted for operator guidance."
+                        request.scope["ethical_flag"] = True
+                        request.scope["dilemma_type"] = dilemma_type
+                    else:
+                        answer = "This request contains potentially sensitive content and cannot be processed automatically."
+                elif policy == "clone_dispatch":
+                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                elif policy == "self_extension_prompt":
+                    answer = "Self‑extension requests are not supported by this endpoint"
+                elif policy == "cross_modal_synthesis":
+                    img_desc = context_txt if context_txt else None
+                    try:
+                        answer = await roles_obj.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
+                    except Exception as exc:
+                        answer = f"Error generating cross‑modal answer: {exc}"
+                else:
+                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
+                    
+                provider_used = "legacy_routing"
+            except httpx.RequestError as exc:
+                answer = f"Error communicating with the model endpoint: {exc}"
+            except (KeyError, IndexError) as exc:
+                answer = f"Error processing model response or policy: {exc}"
+            except Exception as exc:
+                answer = f"An unexpected error occurred during answer generation: {exc}"
 
     engine.add_memory("assistant", answer)
 
@@ -696,9 +955,17 @@ async def chat(q: str, request: Request) -> dict[str, str | dict[str, str]]:
     except Exception:
         pass
 
-    result: dict[str, str | dict[str, str]] = {"answer": answer}
-    if policy_used:
-        result["reasoning_strategy"] = str(policy_used)
+    result: dict[str, Any] = {"answer": answer}
+    
+    # Add DS-Router specific information
+    if provider_used:
+        result["provider"] = provider_used
+    if confidence is not None:
+        result["confidence"] = confidence
+    if escalated:
+        result["escalated"] = escalated
+    
+    # Legacy information
     try:
         sr = request.scope.get("selector_reason")
         if sr:
