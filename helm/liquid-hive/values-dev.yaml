@@ -18,6 +18,13 @@ config:
     mongoUrl: "mongodb://mongo:27017/liquid-hive-dev"
     redisUrl: "redis://redis:6379"
     neo4jUrl: "bolt://neo4j:7687"
+    # Optional integrations (uncomment to enable)
+    # qdrantUrl: "http://qdrant:6333"
+    # minioEndpoint: "http://minio:9000"
+    # minioAccessKey: "minio"
+    # minioSecretKey: "minio123"
+    # minioBucket: "web-raw"
+    # minioSecure: false
   ai:
     vllmEndpoint: "http://vllm:8000"
     vllmApiKey: "dev-key"
