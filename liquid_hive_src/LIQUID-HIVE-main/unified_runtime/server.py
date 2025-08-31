@@ -89,7 +89,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.8")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -647,7 +647,7 @@ async def autopromote_preview() -> dict[str, Any]:
             continue
         r_active = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{active}"}}[{window}]))')) or 0.0
         r_chall = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{challenger}"}}[{window}]))')) or 0.0
-        if (r_active * 300) < min_samples or (r_chall * 300) < min_samples:
+        if (r_active * 300) &lt; min_samples or (r_chall * 300) &lt; min_samples:
             continue
         p95_a = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{active}"}}[{window}])) by (le))')) or 9e9
         p95_c = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{challenger}"}}[{window}])) by (le))')) or 9e9
@@ -657,8 +657,8 @@ async def autopromote_preview() -> dict[str, Any]:
         except Exception:
             cost_small = {"predicted_cost_small": 1.0}
             cost_large = {"predicted_cost_large": 1.0}
-        better_latency = p95_c <= (p95_a * 0.9)
-        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (cost_small.get("predicted_cost_small", 1.0))
+        better_latency = p95_c &lt;= (p95_a * 0.9)
+        better_cost = (cost_large.get("predicted_cost_large", 1.0)) &lt;= (cost_small.get("predicted_cost_small", 1.0))
         if better_latency or better_cost:
             out.append({
                 "role": role,
@@ -762,11 +762,15 @@ async def train() -> dict[str, str]:
 
 @app.post(f"{API_PREFIX}/chat")
 async def chat(q: str, request: Request) -> dict[str, Any]:
+    """Unified chat endpoint relying exclusively on DS-Router.
+    The router encapsulates safety (Pre/Post guards), routing, confidence, and fallbacks.
+    """
     q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
     engine.add_memory("user", q)
 
+    # Optional planning hints (non-blocking)
     planner_hints = None
     reasoning_steps = None
     if plan_once is not None:
@@ -778,12 +782,13 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             planner_hints = None
             reasoning_steps = None
 
+    # RAG enrichment
     context_txt = ""
     prompt = q
     if retriever is not None:
         try:
-            docs = await retriever.search(q, k=5)  # Ensure await is used here
-            context_txt = retriever.format_context(docs)  # Use retriever's format_context method
+            docs = await retriever.search(q, k=5)
+            context_txt = retriever.format_context(docs)
             prompt = (
                 f"[CONTEXT]\n{context_txt}\n\n"
                 f"[QUESTION]\n{q}\n\n"
@@ -792,157 +797,43 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
         except Exception:
             prompt = q
 
-    answer = "Placeholder: HiveMind unavailable"
+    # DS-Router only
+    if ds_router is None or GenRequest is None:
+        answer = "Router unavailable"
+        engine.add_memory("assistant", answer)
+        return {"answer": answer}
+
     provider_used = None
     confidence = None
     escalated = False
 
-    # Use DS-Router if available, otherwise fallback to legacy routing
-    if ds_router is not None and GenRequest is not None:
-        try:
-            # Create DS-Router request
-            gen_request = GenRequest(
-                prompt=prompt,
-                system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
-                max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
-                temperature=0.7
-            )
-            
-            # Generate using DS-Router
-            gen_response = await ds_router.generate(gen_request)
-            
-            answer = gen_response.content
-            provider_used = gen_response.provider
-            confidence = gen_response.confidence
-            escalated = gen_response.metadata.get("escalated", False)
-            
-            # Add routing info to request scope for metrics
-            request.scope["provider_used"] = provider_used
-            request.scope["router_confidence"] = confidence
-            request.scope["escalated"] = escalated
-            
-        except Exception as exc:
-            answer = f"Error with DS-Router: {exc}. Falling back to legacy routing."
-            
-    # Legacy routing fallback if DS-Router not available or failed
-    if provider_used is None:
-        policy_used = None
-        roles_obj = text_roles
-        try:
-            routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
-            chosen_model = None
-            ctx: dict[str, Any] = {}
-            if resource_estimator is not None:
-                try:
-                    ctx["estimated_cost"] = resource_estimator.estimate_cost("implementer", "large")
-                except Exception:
-                    pass
-            if intent_modeler is not None:
-                try:
-                    ctx["operator_intent"] = intent_modeler.current_intent
-                except Exception:
-                    pass
-            if engine is not None:
-                try:
-                    ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
-                except Exception:
-                    pass
-            ctx["planner_hints"] = planner_hints or []
-            ctx["reasoning_steps"] = reasoning_steps or ""
-            # Cognitive map snapshot (if available)
-            try:
-                import json as __json
-                import pathlib as __pathlib
-                runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
-                snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
-                if snap_path.exists():
-                    with open(snap_path, "r", encoding="utf-8") as __f:
-                        ctx["cognitive_map"] = __json.load(__f)
-            except Exception:
-                pass
-            decision = None
-            if strategy_selector is not None:
-                try:
-                    decision = await strategy_selector.decide(prompt, ctx)
-                    policy_used = decision.get("strategy") if decision else None
-                    if decision and decision.get("reason"):
-                        request.scope["selector_reason"] = decision["reason"]
-                    chosen_model = decision.get("model") if decision else None
-                    if decision and decision.get("chosen_model"):
-                        request.scope["chosen_model_alias"] = decision["chosen_model"]
-                except Exception:
-                    decision = None
-            if routing:
-                if not chosen_model:
-                    short = len(q) < 160 and not context_txt
-                    chosen_model = "small" if short else "large"
-                # chosen_model from selector: "small" or "large" mapped to Courier/Master alias in request.scope
-                if chosen_model == "small" and text_roles_small is not None:
-                    roles_obj = text_roles_small
-                elif chosen_model == "large" and text_roles_large is not None:
-                    roles_obj = text_roles_large
-        except Exception:
-            roles_obj = text_roles
+    try:
+        gen_request = GenRequest(
+            prompt=prompt,
+            system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
+            max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
+            temperature=0.7
+        )
+        gen_response = await ds_router.generate(gen_request)
+        answer = gen_response.content
+        provider_used = gen_response.provider
+        confidence = gen_response.confidence
+        escalated = gen_response.metadata.get("escalated", False)
 
-        if roles_obj is not None and judge is not None and settings is not None:
-            try:
-                policy = policy_used
-                if not policy and decide_policy is not None:
-                    policy = decide_policy(task_type="text", prompt=prompt)  # type: ignore[operator]
-                if policy == "committee":
-                    tasks: List[str] = await asyncio.gather(*[
-                        roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                        for _ in range(settings.committee_k)
-                    ])
-                    rankings = await judge.rank(tasks, prompt=prompt)  # type: ignore[attr-defined]
-                    answer = judge.merge(tasks, rankings)  # type: ignore[attr-defined]
-                elif policy == "debate":
-                    a1 = await roles_obj.architect(prompt)  # type: ignore[attr-defined]
-                    a2 = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                    rankings = await judge.rank([a1, a2], prompt=prompt)  # type: ignore[attr-defined]
-                    answer = judge.select([a1, a2], rankings)  # type: ignore[attr-defined]
-                elif policy == "ethical_deliberation":
-                    # Ethical Synthesizer: Handle ethical dilemmas
-                    if engine is not None:
-                        ethical_analysis = decision.get("ethical_analysis", {}) if decision else {}
-                        dilemma_type = ethical_analysis.get("dilemma_type", "unknown")
-                        severity = ethical_analysis.get("severity", "medium")
-                        
-                        # Create ethical deliberation proposal
-                        ethical_proposal = f"""ETHICAL DILEMMA DETECTED: {dilemma_type.upper()}
-Severity: {severity}
-Original Query: {q}
-Detected Issues: {', '.join(ethical_analysis.get('all_detected', []))}
+        # Annotate request scope for metrics
+        request.scope["provider_used"] = provider_used
+        request.scope["router_confidence"] = confidence
+        request.scope["escalated"] = escalated
 
-This query has been flagged for ethical review. Please provide guidance on how to respond appropriately while maintaining ethical standards. [action:ethical_review]"""
-                        
-                        # Add to approval queue instead of answering directly
-                        engine.add_memory("approval", ethical_proposal)
-                        answer = f"This request requires ethical review due to potential {dilemma_type} concerns. It has been submitted for operator guidance."
-                        request.scope["ethical_flag"] = True
-                        request.scope["dilemma_type"] = dilemma_type
-                    else:
-                        answer = "This request contains potentially sensitive content and cannot be processed automatically."
-                elif policy == "clone_dispatch":
-                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                elif policy == "self_extension_prompt":
-                    answer = "Self‑extension requests are not supported by this endpoint"
-                elif policy == "cross_modal_synthesis":
-                    img_desc = context_txt if context_txt else None
-                    try:
-                        answer = await roles_obj.fusion_agent(prompt, image_description=img_desc)  # type: ignore[attr-defined]
-                    except Exception as exc:
-                        answer = f"Error generating cross‑modal answer: {exc}"
-                else:
-                    answer = await roles_obj.implementer(prompt)  # type: ignore[attr-defined]
-                    
-                provider_used = "legacy_routing"
-            except httpx.RequestError as exc:
-                answer = f"Error communicating with the model endpoint: {exc}"
-            except (KeyError, IndexError) as exc:
-                answer = f"Error processing model response or policy: {exc}"
-            except Exception as exc:
-                answer = f"An unexpected error occurred during answer generation: {exc}"
+    except Exception as exc:
+        # Trust DS-Router's internal fallback chain; if it still fails, return a resilient static message
+        answer = (
+            "I apologize, but I'm currently unable to process your request due to temporary "
+            "system limitations. Please try again shortly."
+        )
+        provider_used = "system_fallback"
+        confidence = 0.0
+        escalated = False
 
     engine.add_memory("assistant", answer)
 
@@ -956,25 +847,12 @@ This query has been flagged for ethical review. Please provide guidance on how t
         pass
 
     result: dict[str, Any] = {"answer": answer}
-    
-    # Add DS-Router specific information
     if provider_used:
         result["provider"] = provider_used
     if confidence is not None:
         result["confidence"] = confidence
     if escalated:
         result["escalated"] = escalated
-    
-    # Legacy information
-    try:
-        sr = request.scope.get("selector_reason")
-        if sr:
-            result["selector_reason"] = sr
-        cm = request.scope.get("chosen_model_alias")
-        if cm:
-            result["chosen_model"] = cm
-    except Exception:
-        pass
     if context_txt:
         result["context"] = context_txt
     if planner_hints:
@@ -999,7 +877,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
         candidates = await vl_roles.vl_committee(question, image_data, k=2)  # type: ignore[attr-defined]
         rankings = await judge.rank_vision(question, image_data, candidates)  # type: ignore[attr-defined]
         wid = int(rankings.get("winner_id", 0))
-        answer = candidates[wid] if 0 <= wid < len(candidates) else candidates[0]
+        answer = candidates[wid] if 0 &lt;= wid &lt; len(candidates) else candidates[0]
         critique = rankings.get("critique")
         if grounding_required:
             grounding = vl_roles.grounding_validator(question, image_data, answer)  # type: ignore[attr-defined]
