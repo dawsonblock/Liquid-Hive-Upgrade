@@ -107,8 +107,8 @@ def _has_consent(scope: str, domain: str) -> bool:
 
 @router.post("/consent/request")
 async def consent_request(payload: Dict[str, Any]) -> Dict[str, Any]:
-    scope = str(payload.get("scope", "")).strip()
-    target = str(payload.get("target", "")).strip()
+    scope = _normalize_scope(str(payload.get("scope", "")))
+    target = _normalize_target(str(payload.get("target", "")))
     ttl = int(payload.get("ttl", 600))
     if not scope or not target:
         raise HTTPException(status_code=400, detail="invalid_scope_or_target")
