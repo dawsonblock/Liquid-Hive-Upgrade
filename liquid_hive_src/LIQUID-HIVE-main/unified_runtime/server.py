@@ -98,7 +98,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.11")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.12")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -136,15 +136,10 @@ websockets: list[WebSocket] = []
 
 @app.on_event("startup")
 async def startup() -> None:
-    """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router
-    
-    # Initialize settings
     if Settings is not None:
         settings = Settings()
-    
-    # Initialize DS-Router
     if DSRouter is not None and RouterConfig is not None:
         router_config = RouterConfig.from_env()
         ds_router = DSRouter(router_config)
@@ -152,29 +147,21 @@ async def startup() -> None:
             asyncio.get_event_loop().create_task(ds_router.get_provider_status())
         except Exception:
             pass
-        
-    # Initialize retriever
     if Retriever is not None and settings is not None:
         try:
             retriever = Retriever(settings.rag_index, settings.embed_model)
         except Exception:
             retriever = None
-    
-    # Initialize engine (optional)
     if CapsuleEngine is not None:
         try:
             engine = CapsuleEngine()
         except Exception:
             engine = None
-    
-    # Initialize text roles
     if TextRoles is not None and settings is not None:
         try:
             text_roles = TextRoles(settings)
         except Exception:
             text_roles = None
-    
-    # Initialize trust modeler with default policy if available
     if ConfidenceModeler is not None and TrustPolicy is not None:
         try:
             enabled = bool(getattr(settings, "TRUSTED_AUTONOMY_ENABLED", False)) if settings else False
@@ -193,59 +180,8 @@ async def startup() -> None:
             confidence_modeler = None
 
 
-def _env_write(key: str, value: str) -> None:
-    try:
-        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-        lines: List[str] = []
-        if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
-                lines = f.read().splitlines()
-        found = False
-        new_lines: List[str] = []
-        for line in lines:
-            if line.strip().startswith(f"{key}="):
-                new_lines.append(f"{key}={value}")
-                found = True
-            else:
-                new_lines.append(line)
-        if not found:
-            new_lines.append(f"{key}={value}")
-        with open(env_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(new_lines) + "\n")
-    except Exception:
-        pass
-
-
-def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict]:
-    if not base_url:
-        return None
-    try:
-        params = _u.urlencode({"query": promql})
-        with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
-            data = _json.loads(r.read().decode())
-            if data.get("status") == "success":
-                return data.get("data")
-    except Exception:
-        return None
-    return None
-
-
-def _scalar(data: Optional[dict]) -> Optional[float]:
-    try:
-        if not data:
-            return None
-        res = data.get("result", [])
-        if not res:
-            return None
-        v = res[0].get("value", [None, None])[1]
-        return float(v) if v is not None else None
-    except Exception:
-        return None
-
-
 @app.get(f"{API_PREFIX}/healthz")
 async def healthz() -> dict[str, Any]:
-    """Expose readiness that reflects router availability, not just engine."""
     return {
         "ok": bool(ds_router is not None),
         "engine_ready": bool(engine is not None),
@@ -451,7 +387,12 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
             temperature=0.7
         )
-        chat_timeout = float(os.getenv("CHAT_TIMEOUT_SECS", "15"))
+        # Compute chat timeout allowing R1 if escalation is enabled
+        base_chat_timeout = float(os.getenv("CHAT_TIMEOUT_SECS", "15"))
+        r1_timeout = float(os.getenv("R1_TIMEOUT_SECS", "30"))
+        enable_r1 = str(os.getenv("ENABLE_R1_ESCALATION", "false")).lower() in ("1", "true", "yes")
+        chat_timeout = max(base_chat_timeout, r1_timeout + 5.0) if enable_r1 else base_chat_timeout
+
         gen_response = await asyncio.wait_for(ds_router.generate(gen_request), timeout=chat_timeout)
         answer = gen_response.content
         provider_used = gen_response.provider
