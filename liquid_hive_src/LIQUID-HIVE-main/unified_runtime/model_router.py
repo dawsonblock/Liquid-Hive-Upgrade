@@ -62,6 +62,7 @@ class RouterConfig:
             budget_enforcement=os.getenv("BUDGET_ENFORCEMENT", "hard"),
             deepseek_api_key=os.getenv("DEEPSEEK_API_KEY"),
             hf_token=os.getenv("HF_TOKEN"),
+            enable_r1_escalation=str(os.getenv("ENABLE_R1_ESCALATION", "false")).lower() in ("1", "true", "yes"),
             provider_timeout_secs=float(os.getenv("PROVIDER_TIMEOUT_SECS", "8")),
             health_timeout_secs=float(os.getenv("PROVIDER_HEALTH_TIMEOUT_SECS", "8")),
             pre_guard_timeout_secs=float(os.getenv("PRE_GUARD_TIMEOUT_SECS", "1.0")),
