@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 import yaml
+import io
 from fastapi import APIRouter, HTTPException, Request
 from prometheus_client import Counter
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
