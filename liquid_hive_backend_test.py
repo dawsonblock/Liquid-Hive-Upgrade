@@ -14,8 +14,8 @@ import sys
 from typing import Dict, Any, Optional
 
 class LiquidHiveAPITester:
-    def __init__(self, base_url: str = "/api"):
-        # Use the frontend environment variable for consistency
+    def __init__(self, base_url: str = "http://localhost:8001/api"):
+        # Use the correct backend URL
         self.base_url = base_url
         self.session = requests.Session()
         self.session.headers.update({'Content-Type': 'application/json'})
