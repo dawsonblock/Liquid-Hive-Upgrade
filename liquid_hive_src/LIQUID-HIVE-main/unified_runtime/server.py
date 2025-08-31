@@ -794,9 +794,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     The router encapsulates safety (Pre/Post guards), routing, confidence, and fallbacks.
     """
     q = sanitize_input(q)
-    if engine is None:
-        return {"answer": "Engine not ready"}
-    engine.add_memory("user", q)
+    # Proceed even if engine is not yet initialized; router-only mode
+    if engine is not None:
+        engine.add_memory("user", q)
 
     # Optional planning hints (non-blocking)
     planner_hints = None
