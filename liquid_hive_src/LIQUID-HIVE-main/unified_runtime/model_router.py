@@ -46,6 +46,7 @@ class RouterConfig:
 
     # Timeouts (seconds)
     provider_timeout_secs: float = 8.0
+    r1_timeout_secs: float = 30.0
     health_timeout_secs: float = 8.0
     pre_guard_timeout_secs: float = 1.0
     post_guard_timeout_secs: float = 1.5
@@ -64,6 +65,7 @@ class RouterConfig:
             hf_token=os.getenv("HF_TOKEN"),
             enable_r1_escalation=str(os.getenv("ENABLE_R1_ESCALATION", "false")).lower() in ("1", "true", "yes"),
             provider_timeout_secs=float(os.getenv("PROVIDER_TIMEOUT_SECS", "8")),
+            r1_timeout_secs=float(os.getenv("R1_TIMEOUT_SECS", "30")),
             health_timeout_secs=float(os.getenv("PROVIDER_HEALTH_TIMEOUT_SECS", "8")),
             pre_guard_timeout_secs=float(os.getenv("PRE_GUARD_TIMEOUT_SECS", "1.0")),
             post_guard_timeout_secs=float(os.getenv("POST_GUARD_TIMEOUT_SECS", "1.5")),
@@ -168,12 +170,11 @@ class DSRouter:
             # Fallback to local provider
             response = await self._fallback_generate(sanitized_request, str(e))
         
-        # Step 5: Confidence assessment and escalation
-        if routing_decision.provider != "qwen_cpu":  # Skip confidence check for fallback
+        # Step 5: Confidence assessment and potential escalation
+        if routing_decision.provider != "qwen_cpu":
             confidence = await self._assess_confidence(response, sanitized_request)
             response.confidence = confidence
             
-            # Escalate if confidence too low and not already using R1
             if (self.config.enable_r1_escalation and confidence < self.config.conf_threshold and 
                 routing_decision.provider != "deepseek_r1"):
                 
@@ -213,73 +214,43 @@ class DSRouter:
     
     async def _determine_routing(self, request: GenRequest) -> 'RoutingDecision':
         """Determine which provider to use based on request characteristics."""
-        
-        # Check if this is a hard problem
+        # Hard detection
         is_hard = self._is_hard_problem(request.prompt)
-        
-        # TODO: Implement RAG support scoring
-        # support_score = await self._get_rag_support_score(request.prompt)
-        support_score = 0.7  # Mock for now
-        
+        support_score = 0.7  # Placeholder; can be wired to real RAG
         if support_score < self.config.support_threshold:
             is_hard = True
-        
         if not is_hard:
-            return RoutingDecision(
-                provider="deepseek_chat",
-                reasoning="simple_query",
-                cot_budget=None
-            )
+            return RoutingDecision(provider="deepseek_chat", reasoning="simple_query", cot_budget=None)
         else:
-            return RoutingDecision(
-                provider="deepseek_thinking", 
-                reasoning="complex_query",
-                cot_budget=min(self.config.max_cot_tokens, 3000)
-            )
+            return RoutingDecision(provider="deepseek_thinking", reasoning="complex_query", cot_budget=min(self.config.max_cot_tokens, 3000))
     
     def _is_hard_problem(self, prompt: str) -> bool:
-        """Detect if a prompt represents a hard problem requiring reasoning."""
         for pattern in self._hard_patterns:
             if pattern.search(prompt):
                 return True
         return False
     
     async def _generate_with_routing(self, request: GenRequest, decision: 'RoutingDecision') -> GenResponse:
-        """Generate response using the specified routing decision."""
         provider = self.providers.get(decision.provider)
         if not provider:
             raise ValueError(f"Provider {decision.provider} not available")
-        
-        # Modify request for CoT budget if applicable
         if decision.cot_budget:
             request.cot_budget = decision.cot_budget
-        
+        # Use longer timeout for R1
+        timeout_secs = self.config.r1_timeout_secs if decision.provider == "deepseek_r1" else self.config.provider_timeout_secs
         try:
-            response = await asyncio.wait_for(
-                provider.generate(request),
-                timeout=self.config.provider_timeout_secs,
-            )
+            response = await asyncio.wait_for(provider.generate(request), timeout=timeout_secs)
         except asyncio.TimeoutError:
-            raise TimeoutError(f"Provider {decision.provider} timed out")
-        
-        response.metadata.update({
-            "routing_decision": decision.provider,
-            "routing_reasoning": decision.reasoning
-        })
-        
+            raise TimeoutError(f"Provider {decision.provider} timed out after {timeout_secs}s")
+        response.metadata.update({"routing_decision": decision.provider, "routing_reasoning": decision.reasoning})
         return response
     
     async def _fallback_generate(self, request: GenRequest, error: str) -> GenResponse:
-        """Generate response using local fallback provider."""
         qwen_provider = self.providers.get("qwen_cpu")
         if qwen_provider:
             try:
-                response = await asyncio.wait_for(
-                    qwen_provider.generate(request),
-                    timeout=self.config.provider_timeout_secs,
-                )
+                response = await asyncio.wait_for(qwen_provider.generate(request), timeout=self.config.provider_timeout_secs)
             except Exception as e:
-                # Ultimate fallback if even local provider fails or times out
                 return GenResponse(
                     content="I apologize, but I'm currently unable to process your request due to system limitations.",
                     provider="system_fallback",
@@ -288,7 +259,6 @@ class DSRouter:
             response.metadata["fallback_reason"] = error
             return response
         else:
-            # Ultimate fallback
             return GenResponse(
                 content="I apologize, but I'm currently unable to process your request due to system limitations.",
                 provider="system_fallback",
@@ -296,40 +266,27 @@ class DSRouter:
             )
     
     async def _assess_confidence(self, response: GenResponse, request: GenRequest) -> float:
-        """Assess confidence in the generated response."""
-        # Simple heuristic-based confidence assessment
-        # In production, this could use a dedicated confidence model
-        
-        confidence = 0.7  # Base confidence
-        
-        # Adjust based on response length
+        confidence = 0.7
         if len(response.content) < 50:
             confidence -= 0.2
         elif len(response.content) > 500:
             confidence += 0.1
-        
-        # Adjust based on provider
         if response.provider.startswith("deepseek_r1"):
             confidence += 0.2
         elif response.provider.startswith("deepseek_thinking"):
             confidence += 0.1
         elif response.provider.startswith("qwen_cpu"):
             confidence -= 0.3
-        
-        # Check for uncertainty indicators
         uncertainty_markers = ["i'm not sure", "i don't know", "uncertain", "maybe", "possibly"]
         content_lower = response.content.lower()
         for marker in uncertainty_markers:
             if marker in content_lower:
                 confidence -= 0.15
                 break
-        
         return max(0.0, min(1.0, confidence))
     
     def _create_blocked_response(self, reason: str, start_time: float) -> GenResponse:
-        """Create response for blocked requests."""
         latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-        
         return GenResponse(
             content="I cannot provide a response to this request due to safety or policy restrictions.",
             provider="safety_filter",
@@ -338,9 +295,7 @@ class DSRouter:
         )
     
     def _create_budget_exceeded_response(self, budget_status: 'BudgetStatus', start_time: float) -> GenResponse:
-        """Create response for budget exceeded scenarios."""
         latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-        
         return GenResponse(
             content=f"Daily budget limit has been exceeded. Service will resume at {budget_status.next_reset_utc}.",
             provider="budget_limiter",
@@ -353,9 +308,7 @@ class DSRouter:
             }
         )
     
-    async def _audit_log(self, request: GenRequest, response: GenResponse, routing: 'RoutingDecision', 
-                        pre_guard=None, post_guard=None):
-        """Log audit information for compliance and monitoring."""
+    async def _audit_log(self, request: GenRequest, response: GenResponse, routing: 'RoutingDecision', pre_guard=None, post_guard=None):
         audit_entry = {
             "timestamp": datetime.utcnow().isoformat(),
             "input_sha256": self._hash_content(request.prompt),
@@ -369,24 +322,17 @@ class DSRouter:
                 "pre_guard": getattr(pre_guard, 'status', 'disabled') if pre_guard else "disabled",
                 "post_guard": getattr(post_guard, 'status', 'disabled') if post_guard else "disabled"
             },
-            "tokens": {
-                "prompt": response.prompt_tokens,
-                "output": response.output_tokens
-            },
+            "tokens": {"prompt": response.prompt_tokens, "output": response.output_tokens},
             "cost_usd": response.cost_usd,
             "latency_ms": response.latency_ms
         }
-        
-        # In production, send to audit log service
         self.logger.info("Audit log", extra={"audit": audit_entry})
     
     def _hash_content(self, content: str) -> str:
-        """Create SHA256 hash of content for audit logging."""
         import hashlib
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
     async def get_provider_status(self) -> Dict[str, Any]:
-        """Get status of all providers."""
         status = {}
         for name, provider in self.providers.items():
             try:
@@ -394,45 +340,34 @@ class DSRouter:
                 status[name] = health
             except Exception as e:
                 status[name] = {"status": "error", "error": str(e)}
-        
         return status
 
 @dataclass
 class RoutingDecision:
-    """Represents a routing decision made by the router."""
     provider: str
     reasoning: str
     cot_budget: Optional[int] = None
 
 @dataclass 
 class BudgetStatus:
-    """Budget tracking status."""
     exceeded: bool
     tokens_used: int
     usd_spent: float
     next_reset_utc: str
 
 class BudgetTracker:
-    """Tracks daily budget usage."""
-    
     def __init__(self, config: RouterConfig):
         self.config = config
         self.tokens_used = 0
         self.usd_spent = 0.0
         
     async def check_budget(self) -> BudgetStatus:
-        """Check current budget status."""
-        # In production, this would query Redis for daily counters
-        
         exceeded = (
             self.tokens_used >= self.config.max_oracle_tokens_per_day or
             self.usd_spent >= self.config.max_oracle_usd_per_day
         )
-        
-        # Mock next reset time (should be actual next UTC midnight)
         from datetime import datetime, timedelta
         next_reset = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00 UTC")
-        
         return BudgetStatus(
             exceeded=exceeded,
             tokens_used=self.tokens_used,
@@ -441,10 +376,5 @@ class BudgetTracker:
         )
     
     async def record_usage(self, response: GenResponse):
-        """Record token and cost usage."""
         self.tokens_used += response.prompt_tokens + response.output_tokens
         self.usd_spent += response.cost_usd
-        
-        # In production, atomically increment Redis counters
-        # redis.hincrby(f"oracle:day:{date}", "tokens", response.prompt_tokens + response.output_tokens)
-        # redis.hincrbyfloat(f"oracle:day:{date}", "usd", response.cost_usd)
