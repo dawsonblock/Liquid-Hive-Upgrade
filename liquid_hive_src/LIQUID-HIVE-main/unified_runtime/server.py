@@ -915,7 +915,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
         candidates = await vl_roles.vl_committee(question, image_data, k=2)  # type: ignore[attr-defined]
         rankings = await judge.rank_vision(question, image_data, candidates)  # type: ignore[attr-defined]
         wid = int(rankings.get("winner_id", 0))
-        answer = candidates[wid] if 0 &lt;= wid &lt; len(candidates) else candidates[0]
+        answer = candidates[wid] if 0 <= wid < len(candidates) else candidates[0]
         critique = rankings.get("critique")
         if grounding_required:
             grounding = vl_roles.grounding_validator(question, image_data, answer)  # type: ignore[attr-defined]
