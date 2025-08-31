@@ -174,7 +174,7 @@ class DSRouter:
             response.confidence = confidence
             
             # Escalate if confidence too low and not already using R1
-            if (confidence < self.config.conf_threshold and 
+            if (self.config.enable_r1_escalation and confidence < self.config.conf_threshold and 
                 routing_decision.provider != "deepseek_r1"):
                 
                 escalation_decision = RoutingDecision(
