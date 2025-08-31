@@ -14,7 +14,7 @@ export const fetchState = () => api.get('/state').then(r => r.data);
 export const postChat = (q: string) => api.post('/chat?q=' + encodeURIComponent(q)).then(r => r.data);
 
 export const postVision = (form: FormData, groundingRequired: boolean) =>
-  axios.post('/api/vision?grounding_required=' + String(groundingRequired), form, {
+  api.post('/vision?grounding_required=' + String(groundingRequired), form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data);
 
