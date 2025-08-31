@@ -98,7 +98,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.8")
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.9")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
@@ -148,6 +148,11 @@ async def startup() -> None:
     if DSRouter is not None and RouterConfig is not None:
         router_config = RouterConfig.from_env()
         ds_router = DSRouter(router_config)
+        # Warm-up provider health checks in background to avoid first-call latency
+        try:
+            asyncio.get_event_loop().create_task(ds_router.get_provider_status())
+        except Exception:
+            pass
         
     # Initialize retriever
     if Retriever is not None and settings is not None:
@@ -161,9 +166,6 @@ async def startup() -> None:
     if TextRoles is not None and settings is not None:
         text_roles = TextRoles(settings)
     
-    # Initialize other components as needed
-    # ... (additional component initialization can be added here)
-
     # Initialize trust modeler with default policy if available
     if ConfidenceModeler is not None and TrustPolicy is not None:
         try:
@@ -591,9 +593,8 @@ async def get_providers_status() -> Dict[str, Any]:
         return {"error": "DS-Router not available"}
     
     try:
-        provider_status = await ds_router.get_provider_status()
         return {
-            "providers": provider_status,
+            "providers": await ds_router.get_provider_status(),
             "router_active": True,
             "timestamp": asyncio.get_event_loop().time()
         }
@@ -674,7 +675,7 @@ async def autopromote_preview() -> dict[str, Any]:
             continue
         r_active = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{active}"}}[{window}]))')) or 0.0
         r_chall = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{challenger}"}}[{window}]))')) or 0.0
-        if (r_active * 300) < min_samples or (r_chall * 300) < min_samples:
+        if (r_active * 300) &lt; min_samples or (r_chall * 300) &lt; min_samples:
             continue
         p95_a = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{active}"}}[{window}])) by (le))')) or 9e9
         p95_c = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{challenger}"}}[{window}])) by (le))')) or 9e9
@@ -684,8 +685,8 @@ async def autopromote_preview() -> dict[str, Any]:
         except Exception:
             cost_small = {"predicted_cost_small": 1.0}
             cost_large = {"predicted_cost_large": 1.0}
-        better_latency = p95_c <= (p95_a * 0.9)
-        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (cost_small.get("predicted_cost_small", 1.0))
+        better_latency = p95_c &lt;= (p95_a * 0.9)
+        better_cost = (cost_large.get("predicted_cost_large", 1.0)) &lt;= (cost_small.get("predicted_cost_small", 1.0))
         if better_latency or better_cost:
             out.append({
                 "role": role,
@@ -841,7 +842,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             max_tokens=getattr(settings, 'max_new_tokens', 512) if settings else 512,
             temperature=0.7
         )
-        gen_response = await ds_router.generate(gen_request)
+        # Hard cap to avoid p95 &gt; 10s due to cold-starts
+        chat_timeout = float(os.getenv("CHAT_TIMEOUT_SECS", "9.5"))
+        gen_response = await asyncio.wait_for(ds_router.generate(gen_request), timeout=chat_timeout)
         answer = gen_response.content
         provider_used = gen_response.provider
         confidence = gen_response.confidence
@@ -852,7 +855,15 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
         request.scope["router_confidence"] = confidence
         request.scope["escalated"] = escalated
 
-    except Exception as exc:
+    except asyncio.TimeoutError:
+        answer = (
+            "I apologize, but I'm currently experiencing high load and couldn't respond in time. "
+            "Please try again in a moment."
+        )
+        provider_used = "timeout_fallback"
+        confidence = 0.0
+        escalated = False
+    except Exception:
         # Trust DS-Router's internal fallback chain; if it still fails, return a resilient static message
         answer = (
             "I apologize, but I'm currently unable to process your request due to temporary "
@@ -904,7 +915,7 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
         candidates = await vl_roles.vl_committee(question, image_data, k=2)  # type: ignore[attr-defined]
         rankings = await judge.rank_vision(question, image_data, candidates)  # type: ignore[attr-defined]
         wid = int(rankings.get("winner_id", 0))
-        answer = candidates[wid] if 0 <= wid < len(candidates) else candidates[0]
+        answer = candidates[wid] if 0 &lt;= wid &lt; len(candidates) else candidates[0]
         critique = rankings.get("critique")
         if grounding_required:
             grounding = vl_roles.grounding_validator(question, image_data, answer)  # type: ignore[attr-defined]

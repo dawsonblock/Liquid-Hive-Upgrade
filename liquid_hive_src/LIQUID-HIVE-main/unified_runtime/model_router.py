@@ -40,6 +40,10 @@ class RouterConfig:
     # Provider configurations
     deepseek_api_key: Optional[str] = None
     hf_token: Optional[str] = None
+
+    # Timeouts (seconds)
+    provider_timeout_secs: float = 8.0
+    health_timeout_secs: float = 3.0
     
     @classmethod
     def from_env(cls) -> 'RouterConfig':
@@ -52,7 +56,9 @@ class RouterConfig:
             max_oracle_usd_per_day=float(os.getenv("MAX_ORACLE_USD_PER_DAY", "50.0")),
             budget_enforcement=os.getenv("BUDGET_ENFORCEMENT", "hard"),
             deepseek_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            hf_token=os.getenv("HF_TOKEN")
+            hf_token=os.getenv("HF_TOKEN"),
+            provider_timeout_secs=float(os.getenv("PROVIDER_TIMEOUT_SECS", "8")),
+            health_timeout_secs=float(os.getenv("PROVIDER_HEALTH_TIMEOUT_SECS", "3")),
         )
 
 class DSRouter:
@@ -230,7 +236,14 @@ class DSRouter:
         if decision.cot_budget:
             request.cot_budget = decision.cot_budget
         
-        response = await provider.generate(request)
+        try:
+            response = await asyncio.wait_for(
+                provider.generate(request),
+                timeout=self.config.provider_timeout_secs,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"Provider {decision.provider} timed out")
+        
         response.metadata.update({
             "routing_decision": decision.provider,
             "routing_reasoning": decision.reasoning
@@ -242,7 +255,18 @@ class DSRouter:
         """Generate response using local fallback provider."""
         qwen_provider = self.providers.get("qwen_cpu")
         if qwen_provider:
-            response = await qwen_provider.generate(request)
+            try:
+                response = await asyncio.wait_for(
+                    qwen_provider.generate(request),
+                    timeout=self.config.provider_timeout_secs,
+                )
+            except Exception as e:
+                # Ultimate fallback if even local provider fails or times out
+                return GenResponse(
+                    content="I apologize, but I'm currently unable to process your request due to system limitations.",
+                    provider="system_fallback",
+                    metadata={"error": str(e), "ultimate_fallback": True}
+                )
             response.metadata["fallback_reason"] = error
             return response
         else:
@@ -348,7 +372,7 @@ class DSRouter:
         status = {}
         for name, provider in self.providers.items():
             try:
-                health = await provider.health_check()
+                health = await asyncio.wait_for(provider.health_check(), timeout=self.config.health_timeout_secs)
                 status[name] = health
             except Exception as e:
                 status[name] = {"status": "error", "error": str(e)}

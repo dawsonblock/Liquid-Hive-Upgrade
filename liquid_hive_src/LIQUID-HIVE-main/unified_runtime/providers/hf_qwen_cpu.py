@@ -27,10 +27,11 @@ class QwenCPUProvider(BaseProvider):
     
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("qwen_cpu", config)
-        self.model_name = config.get("model", "Qwen/Qwen2.5-7B-Instruct")
+        self.model_name = (config or {}).get("model", "Qwen/Qwen2.5-7B-Instruct")
         self.device = "cpu"  # Force CPU for fallback reliability
-        self.max_memory_mb = config.get("max_memory_mb", 8192)  # 8GB limit
-        self.hf_token = config.get("hf_token") or os.getenv("HF_TOKEN")
+        self.max_memory_mb = (config or {}).get("max_memory_mb", 8192)  # 8GB limit
+        self.hf_token = (config or {}).get("hf_token") or os.getenv("HF_TOKEN")
+        self.enable_local = str(os.getenv("ENABLE_QWEN_CPU", "false")).lower() in ("1", "true", "yes")
         
         self.tokenizer = None
         self.model = None
@@ -42,47 +43,39 @@ class QwenCPUProvider(BaseProvider):
         self.input_cost_per_1k = 0.0
         self.output_cost_per_1k = 0.0
         
-        # Try to load model at initialization
-        self._initialize_model()
+        # Do not auto-load heavy models unless explicitly enabled
+        if self.enable_local and HF_AVAILABLE and self.hf_token:
+            try:
+                self._initialize_model()
+            except Exception as e:
+                self.load_error = str(e)
+                self.is_loaded = False
+        else:
+            self.load_error = "disabled_or_missing_requirements"
+            self.is_loaded = False
         
     def _initialize_model(self):
-        """Initialize the Qwen model and tokenizer."""
+        """Initialize the Qwen model and tokenizer (CPU-safe, no 4-bit)."""
         if not HF_AVAILABLE:
             self.load_error = "transformers/torch not available"
             return
-            
+        
         try:
-            # Load with 4-bit quantization if available to save memory
-            model_kwargs = {
-                "torch_dtype": torch.float16,
-                "device_map": "cpu",
-                "token": self.hf_token,
-                "trust_remote_code": True
-            }
-            
-            # Try to use quantization if available
-            try:
-                from transformers import BitsAndBytesConfig
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_use_double_quant=True,
-                )
-                model_kwargs["quantization_config"] = quantization_config
-                self.logger.info("Loading Qwen with 4-bit quantization")
-            except ImportError:
-                self.logger.info("BitsAndBytesConfig not available, loading without quantization")
+            # Use float32 on CPU for compatibility; avoid bitsandbytes/accelerate requirements
+            torch_dtype = torch.float32 if torch is not None else None
             
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name, 
+                self.model_name,
                 token=self.hf_token,
                 trust_remote_code=True
             )
             
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                **model_kwargs
+                torch_dtype=torch_dtype,
+                device_map=None,
+                token=self.hf_token,
+                trust_remote_code=True
             )
             
             # Create text generation pipeline
@@ -90,7 +83,7 @@ class QwenCPUProvider(BaseProvider):
                 "text-generation",
                 model=self.model,
                 tokenizer=self.tokenizer,
-                device=self.device,
+                device=-1,  # CPU
                 return_full_text=False,
                 pad_token_id=self.tokenizer.eos_token_id
             )
@@ -106,6 +99,14 @@ class QwenCPUProvider(BaseProvider):
     async def generate(self, request: GenRequest) -> GenResponse:
         """Generate response using local Qwen model."""
         start_time = asyncio.get_event_loop().time()
+        
+        # Lazy-load on first use if allowed
+        if not self.is_loaded and self.enable_local and HF_AVAILABLE and self.hf_token:
+            try:
+                await asyncio.get_event_loop().run_in_executor(None, self._initialize_model)
+            except Exception as e:
+                self.load_error = str(e)
+                self.is_loaded = False
         
         if not self.is_loaded:
             return self._fallback_response(request, start_time, self.load_error)
@@ -199,7 +200,7 @@ class QwenCPUProvider(BaseProvider):
             return f"User: {request.prompt}\n\nAssistant:"
     
     def _fallback_response(self, request: GenRequest, start_time: float, error: str = None) -> GenResponse:
-        """Generate static fallback when local model fails."""
+        """Generate static fallback when local model is disabled or fails."""
         fallback_content = (
             "I apologize, but the local fallback system is currently unavailable. "
             "This could be due to insufficient resources or a configuration issue. "
@@ -210,7 +211,7 @@ class QwenCPUProvider(BaseProvider):
         
         return GenResponse(
             content=fallback_content,
-            provider=f"{self.name}_error",
+            provider=f"{self.name}_disabled" if not self.enable_local else f"{self.name}_error",
             latency_ms=latency_ms,
             metadata={
                 "fallback": True, 
@@ -229,49 +230,30 @@ class QwenCPUProvider(BaseProvider):
                 "provider": self.name
             }
         
+        if not self.enable_local:
+            return {
+                "status": "disabled",
+                "reason": "not_enabled",
+                "provider": self.name,
+                "model": self.model_name
+            }
+        
         if not self.is_loaded:
             return {
-                "status": "unhealthy",
+                "status": "degraded",
                 "reason": self.load_error or "model_not_loaded",
                 "provider": self.name,
                 "model": self.model_name
             }
         
-        try:
-            # Quick health check with minimal generation
-            test_request = GenRequest(
-                prompt="Hello, how are you?",
-                max_tokens=20,
-                temperature=0.5
-            )
-            
-            # Don't actually generate for health check to save resources
-            # Just verify model is loaded
-            health_status = {
-                "status": "healthy",
-                "provider": self.name,
-                "model": self.model_name,
-                "device": self.device,
-                "local_compute": True,
-                "model_loaded": True
-            }
-            
-            # Add memory info if available
-            if torch and torch.cuda.is_available():
-                try:
-                    health_status["gpu_memory_mb"] = torch.cuda.get_device_properties(0).total_memory // (1024**2)
-                except:
-                    pass
-            
-            return health_status
-            
-        except Exception as e:
-            return {
-                "status": "degraded",
-                "reason": str(e),
-                "provider": self.name,
-                "model": self.model_name
-            }
+        return {
+            "status": "healthy",
+            "provider": self.name,
+            "model": self.model_name,
+            "device": self.device,
+            "local_compute": True,
+            "model_loaded": True
+        }
     
     def _estimate_cost(self, prompt_tokens: int, output_tokens: int) -> float:
         """Local compute has no API costs."""
