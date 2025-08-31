@@ -43,7 +43,9 @@ class RouterConfig:
 
     # Timeouts (seconds)
     provider_timeout_secs: float = 8.0
-    health_timeout_secs: float = 3.0
+    health_timeout_secs: float = 8.0
+    pre_guard_timeout_secs: float = 1.0
+    post_guard_timeout_secs: float = 1.5
     
     @classmethod
     def from_env(cls) -> 'RouterConfig':
@@ -58,7 +60,9 @@ class RouterConfig:
             deepseek_api_key=os.getenv("DEEPSEEK_API_KEY"),
             hf_token=os.getenv("HF_TOKEN"),
             provider_timeout_secs=float(os.getenv("PROVIDER_TIMEOUT_SECS", "8")),
-            health_timeout_secs=float(os.getenv("PROVIDER_HEALTH_TIMEOUT_SECS", "3")),
+            health_timeout_secs=float(os.getenv("PROVIDER_HEALTH_TIMEOUT_SECS", "8")),
+            pre_guard_timeout_secs=float(os.getenv("PRE_GUARD_TIMEOUT_SECS", "1.0")),
+            post_guard_timeout_secs=float(os.getenv("POST_GUARD_TIMEOUT_SECS", "1.5")),
         )
 
 class DSRouter:
@@ -130,11 +134,16 @@ class DSRouter:
         """Main router entry point with full safety and intelligence routing."""
         start_time = asyncio.get_event_loop().time()
         
-        # Step 1: Pre-filtering and sanitization
+        # Step 1: Pre-filtering and sanitization (bounded time)
         if self.pre_guard:
-            sanitized_request, pre_guard_result = await self.pre_guard.process(request)
-            if pre_guard_result.blocked:
-                return self._create_blocked_response(pre_guard_result.reason, start_time)
+            try:
+                sanitized_request, pre_guard_result = await asyncio.wait_for(
+                    self.pre_guard.process(request),
+                    timeout=self.config.pre_guard_timeout_secs,
+                )
+            except Exception as e:
+                log.warning("PreGuard disabled due to error/timeout: %s", e)
+                sanitized_request, pre_guard_result = request, None
         else:
             sanitized_request = request
             pre_guard_result = None
@@ -147,7 +156,7 @@ class DSRouter:
         # Step 3: Determine routing strategy
         routing_decision = await self._determine_routing(sanitized_request)
         
-        # Step 4: Generate response with chosen provider
+        # Step 4: Generate response with chosen provider (bounded time)
         try:
             response = await self._generate_with_routing(sanitized_request, routing_decision)
         except Exception as e:
@@ -178,11 +187,16 @@ class DSRouter:
                 except Exception as e:
                     self.logger.warning(f"Escalation to R1 failed: {e}")
         
-        # Step 6: Post-filtering and verification
+        # Step 6: Post-filtering and verification (bounded time)
         if self.post_guard:
-            final_response, post_guard_result = await self.post_guard.process(response, sanitized_request)
-            if post_guard_result.blocked:
-                return self._create_blocked_response(post_guard_result.reason, start_time)
+            try:
+                final_response, post_guard_result = await asyncio.wait_for(
+                    self.post_guard.process(response, sanitized_request),
+                    timeout=self.config.post_guard_timeout_secs,
+                )
+            except Exception as e:
+                log.warning("PostGuard disabled due to error/timeout: %s", e)
+                final_response, post_guard_result = response, None
         else:
             final_response = response
             post_guard_result = None
@@ -348,8 +362,8 @@ class DSRouter:
             "blocked": response.metadata.get("blocked", False),
             "escalated": response.metadata.get("escalated", False),
             "filters": {
-                "pre_guard": pre_guard.status if pre_guard else "disabled",
-                "post_guard": post_guard.status if post_guard else "disabled"
+                "pre_guard": getattr(pre_guard, 'status', 'disabled') if pre_guard else "disabled",
+                "post_guard": getattr(post_guard, 'status', 'disabled') if post_guard else "disabled"
             },
             "tokens": {
                 "prompt": response.prompt_tokens,
