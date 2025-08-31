@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-// Use /api prefix for backend routes through Vite proxy
+// Use environment variable or fallback to /api prefix for Vite proxy in development
+const baseURL = import.meta.env.REACT_APP_BACKEND_URL 
+  ? `${import.meta.env.REACT_APP_BACKEND_URL}/api`
+  : '/api';
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: { 'Content-Type': 'application/json' }
 });
 
