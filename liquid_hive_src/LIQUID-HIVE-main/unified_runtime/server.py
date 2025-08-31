@@ -76,6 +76,15 @@ except Exception:
     ConfidenceModeler = None  # type: ignore
     TrustPolicy = None  # type: ignore
 
+# Ensure trust types import isn't blocked by other hivemind imports
+try:
+    if ConfidenceModeler is None or TrustPolicy is None:
+        from hivemind.confidence_modeler import ConfidenceModeler as _CM, TrustPolicy as _TP  # type: ignore
+        ConfidenceModeler = _CM  # type: ignore
+        TrustPolicy = _TP  # type: ignore
+except Exception:
+    pass
+
 try:
     import redis  # type: ignore
 except Exception:
