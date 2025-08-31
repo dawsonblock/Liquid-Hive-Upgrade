@@ -149,9 +149,11 @@ class LiquidHiveSmokeTest:
                 print('\n'.join(lines))
                 
                 # Check for trusted or unverified entries, no errors
-                response_str = str(data)
-                has_entries = 'trusted' in response_str or 'unverified' in response_str
-                no_errors = 'error' not in response_str.lower()
+                has_trusted = len(data.get('trusted', [])) > 0
+                has_unverified = len(data.get('unverified', [])) > 0
+                has_entries = has_trusted or has_unverified
+                errors_list = data.get('errors', [])
+                no_errors = len(errors_list) == 0
                 
                 success = has_entries and no_errors
                 self.log_result("POST /api/tools/internet_fetch", success, 
