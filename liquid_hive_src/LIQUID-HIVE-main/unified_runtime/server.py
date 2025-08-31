@@ -686,7 +686,7 @@ async def autopromote_preview() -> dict[str, Any]:
             cost_small = {"predicted_cost_small": 1.0}
             cost_large = {"predicted_cost_large": 1.0}
         better_latency = p95_c <= (p95_a * 0.9)
-        better_cost = (cost_large.get("predicted_cost_large", 1.0)) &lt;= (cost_small.get("predicted_cost_small", 1.0))
+        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (cost_small.get("predicted_cost_small", 1.0))
         if better_latency or better_cost:
             out.append({
                 "role": role,
