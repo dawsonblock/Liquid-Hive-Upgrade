@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio
 import time
 import socket
+import os
+import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -12,6 +15,18 @@ from fastapi import APIRouter, HTTPException, Request
 from prometheus_client import Counter
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 from prometheus_client import make_asgi_app
+
+# Optional deps
+try:
+    from minio import Minio  # type: ignore
+except Exception:
+    Minio = None  # type: ignore
+try:
+    from qdrant_client import QdrantClient  # type: ignore
+    from qdrant_client.http import models as qmodels  # type: ignore
+except Exception:
+    QdrantClient = None  # type: ignore
+    qmodels = None  # type: ignore
 
 # Load permissions
 import pathlib
@@ -77,7 +92,6 @@ async def consent_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     ttl = int(payload.get("ttl", 600))
     if not scope or not target:
         raise HTTPException(status_code=400, detail="invalid_scope_or_target")
-    # We don't auto-approve; just acknowledge request
     return {"requested": True, "scope": scope, "target": target, "ttl": ttl}
 
 
@@ -108,7 +122,6 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
     render_js: bool = bool(payload.get("render_js", False))
 
     if render_js and PERMS.get("render_js", {}).get("require_consent", True):
-        # ensure all target domains have consent
         for u in urls:
             dom = _domain_of(u)
             if not _has_consent("render_js", dom):
@@ -123,7 +136,6 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
             dom = _domain_of(url)
             status_label = "error"
             try:
-                # Socket sanity to avoid obvious non-routable targets
                 if dom:
                     try:
                         socket.getaddrinfo(dom, 80, proto=socket.IPPROTO_TCP)
@@ -137,7 +149,6 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
                     "content_snippet": r.text[:500],
                 }
                 if 200 <= status < 400:
-                    # Simple heuristic: https domains count as trusted; else unverified
                     bucket = trusted if urlparse(url).scheme == "https" else unverified
                     bucket.append(data)
                     status_label = "ok"
@@ -152,6 +163,56 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
                 FETCH_COUNT.labels(dom or "", str(render_js).lower(), status_label).inc()
 
     return {"trusted": trusted, "unverified": unverified, "errors": errors}
+
+
+def _init_minio_from_env():
+    endpoint = os.getenv("MINIO_ENDPOINT")
+    if not endpoint:
+        return None
+    access_key = os.getenv("MINIO_ACCESS_KEY", "minio")
+    secret_key = os.getenv("MINIO_SECRET_KEY", "minio123")
+    secure = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
+    if Minio is None:
+        return None
+    # strip scheme for Minio client if provided
+    host = endpoint.replace("http://", "").replace("https://", "")
+    return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
+
+
+def _ensure_minio_bucket(client, bucket: str) -> None:
+    try:
+        if not client.bucket_exists(bucket):
+            client.make_bucket(bucket)
+    except Exception:
+        raise
+
+
+def _minio_put_raw(client, bucket: str, url: str, content: str) -> str:
+    dom = _domain_of(url) or "unknown"
+    day = datetime.utcnow().strftime("%Y%m%d")
+    key = f"{dom}/{day}/{uuid.uuid4().hex}.html"
+    data = content.encode("utf-8", errors="ignore")
+    client.put_object(bucket, key, data=io.BytesIO(data), length=len(data))
+    return key
+
+
+def _init_qdrant_from_env():
+    url = os.getenv("QDRANT_URL")
+    if not url or QdrantClient is None or qmodels is None:
+        return None
+    try:
+        return QdrantClient(url=url)
+    except Exception:
+        return None
+
+
+def _ensure_qdrant_collection(client, name: str = "web_corpus") -> bool:
+    try:
+        vconf = qmodels.VectorParams(size=384, distance=qmodels.Distance.COSINE)
+        client.recreate_collection(collection_name=name, vectors_config=vconf)
+        return True
+    except Exception:
+        return False
 
 
 @router.post("/internet_ingest")
@@ -169,14 +230,36 @@ async def internet_ingest(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     chunks = 0
     status_label = "error"
+    minio_info: Dict[str, Any] = {}
+    qdrant_info: Dict[str, Any] = {}
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             r = await client.get(url)
             if r.status_code == 200:
                 text = r.text
-                # naive chunking by paragraphs
                 chunks = max(1, len([p for p in text.split("\n\n") if p.strip()]))
                 status_label = "ok"
+
+                # Optional MinIO storage
+                try:
+                    mclient = _init_minio_from_env()
+                    if mclient:
+                        bucket = os.getenv("MINIO_BUCKET", "web-raw")
+                        _ensure_minio_bucket(mclient, bucket)
+                        import io
+                        key = _minio_put_raw(mclient, bucket, url, text)
+                        minio_info = {"bucket": bucket, "object_key": key}
+                except Exception as me:
+                    minio_info = {"error": str(me)}
+
+                # Optional Qdrant collection ensure
+                try:
+                    qclient = _init_qdrant_from_env()
+                    if qclient:
+                        ok = _ensure_qdrant_collection(qclient, os.getenv("QDRANT_COLLECTION", "web_corpus"))
+                        qdrant_info = {"collection_ready": ok}
+                except Exception as qe:
+                    qdrant_info = {"error": str(qe)}
             else:
                 status_label = "bad_status"
     except Exception:
@@ -184,7 +267,12 @@ async def internet_ingest(payload: Dict[str, Any]) -> Dict[str, Any]:
     finally:
         INGEST_COUNT.labels(dom or "", str(render_js).lower(), status_label).inc()
 
-    return {"url": url, "chunks_count": chunks}
+    resp: Dict[str, Any] = {"url": url, "chunks_count": chunks}
+    if minio_info:
+        resp["minio"] = minio_info
+    if qdrant_info:
+        resp["qdrant"] = qdrant_info
+    return resp
 
 
 @test_router.get("/challenge")
