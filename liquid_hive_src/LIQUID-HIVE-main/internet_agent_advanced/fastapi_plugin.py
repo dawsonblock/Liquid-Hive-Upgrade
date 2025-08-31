@@ -12,10 +12,18 @@ from urllib.parse import urlparse
 import httpx
 import yaml
 import io
+import re
 from fastapi import APIRouter, HTTPException, Request
 from prometheus_client import Counter
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 from prometheus_client import make_asgi_app
+
+# Determinism setup (best-effort)
+try:
+    from .consent.determinism import setup as determinism_setup  # type: ignore
+    determinism_setup()
+except Exception:
+    pass
 
 # Optional deps
 try:
@@ -31,25 +39,6 @@ except Exception:
 
 # Load permissions
 import pathlib
-
-def _normalize_scope(scope: str) -> str:
-    s = (scope or "").strip().lower()
-    if s in ("internet_fetch_js", "js_render", "render_js"):
-        return "render_js"
-    if s in ("ingest", "ingest_index", "index"):
-        return "ingest_index"
-    return s
-
-
-def _normalize_target(target: str) -> str:
-    t = (target or "").strip()
-    try:
-        host = urlparse(t).hostname
-        if host:
-            return host.lower()
-    except Exception:
-        pass
-    return t.lower()
 
 CONFIG_PATH = pathlib.Path(__file__).resolve().parent / "config" / "permissions.yaml"
 DEFAULT_PERMISSIONS = {
@@ -85,6 +74,13 @@ metrics_app = make_asgi_app()
 
 test_router = APIRouter(prefix="/test", tags=["internet-agent-test"])
 
+# Stable default headers for outbound HTTP
+DEFAULT_HEADERS = {
+    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0 Safari/537.36 IA/1.0",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "accept-language": "en-US,en;q=0.9",
+}
+
 
 def _now() -> float:
     return time.time()
@@ -97,12 +93,46 @@ def _domain_of(url: str) -> str:
         return ""
 
 
+def _normalize_scope(scope: str) -> str:
+    s = (scope or "").strip().lower()
+    if s in ("internet_fetch_js", "js_render", "render_js"):
+        return "render_js"
+    if s in ("ingest", "ingest_index", "index"):
+        return "ingest_index"
+    return s
+
+
+def _normalize_target(target: str) -> str:
+    t = (target or "").strip()
+    try:
+        host = urlparse(t).hostname
+        if host:
+            return host.lower()
+    except Exception:
+        pass
+    return t.lower()
+
+
 def _has_consent(scope: str, domain: str) -> bool:
     if not domain:
         return False
     entry = _CONSENTS.get(domain, {})
     exp = entry.get(scope)
     return bool(exp and exp > _now())
+
+
+def _normalize_text(text: str) -> str:
+    # Remove script/style blocks and collapse whitespace for more stable snippets
+    try:
+        text = re.sub(r"<script[\s\S]*?</script>", " ", text, flags=re.IGNORECASE)
+        text = re.sub(r"<style[\s\S]*?</style>", " ", text, flags=re.IGNORECASE)
+        # Remove HTML comments
+        text = re.sub(r"<!--.*?-->", " ", text, flags=re.DOTALL)
+        # Collapse whitespace
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+    except Exception:
+        return text[:1000]
 
 
 @router.post("/consent/request")
@@ -151,7 +181,7 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
     unverified: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
 
-    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=DEFAULT_HEADERS) as client:
         for url in urls:
             dom = _domain_of(url)
             status_label = "error"
@@ -163,10 +193,12 @@ async def internet_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
                         raise HTTPException(status_code=502, detail="dns_resolution_failed")
                 r = await client.get(url)
                 status = r.status_code
+                # Normalize for determinism in snippets
+                norm = _normalize_text(r.text)
                 data = {
                     "url": url,
                     "status_code": status,
-                    "content_snippet": r.text[:500],
+                    "content_snippet": norm[:500],
                 }
                 if 200 <= status < 400:
                     bucket = trusted if urlparse(url).scheme == "https" else unverified
@@ -194,7 +226,6 @@ def _init_minio_from_env():
     secure = os.getenv("MINIO_SECURE", "false").lower() in ("1", "true", "yes")
     if Minio is None:
         return None
-    # strip scheme for Minio client if provided
     host = endpoint.replace("http://", "").replace("https://", "")
     return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
 
@@ -245,7 +276,7 @@ async def internet_ingest(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     dom = _domain_of(url)
     if render_js and PERMS.get("ingest_index", {}).get("require_consent", True):
-        if not _has_consent("render_js", dom):
+        if not _has_consent("render_js", _normalize_target(dom)):
             raise HTTPException(status_code=403, detail="consent_required")
 
     chunks = 0
@@ -253,7 +284,7 @@ async def internet_ingest(payload: Dict[str, Any]) -> Dict[str, Any]:
     minio_info: Dict[str, Any] = {}
     qdrant_info: Dict[str, Any] = {}
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=DEFAULT_HEADERS) as client:
             r = await client.get(url)
             if r.status_code == 200:
                 text = r.text
@@ -266,7 +297,6 @@ async def internet_ingest(payload: Dict[str, Any]) -> Dict[str, Any]:
                     if mclient:
                         bucket = os.getenv("MINIO_BUCKET", "web-raw")
                         _ensure_minio_bucket(mclient, bucket)
-                        import io
                         key = _minio_put_raw(mclient, bucket, url, text)
                         minio_info = {"bucket": bucket, "object_key": key}
                 except Exception as me:
