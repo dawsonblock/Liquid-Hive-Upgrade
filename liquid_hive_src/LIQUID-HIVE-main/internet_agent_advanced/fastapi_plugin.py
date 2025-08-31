@@ -129,7 +129,7 @@ async def consent_approve(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/consent/clear_session")
 async def consent_clear(payload: Dict[str, Any]) -> Dict[str, Any]:
-    domain = str(payload.get("domain", "")).strip()
+    domain = _normalize_target(str(payload.get("domain", "")))
     if not domain:
         raise HTTPException(status_code=400, detail="invalid_domain")
     _CONSENTS.pop(domain, None)
