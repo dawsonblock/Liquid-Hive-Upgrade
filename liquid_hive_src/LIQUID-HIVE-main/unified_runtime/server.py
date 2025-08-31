@@ -20,16 +20,25 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from capsule_brain.security.input_sanitizer import sanitize_input
 
+# Import metrics independently so failures in other heavy modules don't disable it
 try:
     from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
-    from capsule_brain.planner.plan import plan_once
-    from capsule_brain.core.capsule_engine import CapsuleEngine
-    from capsule_brain.core.intent_modeler import IntentModeler
 except Exception:
     MetricsMiddleware = None  # type: ignore
     metrics_router = None  # type: ignore
+
+# Import heavier optional modules with broad guards
+try:
+    from capsule_brain.planner.plan import plan_once
+except Exception:
     plan_once = None  # type: ignore
+try:
+    from capsule_brain.core.capsule_engine import CapsuleEngine
+except Exception:
     CapsuleEngine = None  # type: ignore
+try:
+    from capsule_brain.core.intent_modeler import IntentModeler
+except Exception:
     IntentModeler = None  # type: ignore
 
 try:
