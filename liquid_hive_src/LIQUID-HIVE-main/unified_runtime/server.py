@@ -164,6 +164,24 @@ async def startup() -> None:
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
 
+    # Initialize trust modeler with default policy if available
+    if ConfidenceModeler is not None and TrustPolicy is not None:
+        try:
+            enabled = bool(getattr(settings, "TRUSTED_AUTONOMY_ENABLED", False)) if settings else False
+            threshold = float(getattr(settings, "TRUST_THRESHOLD", 0.999)) if settings else 0.999
+            min_samples = int(getattr(settings, "TRUST_MIN_SAMPLES", 200)) if settings else 200
+            allow = getattr(settings, "TRUST_ALLOWLIST", "") if settings else ""
+            allow_t = tuple([s.strip() for s in allow.split(",") if s.strip()])
+            confidence_policy = TrustPolicy(
+                enabled=enabled,
+                threshold=threshold,
+                min_samples=min_samples,
+                allowlist=allow_t,
+            )
+            confidence_modeler = ConfidenceModeler(confidence_policy)
+        except Exception:
+            confidence_modeler = None
+
 
 def _env_write(key: str, value: str) -> None:
     try:
