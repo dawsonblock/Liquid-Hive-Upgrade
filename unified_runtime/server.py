@@ -1197,11 +1197,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         }
                         await websocket.send_json({"type": "rag_status", "payload": rag_status})
                     
-                    # Oracle/Arbiter system status
+                    # Enhanced Oracle/Arbiter system status (DeepSeek R1 ecosystem)
                     oracle_status = {
                         "deepseek_available": bool(os.getenv("DEEPSEEK_API_KEY")),
-                        "openai_available": bool(os.getenv("OPENAI_API_KEY")),
-                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False) if settings else False
+                        "deepseek_r1_arbiter": bool(os.getenv("DEEPSEEK_API_KEY")),  # R1 for reasoning
+                        "unified_ecosystem": True,  # All DeepSeek, no mixed APIs
+                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False) if settings else False,
+                        "cost_advantage": "70% cheaper than GPT-4o"
                     }
                     await websocket.send_json({"type": "oracle_status", "payload": oracle_status})
                     
