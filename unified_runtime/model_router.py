@@ -8,7 +8,7 @@ import asyncio
 import re
 import logging
 import os
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional, Tuple, Union, AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
