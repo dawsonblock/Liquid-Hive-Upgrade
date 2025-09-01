@@ -171,6 +171,10 @@ _autonomy_lock: Any = None
 _autonomy_lock_key = "liquid_hive:autonomy_leader"
 _autonomy_id = uuid.uuid4().hex
 
+# Semantic cache
+semantic_cache: Optional[SemanticCache] = None
+cache_manager = None
+
 websockets: list[WebSocket] = []
 
 
