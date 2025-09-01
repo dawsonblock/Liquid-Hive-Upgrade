@@ -1085,6 +1085,20 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
+    
+    # Step 1: Check semantic cache first
+    if semantic_cache and semantic_cache.is_ready:
+        try:
+            cached_response = await semantic_cache.get(q)
+            if cached_response:
+                # Return cached response with cache metadata
+                cached_response["cached"] = True
+                cached_response["cache_timestamp"] = time.time()
+                return cached_response
+        except Exception as e:
+            log.warning(f"Semantic cache check failed: {e}")
+    
+    # Continue with normal processing if no cache hit
     engine.add_memory("user", q)
 
     planner_hints = None
