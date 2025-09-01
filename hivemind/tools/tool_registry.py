@@ -19,11 +19,29 @@ from datetime import datetime, timedelta
 from .base_tool import BaseTool, ToolResult
 
 class ToolRegistry:
-    """Central registry for managing tools in the LIQUID-HIVE system."""
+    """Enhanced central registry for managing tools in the LIQUID-HIVE system."""
     
     def __init__(self):
         self.tools: Dict[str, BaseTool] = {}
         self.logger = logging.getLogger(__name__)
+        
+        # Analytics and tracking
+        self.execution_stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+            "total_executions": 0,
+            "successful_executions": 0,
+            "failed_executions": 0,
+            "total_execution_time": 0.0,
+            "last_executed": None,
+            "error_types": defaultdict(int),
+            "average_execution_time": 0.0
+        })
+        
+        # Approval system
+        self.pending_approvals: Dict[str, Dict[str, Any]] = {}
+        self.approval_history: List[Dict[str, Any]] = []
+        
+        # Tool usage tracking
+        self.tool_usage_log: List[Dict[str, Any]] = []
     
     def register_tool(self, tool: BaseTool) -> bool:
         """Register a tool instance."""
