@@ -619,6 +619,7 @@ class RoutingDecision:
     provider: str
     reasoning: str
     cot_budget: Optional[int] = None
+    rag_enhanced: bool = False
 
 @dataclass 
 class BudgetStatus:
