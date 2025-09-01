@@ -770,4 +770,6 @@ class BudgetTracker:
         else:
             self._fallback_tokens = 0
             self._fallback_usd = 0.0
-            return {"status": "fallback_reset"}
+            return {
+                "status": "fallback_reset"
+            }
