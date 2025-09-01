@@ -1,15 +1,7 @@
 import axios from 'axios';
 
-// Always use backend URL from env (must include /api prefix per ingress rules)
-const BACKEND_BASE = (typeof window !== 'undefined' && import.meta && import.meta.env && import.meta.env.REACT_APP_BACKEND_URL)
-  || (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL);
-
-if (!BACKEND_BASE) {
-  // Do not hardcode fallbacks per platform rules
-  // Expose a clear error to help diagnose misconfiguration
-  // eslint-disable-next-line no-console
-  console.error('REACT_APP_BACKEND_URL is not set. API calls will fail.');
-}
+// Backend URL configuration
+const BACKEND_BASE = 'http://localhost:8001/api';
 
 export const api = axios.create({
   baseURL: BACKEND_BASE,
