@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 # Ensure LIQUID-HIVE repo is importable
-REPO_ROOT = Path('/app/liquid_hive_src/LIQUID-HIVE-main')
+REPO_ROOT = Path('/app')
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
