@@ -230,6 +230,225 @@ class ToolRegistry:
             name for name, tool in self.tools.items()
             if tool.requires_approval
         ]
+    
+    def _is_approved(self, tool_name: str, parameters: Dict[str, Any], 
+                     operator_id: Optional[str]) -> bool:
+        """Check if tool execution is approved."""
+        # For now, implement simple approval logic
+        # In production, this would check against a database or approval service
+        approval_key = f"{tool_name}_{hash(str(sorted(parameters.items())))}"
+        
+        # Check if there's a pending approval that's been granted
+        if approval_key in self.pending_approvals:
+            approval = self.pending_approvals[approval_key]
+            return approval.get("status") == "approved"
+        
+        return False
+    
+    def _create_approval_request(self, tool_name: str, parameters: Dict[str, Any], 
+                                operator_id: Optional[str]) -> str:
+        """Create an approval request for tool execution."""
+        approval_id = f"approval_{tool_name}_{int(time.time())}"
+        tool = self.get_tool(tool_name)
+        
+        approval_request = {
+            "approval_id": approval_id,
+            "tool_name": tool_name,
+            "parameters": parameters,
+            "operator_id": operator_id,
+            "risk_level": tool.risk_level if tool else "unknown",
+            "requested_at": datetime.utcnow().isoformat(),
+            "status": "pending",
+            "reason": f"Tool '{tool_name}' requires approval due to {tool.risk_level} risk level"
+        }
+        
+        approval_key = f"{tool_name}_{hash(str(sorted(parameters.items())))}"
+        self.pending_approvals[approval_key] = approval_request
+        
+        self.logger.info(f"Created approval request {approval_id} for tool {tool_name}")
+        
+        return approval_id
+    
+    def approve_tool_execution(self, approval_id: str, approver_id: str) -> bool:
+        """Approve a pending tool execution request."""
+        for approval_key, approval in self.pending_approvals.items():
+            if approval["approval_id"] == approval_id:
+                approval["status"] = "approved"
+                approval["approved_by"] = approver_id
+                approval["approved_at"] = datetime.utcnow().isoformat()
+                
+                # Add to approval history
+                self.approval_history.append(approval.copy())
+                
+                self.logger.info(f"Approved tool execution: {approval_id} by {approver_id}")
+                return True
+        
+        return False
+    
+    def deny_tool_execution(self, approval_id: str, approver_id: str, reason: str = "") -> bool:
+        """Deny a pending tool execution request."""
+        for approval_key, approval in self.pending_approvals.items():
+            if approval["approval_id"] == approval_id:
+                approval["status"] = "denied"
+                approval["denied_by"] = approver_id
+                approval["denied_at"] = datetime.utcnow().isoformat()
+                approval["denial_reason"] = reason
+                
+                # Add to approval history
+                self.approval_history.append(approval.copy())
+                
+                # Remove from pending
+                del self.pending_approvals[approval_key]
+                
+                self.logger.info(f"Denied tool execution: {approval_id} by {approver_id}")
+                return True
+        
+        return False
+    
+    def get_pending_approvals(self) -> List[Dict[str, Any]]:
+        """Get list of pending approval requests."""
+        return [approval for approval in self.pending_approvals.values() 
+                if approval["status"] == "pending"]
+    
+    def _record_execution_metrics(self, tool_name: str, result: ToolResult, 
+                                 execution_time: float, parameters: Dict[str, Any],
+                                 operator_id: Optional[str]):
+        """Record detailed execution metrics."""
+        stats = self.execution_stats[tool_name]
+        
+        stats["total_executions"] += 1
+        stats["total_execution_time"] += execution_time
+        stats["last_executed"] = datetime.utcnow().isoformat()
+        
+        if result.success:
+            stats["successful_executions"] += 1
+        else:
+            stats["failed_executions"] += 1
+            # Track error types
+            if result.error:
+                error_type = result.error.split(':')[0] if ':' in result.error else "unknown"
+                stats["error_types"][error_type] += 1
+        
+        # Update average execution time
+        stats["average_execution_time"] = stats["total_execution_time"] / stats["total_executions"]
+    
+    def _log_tool_usage(self, tool_name: str, parameters: Dict[str, Any], 
+                       result: ToolResult, execution_time: float, 
+                       operator_id: Optional[str], execution_id: str):
+        """Log detailed tool usage for audit and analysis."""
+        log_entry = {
+            "execution_id": execution_id,
+            "tool_name": tool_name,
+            "operator_id": operator_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "parameters": parameters,
+            "success": result.success,
+            "error": result.error if not result.success else None,
+            "execution_time": execution_time,
+            "data_size": len(str(result.data)) if result.data else 0,
+            "metadata": result.metadata
+        }
+        
+        self.tool_usage_log.append(log_entry)
+        
+        # Keep only last 1000 entries to prevent memory issues
+        if len(self.tool_usage_log) > 1000:
+            self.tool_usage_log = self.tool_usage_log[-1000:]
+    
+    def get_tool_analytics(self, tool_name: Optional[str] = None, 
+                          days: int = 7) -> Dict[str, Any]:
+        """Get analytics for tools."""
+        if tool_name:
+            if tool_name not in self.execution_stats:
+                return {"error": f"No execution data for tool: {tool_name}"}
+            
+            stats = self.execution_stats[tool_name].copy()
+            
+            # Convert defaultdict to regular dict for JSON serialization
+            if "error_types" in stats:
+                stats["error_types"] = dict(stats["error_types"])
+            
+            return {
+                "tool_name": tool_name,
+                "stats": stats,
+                "recent_usage": self._get_recent_usage(tool_name, days)
+            }
+        else:
+            # Return analytics for all tools
+            all_stats = {}
+            for name, stats in self.execution_stats.items():
+                stats_copy = stats.copy()
+                if "error_types" in stats_copy:
+                    stats_copy["error_types"] = dict(stats_copy["error_types"])
+                all_stats[name] = stats_copy
+            
+            return {
+                "overall_stats": all_stats,
+                "most_used_tools": self._get_most_used_tools(),
+                "error_summary": self._get_error_summary(),
+                "performance_summary": self._get_performance_summary()
+            }
+    
+    def _get_recent_usage(self, tool_name: str, days: int) -> List[Dict[str, Any]]:
+        """Get recent usage for a specific tool."""
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        recent_usage = [
+            entry for entry in self.tool_usage_log
+            if (entry["tool_name"] == tool_name and 
+                datetime.fromisoformat(entry["timestamp"]) > cutoff_date)
+        ]
+        
+        return sorted(recent_usage, key=lambda x: x["timestamp"], reverse=True)[:50]
+    
+    def _get_most_used_tools(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get most frequently used tools."""
+        tool_usage = [
+            {
+                "tool_name": name,
+                "total_executions": stats["total_executions"],
+                "success_rate": (stats["successful_executions"] / stats["total_executions"]) * 100 
+                               if stats["total_executions"] > 0 else 0,
+                "average_execution_time": stats["average_execution_time"]
+            }
+            for name, stats in self.execution_stats.items()
+        ]
+        
+        return sorted(tool_usage, key=lambda x: x["total_executions"], reverse=True)[:limit]
+    
+    def _get_error_summary(self) -> Dict[str, Any]:
+        """Get summary of errors across all tools."""
+        total_errors = 0
+        error_types = defaultdict(int)
+        
+        for stats in self.execution_stats.values():
+            total_errors += stats["failed_executions"]
+            for error_type, count in stats["error_types"].items():
+                error_types[error_type] += count
+        
+        return {
+            "total_errors": total_errors,
+            "error_types": dict(error_types),
+            "tools_with_errors": len([name for name, stats in self.execution_stats.items() 
+                                    if stats["failed_executions"] > 0])
+        }
+    
+    def _get_performance_summary(self) -> Dict[str, Any]:
+        """Get performance summary across all tools."""
+        execution_times = []
+        total_executions = 0
+        
+        for stats in self.execution_stats.values():
+            if stats["total_executions"] > 0:
+                execution_times.append(stats["average_execution_time"])
+                total_executions += stats["total_executions"]
+        
+        return {
+            "total_executions": total_executions,
+            "average_execution_time": sum(execution_times) / len(execution_times) if execution_times else 0,
+            "fastest_tool": min(execution_times) if execution_times else 0,
+            "slowest_tool": max(execution_times) if execution_times else 0
+        }
 
 # Global registry instance
 global_registry = ToolRegistry()
