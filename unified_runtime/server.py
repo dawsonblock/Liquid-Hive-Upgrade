@@ -254,6 +254,32 @@ async def startup() -> None:
         if approval_tools:
             print(f"🔒 Tools requiring approval: {', '.join(approval_tools)}")
     
+    # Initialize Semantic Cache
+    if get_semantic_cache is not None and settings is not None:
+        try:
+            redis_url = settings.redis_url or "redis://localhost:6379"
+            semantic_cache = await get_semantic_cache(
+                redis_url=redis_url,
+                embedding_model=settings.embed_model or "all-MiniLM-L6-v2",
+                similarity_threshold=0.95
+            )
+            
+            if semantic_cache and semantic_cache.is_ready:
+                print("🧠 Semantic Cache initialized successfully")
+                
+                # Initialize cache manager
+                if create_cache_manager is not None:
+                    cache_manager = await create_cache_manager(redis_url)
+                    if cache_manager:
+                        print("📈 Cache Manager initialized successfully")
+            else:
+                print("⚠️ Semantic Cache initialization failed")
+                
+        except Exception as e:
+            print(f"❌ Failed to initialize Semantic Cache: {e}")
+            semantic_cache = None
+            cache_manager = None
+    
     
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
