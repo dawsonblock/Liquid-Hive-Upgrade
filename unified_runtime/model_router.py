@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from .providers import (
-    BaseProvider, GenRequest, GenResponse,
+    BaseProvider, GenRequest, GenResponse, StreamChunk,
     DeepSeekChatProvider, DeepSeekThinkingProvider, 
     DeepSeekR1Provider, QwenCPUProvider
 )
