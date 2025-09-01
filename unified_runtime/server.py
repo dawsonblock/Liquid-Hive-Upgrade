@@ -555,17 +555,20 @@ async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
         return {"error": "Settings unavailable"}
     try:
         enable_val = cfg.get("ENABLE_ORACLE_REFINEMENT")
-        force_val = cfg.get("FORCE_GPT4O_ARBITER")
+        force_val = cfg.get("FORCE_DEEPSEEK_R1_ARBITER")
         if enable_val is None and "enabled" in cfg:
             enable_val = cfg["enabled"]
+        if force_val is None and "force_deepseek_r1" in cfg:
+            force_val = cfg["force_deepseek_r1"]
+        # Legacy support for old GPT-4o parameter name
         if force_val is None and "force_gpt4o" in cfg:
             force_val = cfg["force_gpt4o"]
         if enable_val is not None:
             settings.ENABLE_ORACLE_REFINEMENT = bool(enable_val)  # type: ignore
             _env_write("ENABLE_ORACLE_REFINEMENT", "true" if bool(enable_val) else "false")
         if force_val is not None:
-            settings.FORCE_GPT4O_ARBITER = bool(force_val)  # type: ignore
-            _env_write("FORCE_GPT4O_ARBITER", "true" if bool(force_val) else "false")
+            settings.FORCE_DEEPSEEK_R1_ARBITER = bool(force_val)  # type: ignore
+            _env_write("FORCE_DEEPSEEK_R1_ARBITER", "true" if bool(force_val) else "false")
         return {"status": "updated"}
     except Exception as exc:
         return {"error": str(exc)}
