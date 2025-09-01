@@ -1,15 +1,21 @@
 """
-LIQUID-HIVE Tool & Plugin Ecosystem
-==================================
+LIQUID-HIVE Enhanced Tool & Plugin Ecosystem
+===========================================
 
-A formal framework for adding extensible tools and capabilities to the AI system.
-Tools can be anything from calculators to web search to database queries.
+A comprehensive framework for adding extensible tools and capabilities to the AI system.
+Tools can be anything from calculators to web search to database queries, file operations,
+system monitoring, and advanced text processing.
 """
 
 from .base_tool import BaseTool, ToolResult, ToolParameter
 from .tool_registry import ToolRegistry
 from .calculator_tool import CalculatorTool
 from .web_search_tool import WebSearchTool
+from .file_operations_tool import FileOperationsTool
+from .database_query_tool import DatabaseQueryTool
+from .code_analysis_tool import CodeAnalysisTool
+from .text_processing_tool import TextProcessingTool
+from .system_info_tool import SystemInfoTool
 
 __all__ = [
     'BaseTool',
@@ -17,5 +23,10 @@ __all__ = [
     'ToolParameter',
     'ToolRegistry',
     'CalculatorTool',
-    'WebSearchTool'
+    'WebSearchTool',
+    'FileOperationsTool',
+    'DatabaseQueryTool',
+    'CodeAnalysisTool',
+    'TextProcessingTool',
+    'SystemInfoTool'
 ]
