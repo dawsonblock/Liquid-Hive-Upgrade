@@ -26,22 +26,3 @@ data:
   {{- if .Values.config.monitoring.prometheusBaseUrl }}
   prometheus_base_url: {{ .Values.config.monitoring.prometheusBaseUrl | quote }}
   {{- end }}
-  # Optional Internet Agent Advanced integrations
-  {{- if .Values.config.database.qdrantUrl }}
-  QDRANT_URL: {{ .Values.config.database.qdrantUrl | quote }}
-  {{- end }}
-  {{- if .Values.config.database.minioEndpoint }}
-  MINIO_ENDPOINT: {{ .Values.config.database.minioEndpoint | quote }}
-  {{- end }}
-  {{- if .Values.config.database.minioAccessKey }}
-  MINIO_ACCESS_KEY: {{ .Values.config.database.minioAccessKey | quote }}
-  {{- end }}
-  {{- if .Values.config.database.minioSecretKey }}
-  MINIO_SECRET_KEY: {{ .Values.config.database.minioSecretKey | quote }}
-  {{- end }}
-  {{- if .Values.config.database.minioBucket }}
-  MINIO_BUCKET: {{ .Values.config.database.minioBucket | quote }}
-  {{- end }}
-  {{- if .Values.config.database.minioSecure }}
-  MINIO_SECURE: {{ .Values.config.database.minioSecure | quote }}
-  {{- end }}

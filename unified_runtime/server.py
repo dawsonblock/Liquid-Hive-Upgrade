@@ -16,6 +16,18 @@ import urllib.request as _req
 import httpx
 
 from fastapi import FastAPI, UploadFile, File, Request
+
+# Integrate internet agent advanced routes and metrics
+try:
+    from internet_agent_advanced.fastapi_plugin import (
+        router as internet_tools_router,
+        metrics_app as internet_metrics_app,
+        test_router as internet_test_router,
+    )
+except Exception:
+    internet_tools_router = None  # type: ignore
+    internet_metrics_app = None  # type: ignore
+    internet_test_router = None  # type: ignore
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from capsule_brain.security.input_sanitizer import sanitize_input
@@ -95,6 +107,15 @@ if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
     app.include_router(metrics_router)
+
+# Include internet agent advanced routers and metrics if available
+if "internet_tools_router" in globals() and internet_tools_router is not None:
+    app.include_router(internet_tools_router)
+if "internet_test_router" in globals() and internet_test_router is not None:
+    app.include_router(internet_test_router)
+if "internet_metrics_app" in globals() and internet_metrics_app is not None:
+    # Mount under separate path to avoid conflict with existing metrics
+    app.mount("/internet-agent-metrics", internet_metrics_app)
 
 engine: Optional[CapsuleEngine] = None
 text_roles: Optional[TextRoles] = None

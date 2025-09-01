@@ -1,0 +1,33 @@
+# Consent policy for internet_agent_advanced
+# scope: one of [fetch_http, render_js, ingest_index, large_download, api_github, api_hf, robots_override, captcha_bypass]
+defaults:
+  fetch_http:
+    require_consent: false
+  render_js:
+    require_consent: true
+  ingest_index:
+    require_consent: true
+  large_download:
+    require_consent: true
+    size_threshold_mb: 25
+  api_github:
+    require_consent: false
+  api_hf:
+    require_consent: false
+  robots_override:
+    require_consent: true
+    allowed: false  # NEVER allowed
+  captcha_bypass:
+    require_consent: true
+    allowed: false  # NEVER allowed
+
+domains:
+  # Example: always ask before scraping social media or login walls
+  - pattern: "*.twitter.com"
+    rules:
+      fetch_http: { require_consent: true }
+      render_js: { require_consent: true }
+  - pattern: "*.linkedin.com"
+    rules:
+      fetch_http: { require_consent: true }
+      render_js: { require_consent: true }

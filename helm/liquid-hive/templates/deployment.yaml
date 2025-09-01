@@ -116,50 +116,6 @@ spec:
             - name: VL_MODEL_ID
               value: {{ .Values.config.ai.vlModelId | quote }}
               
-            # Optional integrations via ConfigMap (Internet Agent Advanced)
-            {{- if .Values.config.database.qdrantUrl }}
-            - name: QDRANT_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: QDRANT_URL
-            {{- end }}
-            {{- if .Values.config.database.minioEndpoint }}
-            - name: MINIO_ENDPOINT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: MINIO_ENDPOINT
-            {{- end }}
-            {{- if .Values.config.database.minioAccessKey }}
-            - name: MINIO_ACCESS_KEY
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: MINIO_ACCESS_KEY
-            {{- end }}
-            {{- if .Values.config.database.minioSecretKey }}
-            - name: MINIO_SECRET_KEY
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: MINIO_SECRET_KEY
-            {{- end }}
-            {{- if .Values.config.database.minioBucket }}
-            - name: MINIO_BUCKET
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: MINIO_BUCKET
-            {{- end }}
-            {{- if .Values.config.database.minioSecure }}
-            - name: MINIO_SECURE
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "liquid-hive.fullname" . }}-config
-                  key: MINIO_SECURE
-            {{- end }}
-
           livenessProbe:
             httpGet:
               path: /healthz

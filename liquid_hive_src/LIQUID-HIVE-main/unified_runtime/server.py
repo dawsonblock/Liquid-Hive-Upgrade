@@ -20,25 +20,16 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from capsule_brain.security.input_sanitizer import sanitize_input
 
-# Import metrics independently so failures in other heavy modules don't disable it
 try:
     from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
+    from capsule_brain.planner.plan import plan_once
+    from capsule_brain.core.capsule_engine import CapsuleEngine
+    from capsule_brain.core.intent_modeler import IntentModeler
 except Exception:
     MetricsMiddleware = None  # type: ignore
     metrics_router = None  # type: ignore
-
-# Import heavier optional modules with broad guards
-try:
-    from capsule_brain.planner.plan import plan_once
-except Exception:
     plan_once = None  # type: ignore
-try:
-    from capsule_brain.core.capsule_engine import CapsuleEngine
-except Exception:
     CapsuleEngine = None  # type: ignore
-try:
-    from capsule_brain.core.intent_modeler import IntentModeler
-except Exception:
     IntentModeler = None  # type: ignore
 
 try:
@@ -107,14 +98,12 @@ except Exception:
 
 API_PREFIX = "/api"
 
-# IA plugin integration will be added after app is created
-
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.12")
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
-    app.include_router(metrics_router, prefix=API_PREFIX)
+    app.include_router(metrics_router)
 
 engine: Optional[CapsuleEngine] = None
 text_roles: Optional[TextRoles] = None
@@ -129,18 +118,6 @@ resource_estimator: Optional[ResourceEstimator] = None
 adapter_manager: Optional[AdapterDeploymentManager] = None
 tool_auditor: Optional[ToolAuditor] = None
 intent_modeler: Optional[IntentModeler] = None
-# Optional: integrate internet_agent_advanced plugin routes and metrics if available
-try:
-    from internet_agent_advanced.fastapi_plugin import router as tools_router, metrics_app as ia_metrics_app, test_router as ia_test_router  # type: ignore
-    app.include_router(tools_router, prefix=API_PREFIX)
-    app.include_router(ia_test_router, prefix=API_PREFIX)
-    try:
-        app.mount(f"{API_PREFIX}/internet-agent-metrics", ia_metrics_app)
-    except Exception:
-        pass
-except Exception:
-    pass
-
 confidence_modeler: Optional[ConfidenceModeler] = None
 ds_router: Optional[DSRouter] = None
 
