@@ -9,7 +9,7 @@ This module implements the provider abstraction for different LLM backends:
 - Qwen 2.5 7B (local fallback)
 """
 
-from .base_provider import BaseProvider, GenRequest, GenResponse
+from .base_provider import BaseProvider, GenRequest, GenResponse, StreamChunk
 from .deepseek_chat import DeepSeekChatProvider
 from .deepseek_thinking import DeepSeekThinkingProvider
 from .deepseek_r1 import DeepSeekR1Provider
