@@ -113,6 +113,13 @@ try:
 except Exception:
     redis = None  # type: ignore
 
+try:
+    from hivemind.cache import SemanticCache, get_semantic_cache, create_cache_manager
+except Exception:
+    SemanticCache = None
+    get_semantic_cache = None
+    create_cache_manager = None
+
 # Curiosity Engine (Genesis Spark)
 try:
     from hivemind.autonomy.curiosity import CuriosityEngine  # type: ignore
