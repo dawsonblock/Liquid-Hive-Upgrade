@@ -1,11 +1,13 @@
 """
 Base Provider Interface for DS-Router
 ====================================
+
+Enhanced with streaming support for real-time response generation.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -22,6 +24,7 @@ class GenRequest:
     temperature: Optional[float] = None
     cot_budget: Optional[int] = None  # For reasoning modes
     metadata: Dict[str, Any] = None
+    stream: bool = False  # Enable streaming mode
 
     def __post_init__(self):
         if self.metadata is None:
@@ -38,6 +41,20 @@ class GenResponse:
     cost_usd: float = 0.0
     confidence: Optional[float] = None
     logprobs: Optional[List[float]] = None
+    metadata: Dict[str, Any] = None
+    is_complete: bool = True  # For streaming responses
+    
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+@dataclass
+class StreamChunk:
+    """Represents a chunk in a streaming response."""
+    content: str
+    chunk_id: int = 0
+    is_final: bool = False
+    provider: str = ""
     metadata: Dict[str, Any] = None
     
     def __post_init__(self):
