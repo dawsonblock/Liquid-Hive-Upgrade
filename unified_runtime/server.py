@@ -538,11 +538,11 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
 @app.get(f"{API_PREFIX}/config/governor")
 async def get_governor() -> Dict[str, Any]:
     if settings is None:
-        return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_GPT4O_ARBITER": None}
+        return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_DEEPSEEK_R1_ARBITER": None}
     try:
         return {
             "ENABLE_ORACLE_REFINEMENT": bool(getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)),
-            "FORCE_GPT4O_ARBITER": bool(getattr(settings, "FORCE_GPT4O_ARBITER", False)),
+            "FORCE_DEEPSEEK_R1_ARBITER": bool(getattr(settings, "FORCE_DEEPSEEK_R1_ARBITER", False)),
         }
     except Exception as exc:
         return {"error": str(exc)}
