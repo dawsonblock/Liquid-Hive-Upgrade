@@ -95,10 +95,171 @@ class DeepSeekChatProvider(BaseProvider):
                     sleep_time = (0.5 * (2 ** attempt)) + random.uniform(0, 1)
                     await asyncio.sleep(sleep_time)
                     continue
-                else:
-                    # Final attempt failed
-                    self._log_generation(request, None, error_msg)
-                    return self._fallback_response(request, start_time, error=error_msg)
+        return final_response
+    
+    async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
+        """Generate streaming response with full safety and intelligence routing."""
+        start_time = asyncio.get_event_loop().time()
+        
+        # Step 1: Pre-filtering and sanitization
+        if self.pre_guard:
+            sanitized_request, pre_guard_result = await self.pre_guard.process(request)
+            if pre_guard_result.blocked:
+                yield StreamChunk(
+                    content="I cannot provide a response to this request due to safety or policy restrictions.",
+                    chunk_id=0,
+                    is_final=True,
+                    provider="safety_filter",
+                    metadata={"blocked": True, "block_reason": pre_guard_result.reason}
+                )
+                return
+        else:
+            sanitized_request = request
+            pre_guard_result = None
+        
+        # Step 2: Budget check
+        budget_status = await self._budget_tracker.check_budget()
+        if budget_status.exceeded and self.config.budget_enforcement == "hard":
+            yield StreamChunk(
+                content=f"Daily budget limit has been exceeded. Service will resume at {budget_status.next_reset_utc}.",
+                chunk_id=0,
+                is_final=True,
+                provider="budget_limiter",
+                metadata={
+                    "budget_exceeded": True,
+                    "next_reset": budget_status.next_reset_utc
+                }
+            )
+            return
+        
+        # Step 3: Determine routing strategy
+        routing_decision = await self._determine_routing(sanitized_request)
+        
+        # Step 4: Generate streaming response
+        try:
+            async for chunk in self._generate_stream_with_routing(sanitized_request, routing_decision):
+                # Apply post-filtering to chunks if needed
+                if self.post_guard and chunk.is_final:
+                    # For final chunk, we can check the complete content
+                    dummy_response = GenResponse(
+                        content=chunk.content,
+                        provider=chunk.provider,
+                        metadata=chunk.metadata
+                    )
+                    
+                    _, post_guard_result = await self.post_guard.process(dummy_response, sanitized_request)
+                    if post_guard_result.blocked:
+                        yield StreamChunk(
+                            content="Response was filtered due to safety concerns.",
+                            chunk_id=chunk.chunk_id + 1,
+                            is_final=True,
+                            provider="safety_filter",
+                            metadata={"post_filtered": True, "reason": post_guard_result.reason}
+                        )
+                        return
+                
+                yield chunk
+                
+        except Exception as e:
+            self.logger.error(f"Streaming generation failed: {e}")
+            # Yield error chunk
+            yield StreamChunk(
+                content=f"An error occurred during response generation: {str(e)}",
+                chunk_id=0,
+                is_final=True,
+                provider="error_handler",
+                metadata={"error": str(e), "routing_decision": routing_decision.provider}
+            )
+    
+    async def _generate_stream_with_routing(self, request: GenRequest, 
+                                          decision: 'RoutingDecision') -> AsyncGenerator[StreamChunk, None]:
+        """Generate streaming response using the specified routing decision."""
+        provider = self.providers.get(decision.provider)
+        
+        if not provider:
+            yield StreamChunk(
+                content=f"Provider {decision.provider} not available",
+                chunk_id=0,
+                is_final=True,
+                provider="error",
+                metadata={"error": f"Provider {decision.provider} not found"}
+            )
+            return
+        
+        try:
+            # Check if provider supports streaming
+            if provider.supports_streaming():
+                # Use native streaming
+                async for chunk in provider.generate_stream(request):
+                    # Add routing metadata
+                    chunk.metadata.update({
+                        "routing_decision": decision.provider,
+                        "routing_reasoning": decision.reasoning,
+                        "native_streaming": True
+                    })
+                    yield chunk
+            else:
+                # Fallback to simulated streaming
+                response = await self._call_provider_with_circuit_breaker(decision.provider, request)
+                
+                # Simulate streaming by chunking the response
+                async for chunk in self._simulate_streaming(response, decision):
+                    yield chunk
+                    
+        except Exception as e:
+            # Try fallback providers
+            fallback_providers = ["qwen_cpu"]
+            for fallback_name in fallback_providers:
+                if fallback_name == decision.provider:
+                    continue
+                
+                try:
+                    fallback_provider = self.providers.get(fallback_name)
+                    if fallback_provider:
+                        async for chunk in fallback_provider.generate_stream(request):
+                            chunk.metadata.update({
+                                "fallback_from": decision.provider,
+                                "fallback_reason": str(e)
+                            })
+                            yield chunk
+                        return
+                except Exception:
+                    continue
+            
+            # All providers failed
+            yield StreamChunk(
+                content="I apologize, but I'm currently unable to process your request due to system limitations.",
+                chunk_id=0,
+                is_final=True,
+                provider="system_fallback",
+                metadata={"all_providers_failed": True, "original_error": str(e)}
+            )
+    
+    async def _simulate_streaming(self, response: GenResponse, decision: 'RoutingDecision') -> AsyncGenerator[StreamChunk, None]:
+        """Simulate streaming for providers that don't support native streaming."""
+        content = response.content
+        chunk_size = 10  # Characters per chunk
+        delay = 0.05  # Delay between chunks in seconds
+        
+        for i in range(0, len(content), chunk_size):
+            chunk_content = content[i:i + chunk_size]
+            is_final = i + chunk_size >= len(content)
+            
+            yield StreamChunk(
+                content=chunk_content,
+                chunk_id=i // chunk_size,
+                is_final=is_final,
+                provider=f"{response.provider}_simulated",
+                metadata={
+                    "simulated_streaming": True,
+                    "original_latency_ms": response.latency_ms,
+                    "total_tokens": response.output_tokens,
+                    "routing_decision": decision.provider
+                }
+            )
+            
+            if not is_final:
+                await asyncio.sleep(delay)
     
     async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
         """Generate streaming response using DeepSeek chat mode."""
