@@ -1315,6 +1315,24 @@ This query has been flagged for ethical review. Please provide guidance on how t
         result["planner_hints"] = planner_hints  # type: ignore
     if reasoning_steps:
         result["reasoning_steps"] = reasoning_steps  # type: ignore
+    
+    # Step: Cache the response for future similar queries
+    if semantic_cache and semantic_cache.is_ready and not result.get("cached"):
+        try:
+            # Only cache successful responses
+            if result.get("answer") and not result.get("error"):
+                cache_context = {
+                    "provider": provider_used,
+                    "has_context": bool(context_txt),
+                    "query_length": len(q)
+                }
+                
+                await semantic_cache.set(q, result, context=cache_context)
+                log.debug(f"Cached response for query: {q[:50]}...")
+                
+        except Exception as e:
+            log.warning(f"Failed to cache response: {e}")
+    
     return result
 
 
