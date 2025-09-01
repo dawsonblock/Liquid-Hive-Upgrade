@@ -184,7 +184,21 @@ async def startup() -> None:
         
     # Initialize retriever
     if Retriever is not None and settings is not None:
-        retriever = Retriever(settings.rag_index, settings.embed_model)
+        # Try to initialize enhanced retriever with Qdrant support
+        try:
+            from hivemind.rag.hybrid_retriever import create_hybrid_retriever
+            retriever = create_hybrid_retriever(settings)
+            if retriever and retriever.is_ready:
+                log.info("✅ Enhanced Hybrid RAG Retriever initialized successfully")
+            else:
+                # Fallback to original FAISS retriever
+                retriever = Retriever(settings.rag_index, settings.embed_model)
+                if retriever.is_ready:
+                    log.info("✅ FAISS RAG Retriever initialized (fallback mode)")
+        except Exception as e:
+            log.warning(f"Failed to initialize hybrid retriever: {e}")
+            # Fallback to original retriever
+            retriever = Retriever(settings.rag_index, settings.embed_model)
     
     # Initialize engine
     if CapsuleEngine is not None:
