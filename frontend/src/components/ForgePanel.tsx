@@ -22,9 +22,9 @@ const ForgePanel: React.FC = () => {
     await refresh();
   };
 
-  const onToggleGov = async (key: 'ENABLE_ORACLE_REFINEMENT' | 'FORCE_GPT4O_ARBITER', value: boolean) => {
+  const onToggleGov = async (key: 'ENABLE_ORACLE_REFINEMENT' | 'FORCE_DEEPSEEK_R1_ARBITER', value: boolean) => {
     const enabled = key === 'ENABLE_ORACLE_REFINEMENT' ? value : !!gov.ENABLE_ORACLE_REFINEMENT;
-    const force = key === 'FORCE_GPT4O_ARBITER' ? value : !!gov.FORCE_GPT4O_ARBITER;
+    const force = key === 'FORCE_DEEPSEEK_R1_ARBITER' ? value : !!gov.FORCE_DEEPSEEK_R1_ARBITER;
     await setGovernor(enabled, force);
     await refresh();
   };
