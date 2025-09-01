@@ -24,7 +24,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useDispatch, useSelector } from 'react-redux';
-import { getProvidersStatus } from '../services/api';
+import { useProviders } from '../contexts/ProvidersContext';
 import { getBackendWsBase } from '../services/env';
 import type { RootState } from '../store';
 import { addChat, updateLastMessage } from '../store';
@@ -50,8 +50,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [streamMetadata, setStreamMetadata] = useState<any>(null);
-  const [providers, setProviders] = useState<Record<string, any>>({});
-  const [providersLoading, setProvidersLoading] = useState<boolean>(false);
+  const { providers, loading: providersLoading, refresh: refreshProviders } = useProviders();
 
   // Context and metadata state
   const [lastContext, setLastContext] = useState<string | undefined>();
@@ -67,17 +66,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const refreshProviders = useCallback(async () => {
-    try {
-      setProvidersLoading(true);
-      const ps = await getProvidersStatus();
-      if (ps?.providers) setProviders(ps.providers);
-    } catch {
-      // ignore
-    } finally {
-      setProvidersLoading(false);
-    }
-  }, []);
+  // providers controlled by context
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
@@ -232,8 +221,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       connectWebSocket();
     }
 
-    // Initial provider fetch (non-blocking)
-    refreshProviders();
+  // Providers are fetched via context
 
     return () => {
       if (wsRef.current) {
@@ -242,13 +230,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     };
   }, [streamingEnabled, connectWebSocket, refreshProviders]);
 
-  // Auto refresh providers periodically
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      refreshProviders();
-    }, 15000); // 15s cadence
-    return () => window.clearInterval(id);
-  }, [refreshProviders]);
+  // auto-refresh handled by context
 
   // Connection status indicator
   const getConnectionStatusColor = () => {

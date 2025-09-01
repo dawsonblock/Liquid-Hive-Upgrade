@@ -25,6 +25,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
+import { ProvidersProvider } from './contexts/ProvidersContext';
 import ChatPanel from './components/ChatPanel';
 import ForgePanel from './components/ForgePanel';
 import SecretsPanel from './components/SecretsPanel';
@@ -73,6 +74,7 @@ export default function App() {
   const online = useBackendHealth();
   return (
     <Provider store={store}>
+      <ProvidersProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AppBar position="fixed" color="transparent" elevation={0} sx={{
@@ -168,7 +170,8 @@ export default function App() {
           {panel === 'secrets' && <SecretsPanel />}
           {panel === 'forge' && <ForgePanel />}
         </Box>
-      </ThemeProvider>
+  </ThemeProvider>
+  </ProvidersProvider>
     </Provider>
   );
 }

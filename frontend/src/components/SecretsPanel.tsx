@@ -7,11 +7,12 @@ import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import Switch from '@mui/material/Switch';
 import { useEffect, useMemo, useState } from 'react';
 import { getProvidersStatus, getSecretsHealth, reloadRouterSecrets, secretExists, setSecret } from '../services/api';
+import { useProviders } from '../contexts/ProvidersContext';
 
 const SECRET_KEYS = [
     { key: 'DEEPSEEK_API_KEY', label: 'DeepSeek API Key', placeholder: 'sk-...' },
@@ -27,9 +28,7 @@ export default function SecretsPanel() {
     const [message, setMessage] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [health, setHealth] = useState<any>(null);
-    const [providers, setProviders] = useState<Record<string, any>>({});
-    const [providersLoading, setProvidersLoading] = useState<boolean>(false);
-    const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+    const { providers, loading: providersLoading, refresh: refreshProviders, autoRefresh, setAutoRefresh } = useProviders();
 
     useEffect(() => {
         // Load health and existence of known secrets
@@ -39,8 +38,7 @@ export default function SecretsPanel() {
                 setHealth(h);
             } catch { }
             try {
-                const ps = await getProvidersStatus();
-                if (ps?.providers) setProviders(ps.providers);
+                await refreshProviders();
             } catch { }
             for (const s of SECRET_KEYS) {
                 try {
@@ -85,33 +83,14 @@ export default function SecretsPanel() {
                 setMessage('Router reloaded');
                 // Refresh providers after a short delay to allow warm-up
                 setTimeout(async () => {
-                    try {
-                        setProvidersLoading(true);
-                        const ps = await getProvidersStatus();
-                        if (ps?.providers) setProviders(ps.providers);
-                    } catch { } finally { setProvidersLoading(false); }
+                    try { await refreshProviders(); } catch {}
                 }, 800);
             }
         } catch (e: any) {
             setError(e?.message || 'Failed to reload');
         }
     };
-
-    const refreshProviders = async () => {
-        try {
-            setProvidersLoading(true);
-            const ps = await getProvidersStatus();
-            if (ps?.providers) setProviders(ps.providers);
-        } catch { } finally { setProvidersLoading(false); }
-    };
-
-    useEffect(() => {
-        if (!autoRefresh) return;
-        const id = window.setInterval(() => {
-            refreshProviders();
-        }, 15000);
-        return () => window.clearInterval(id);
-    }, [autoRefresh]);
+    // polling controlled by context
 
     return (
         <Box>
