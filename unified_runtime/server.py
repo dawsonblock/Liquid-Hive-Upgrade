@@ -161,7 +161,7 @@ websockets: list[WebSocket] = []
 async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router
+    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
     
     # Initialize settings
     if Settings is not None:
@@ -183,6 +183,21 @@ async def startup() -> None:
     # Initialize text roles
     if TextRoles is not None and settings is not None:
         text_roles = TextRoles(settings)
+    
+    # Initialize Tool Registry and discover tools
+    if ToolRegistry is not None and global_registry is not None:
+        tool_registry = global_registry
+        
+        # Register built-in tools
+        if CalculatorTool is not None:
+            tool_registry.register_tool_class(CalculatorTool)
+        
+        if WebSearchTool is not None:
+            tool_registry.register_tool_class(WebSearchTool)
+        
+        # Discover additional tools
+        tools_discovered = tool_registry.discover_tools()
+        print(f"🛠️ Tool Registry initialized with {len(tool_registry.tools)} tools")
     
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
