@@ -520,14 +520,37 @@ class DSRouter:
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
     async def get_provider_status(self) -> Dict[str, Any]:
-        """Get status of all providers."""
+        """Get status of all providers including circuit breaker state."""
         status = {}
         for name, provider in self.providers.items():
             try:
-                health = await provider.health_check()
+                # Get basic health check
+                health = await asyncio.wait_for(provider.health_check(), timeout=10)
+                
+                # Add circuit breaker information
+                circuit_breaker = self.circuit_breakers.get(name)
+                if circuit_breaker:
+                    health.update({
+                        "circuit_state": circuit_breaker.state.value,
+                        "failure_count": circuit_breaker.failure_count,
+                        "success_count": circuit_breaker.success_count,
+                        "last_failure": circuit_breaker.last_failure_time.isoformat() if circuit_breaker.last_failure_time else None
+                    })
+                
                 status[name] = health
+                
             except Exception as e:
-                status[name] = {"status": "error", "error": str(e)}
+                # If health check fails, record the failure in circuit breaker
+                circuit_breaker = self.circuit_breakers.get(name)
+                if circuit_breaker:
+                    circuit_breaker.record_failure()
+                
+                status[name] = {
+                    "status": "error", 
+                    "error": str(e),
+                    "circuit_state": circuit_breaker.state.value if circuit_breaker else "unknown",
+                    "failure_count": circuit_breaker.failure_count if circuit_breaker else 0
+                }
         
         return status
 
