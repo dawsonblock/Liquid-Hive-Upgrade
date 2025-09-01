@@ -1,9 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useEffect, useMemo, useState } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Button, Snackbar, Alert } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { getApprovals, approveProposal, denyProposal, fetchState, previewAutopromote } from '../services/api';
+import { Alert, Box, Button, Chip, Grid, IconButton, List, ListItem, ListItemText, Paper, Snackbar, Stack, Typography } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import { approveProposal, denyProposal, fetchState, getApprovals, previewAutopromote } from '../services/api';
+import { getBackendWsBase } from '../services/env';
 const SystemPanel = () => {
     const [approvals, setApprovals] = useState([]);
     const [stateSummary, setStateSummary] = useState(null);
@@ -19,7 +20,7 @@ const SystemPanel = () => {
             catch { }
         };
         load();
-        const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
+        const ws = new WebSocket(getBackendWsBase() + '/api/ws');
         ws.onmessage = (ev) => {
             try {
                 const msg = JSON.parse(ev.data);

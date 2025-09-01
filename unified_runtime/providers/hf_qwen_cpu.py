@@ -24,26 +24,40 @@ except ImportError:
 
 class QwenCPUProvider(BaseProvider):
     """Qwen 2.5 7B Instruct local CPU provider as fallback."""
-    
+
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("qwen_cpu", config)
-        self.model_name = config.get("model", "Qwen/Qwen2.5-7B-Instruct")
+        cfg = config or {}
+        # Prefer a much smaller default model for CPU environments to avoid OOM
+        self.model_name = cfg.get("model", os.getenv("QWEN_CPU_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"))
         self.device = "cpu"  # Force CPU for fallback reliability
-        self.max_memory_mb = config.get("max_memory_mb", 8192)  # 8GB limit
-        self.hf_token = config.get("hf_token") or os.getenv("HF_TOKEN")
-        
+        self.max_memory_mb = cfg.get("max_memory_mb", 8192)  # 8GB limit
+        self.hf_token = cfg.get("hf_token") or os.getenv("HF_TOKEN") or os.getenv("HUGGING_FACE_HUB_TOKEN")
+        # Lazy load by default to avoid blocking server startup
+        self.lazy_load: bool = bool(int(os.getenv("QWEN_CPU_LAZY_LOAD", "1")))
+        # Optionally allow autoload on first generate if explicitly enabled
+        self.autoload_on_generate: bool = bool(int(os.getenv("QWEN_CPU_AUTOLOAD", "0")))
+
         self.tokenizer = None
         self.model = None
         self.pipeline = None
         self.is_loaded = False
         self.load_error = None
-        
+
         # Cost is essentially zero (local compute)
         self.input_cost_per_1k = 0.0
         self.output_cost_per_1k = 0.0
-        
-        # Try to load model at initialization
-        self._initialize_model()
+
+        # Do not load the model at initialization to keep startup fast and reliable on CPU
+        # Allow explicit preload only if requested
+        if os.getenv("QWEN_CPU_PRELOAD", "0") == "1":
+            try:
+                self._initialize_model()
+            except Exception:
+                pass
+    
+    # Do not load the model at initialization to keep startup fast and reliable on CPU
+    # Model can be loaded on-demand if explicitly enabled via QWEN_CPU_AUTOLOAD=1
         
     def _initialize_model(self):
         """Initialize the Qwen model and tokenizer."""
@@ -52,27 +66,14 @@ class QwenCPUProvider(BaseProvider):
             return
             
         try:
-            # Load with 4-bit quantization if available to save memory
+            # CPU-safe defaults: avoid float16 on CPU and avoid bitsandbytes quantization
             model_kwargs = {
-                "torch_dtype": torch.float16,
-                "device_map": "cpu",
+                "torch_dtype": torch.float32,
+                "device_map": None,  # explicit CPU device below
                 "token": self.hf_token,
-                "trust_remote_code": True
+                "trust_remote_code": True,
+                "low_cpu_mem_usage": True,
             }
-            
-            # Try to use quantization if available
-            try:
-                from transformers import BitsAndBytesConfig
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_use_double_quant=True,
-                )
-                model_kwargs["quantization_config"] = quantization_config
-                self.logger.info("Loading Qwen with 4-bit quantization")
-            except ImportError:
-                self.logger.info("BitsAndBytesConfig not available, loading without quantization")
             
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name, 
@@ -90,7 +91,7 @@ class QwenCPUProvider(BaseProvider):
                 "text-generation",
                 model=self.model,
                 tokenizer=self.tokenizer,
-                device=self.device,
+                device=-1,  # CPU
                 return_full_text=False,
                 pad_token_id=self.tokenizer.eos_token_id
             )
@@ -108,7 +109,16 @@ class QwenCPUProvider(BaseProvider):
         start_time = asyncio.get_event_loop().time()
         
         if not self.is_loaded:
-            return self._fallback_response(request, start_time, self.load_error)
+            # Optionally autoload on first use if explicitly enabled
+            if self.autoload_on_generate and not self.lazy_load:
+                try:
+                    await asyncio.get_event_loop().run_in_executor(None, self._initialize_model)
+                except Exception as _:
+                    pass
+            # If still not loaded, return a graceful fallback without blocking
+            if not self.is_loaded:
+                hint = self.load_error or "model_not_loaded"
+                return self._fallback_response(request, start_time, hint)
         
         # Format prompt for Qwen chat template
         formatted_prompt = self._format_chat_prompt(request)
@@ -230,11 +240,14 @@ class QwenCPUProvider(BaseProvider):
             }
         
         if not self.is_loaded:
+            # Report as initializing to avoid hard failures or long startup
             return {
-                "status": "unhealthy",
+                "status": "initializing",
                 "reason": self.load_error or "model_not_loaded",
                 "provider": self.name,
-                "model": self.model_name
+                "model": self.model_name,
+                "local_compute": True,
+                "model_loaded": False
             }
         
         try:

@@ -2,7 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ChatPanel from './ChatPanel';
 import { Provider } from 'react-redux';
-import { store } from '../../store';
+import { store } from '../store';
+// Try TypeScript import first, fallback to JS if needed
+// import { store } from '../../store.ts';
 
 jest.mock('../services/api', () => ({
   postChat: async () => ({ answer: 'Hello World' }),

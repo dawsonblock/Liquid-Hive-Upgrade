@@ -1,8 +1,8 @@
 import axios from 'axios';
-// Use environment variable or fallback to /api prefix for Vite proxy in development
-const baseURL = import.meta.env.REACT_APP_BACKEND_URL
-    ? `${import.meta.env.REACT_APP_BACKEND_URL}/api`
-    : '/api';
+import { getBackendHttpBase } from './env';
+// If an explicit backend base exists, point axios to it. Otherwise, rely on Vite dev proxy via '/api'.
+const httpBase = getBackendHttpBase();
+const baseURL = httpBase ? `${httpBase}/api` : '/api';
 export const api = axios.create({
     baseURL,
     headers: { 'Content-Type': 'application/json' }
@@ -19,7 +19,27 @@ export const getAdaptersState = () => api.get('/adapters/state').then(r => r.dat
 export const promoteAdapter = (role) => api.post(`/adapters/promote/${encodeURIComponent(role)}`).then(r => r.data);
 export const getGovernor = () => api.get('/config/governor').then(r => r.data);
 export const setGovernor = (enabled, force_deepseek_r1) => api.post('/config/governor', { enabled, force_deepseek_r1 }).then(r => r.data);
+// Health endpoint to check backend connectivity
+export const health = async () => {
+    try {
+        const res = await api.get('/healthz');
+        return { ok: res.status === 200, data: res.data };
+    }
+    catch (_e) {
+        return { ok: false, data: null };
+    }
+};
 export const startTraining = () => api.post('/train').then(r => r.data);
 export const previewAutopromote = () => api.get('/autonomy/autopromote/preview').then(r => r.data);
 // New secrets health endpoint
 export const getSecretsHealth = () => api.get('/secrets/health').then(r => r.data);
+// Secrets management helpers
+export const secretExists = (name) => api.get(`/secrets/exists`, { params: { name } }).then(r => r.data);
+export const setSecret = (name, value, adminToken) => api.post('/secrets/set', { name, value }, {
+    headers: adminToken ? { 'x-admin-token': adminToken } : undefined
+}).then(r => r.data);
+export const reloadRouterSecrets = (adminToken) => api.post('/admin/router/reload-secrets', {}, {
+    headers: adminToken ? { 'x-admin-token': adminToken } : undefined
+}).then(r => r.data);
+// Providers status
+export const getProvidersStatus = () => api.get('/providers').then(r => r.data);

@@ -164,7 +164,7 @@ You are operating in deep reasoning mode. Take time to think through this proble
         # If no clear structure, return original content
         return None, content
     
-    def _fallback_response(self, request: GenRequest, start_time: float, error: str = None) -> GenResponse:
+    def _fallback_response(self, request: GenRequest, start_time: float, error: Optional[str] = None) -> GenResponse:
         """Generate fallback response when R1 API is unavailable."""
         fallback_content = (
             "I apologize, but the advanced reasoning system (DeepSeek R1) is currently unavailable. "
@@ -183,39 +183,28 @@ You are operating in deep reasoning mode. Take time to think through this proble
         )
     
     async def health_check(self) -> Dict[str, Any]:
-        """Check DeepSeek R1 API health."""
+        """Quick health check for DeepSeek R1 API (single attempt, short timeout)."""
         if not self.api_key:
-            return {
-                "status": "unavailable",
-                "reason": "no_api_key", 
-                "provider": self.name
-            }
-            
+            return {"status": "unavailable", "reason": "no_api_key", "provider": self.name}
+
+        if httpx is None:
+            return {"status": "unavailable", "reason": "httpx_missing", "provider": self.name}
+
+        messages = [
+            {"role": "system", "content": "Reason concisely."},
+            {"role": "user", "content": "ping"}
+        ]
+        payload = {"model": self.model, "messages": messages, "max_tokens": 1, "temperature": 0.0, "stream": False}
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         try:
-            # Simple health check with minimal reasoning request
-            test_request = GenRequest(
-                prompt="Analyze this logic: If all A are B, and some B are C, what can we conclude about A and C?",
-                max_tokens=200,
-                temperature=0.1,
-                cot_budget=100
-            )
-            response = await self.generate(test_request)
-            
-            return {
-                "status": "healthy" if response.content and not response.metadata.get("fallback") else "degraded",
-                "provider": self.name,
-                "model": self.model,
-                "latency_ms": response.latency_ms,
-                "reasoning_mode": "r1",
-                "max_cot_tokens": self.max_cot_tokens
-            }
-            
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.post(self.base_url, json=payload, headers=headers)
+                if resp.status_code == 401:
+                    return {"status": "unhealthy", "reason": "unauthorized", "provider": self.name}
+                resp.raise_for_status()
+                return {"status": "healthy", "provider": self.name, "model": self.model, "reasoning_mode": "r1", "max_cot_tokens": self.max_cot_tokens}
         except Exception as e:
-            return {
-                "status": "unhealthy",
-                "reason": str(e),
-                "provider": self.name
-            }
+            return {"status": "unhealthy", "reason": str(e), "provider": self.name}
     
     def _estimate_cost(self, prompt_tokens: int, output_tokens: int) -> float:
         """Estimate cost for DeepSeek R1 reasoning mode."""

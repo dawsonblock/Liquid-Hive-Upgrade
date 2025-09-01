@@ -1,9 +1,9 @@
 import axios from 'axios';
+import { getBackendHttpBase } from './env';
 
-// Use environment variable or fallback to /api prefix for Vite proxy in development
-const baseURL = import.meta.env.REACT_APP_BACKEND_URL 
-  ? `${import.meta.env.REACT_APP_BACKEND_URL}/api`
-  : '/api';
+// If an explicit backend base exists, point axios to it. Otherwise, rely on Vite dev proxy via '/api'.
+const httpBase = getBackendHttpBase();
+const baseURL = httpBase ? `${httpBase}/api` : '/api';
 
 export const api = axios.create({
   baseURL,
@@ -29,9 +29,37 @@ export const getGovernor = () => api.get('/config/governor').then(r => r.data);
 export const setGovernor = (enabled: boolean, force_deepseek_r1: boolean) =>
   api.post('/config/governor', { enabled, force_deepseek_r1 }).then(r => r.data);
 
+// Health endpoint to check backend connectivity
+export const health = async () => {
+  try {
+    const res = await api.get('/healthz');
+    return { ok: res.status === 200, data: res.data };
+  } catch (_e) {
+    return { ok: false, data: null };
+  }
+};
+
 export const startTraining = () => api.post('/train').then(r => r.data);
 
 export const previewAutopromote = () => api.get('/autonomy/autopromote/preview').then(r => r.data);
 
 // New secrets health endpoint
 export const getSecretsHealth = () => api.get('/secrets/health').then(r => r.data);
+
+// Secrets management helpers
+export const secretExists = (name: string) =>
+  api.get(`/secrets/exists`, { params: { name } }).then(r => r.data as { name: string; exists: boolean });
+
+export const setSecret = (name: string, value: any, adminToken?: string) =>
+  api.post('/secrets/set', { name, value }, {
+    headers: adminToken ? { 'x-admin-token': adminToken } : undefined
+  }).then(r => r.data as { status?: string; error?: string; provider?: string });
+
+export const reloadRouterSecrets = (adminToken?: string) =>
+  api.post('/admin/router/reload-secrets', {}, {
+    headers: adminToken ? { 'x-admin-token': adminToken } : undefined
+  }).then(r => r.data as { status?: string; error?: string });
+
+// Providers status
+export const getProvidersStatus = () =>
+  api.get('/providers').then(r => r.data as { providers?: Record<string, any>; router_active?: boolean; timestamp?: number; error?: string });

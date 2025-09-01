@@ -38,10 +38,10 @@ cachetools==5.3.3
 sqlitedict==2.1.0
 playwright==1.45.0
 PyGithub==2.3.0
-huggingface_hub==0.23.0
+huggingface_hub>=0.34.0
 user-agents==2.2.0
 robotexclusionrulesparser>=1.7.0
-simhash==2.0.1
+simhash==2.1.2
 qdrant-client==1.10.1
 
 # Enhanced Tools Framework Dependencies

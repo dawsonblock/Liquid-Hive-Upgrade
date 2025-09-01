@@ -1,14 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Button, Snackbar, Alert } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { getApprovals, approveProposal, denyProposal, fetchState, previewAutopromote } from '../services/api';
+import { Alert, Box, Button, Chip, Grid, IconButton, List, ListItem, ListItemText, Paper, Snackbar, Stack, Typography } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { approveProposal, denyProposal, fetchState, getApprovals, previewAutopromote } from '../services/api';
+import { getBackendWsBase } from '../services/env';
 
 const SystemPanel: React.FC = () => {
   const [approvals, setApprovals] = useState<{ id: number; content: string }[]>([]);
   const [stateSummary, setStateSummary] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
-  const [snack, setSnack] = useState<{ open: boolean; msg: string }[]> ([]);
+  const [snack, setSnack] = useState<{ open: boolean; msg: string }[]>([]);
   const [preview, setPreview] = useState<any[]>([]);
 
   useEffect(() => {
@@ -16,11 +17,11 @@ const SystemPanel: React.FC = () => {
       try {
         setApprovals(await getApprovals());
         setStateSummary(await fetchState());
-      } catch {}
+      } catch { }
     };
     load();
 
-    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
+    const ws = new WebSocket(getBackendWsBase() + '/api/ws');
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
@@ -34,7 +35,7 @@ const SystemPanel: React.FC = () => {
             setSnack(prev => [...prev, { open: true, msg: text }]);
           });
         }
-      } catch {}
+      } catch { }
     };
     return () => ws.close();
   }, []);

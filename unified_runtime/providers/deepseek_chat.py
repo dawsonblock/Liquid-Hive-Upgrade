@@ -56,7 +56,8 @@ class DeepSeekChatProvider(BaseProvider):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
+
+        last_error: Optional[str] = None
         for attempt in range(self.max_retries):
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -88,6 +89,7 @@ class DeepSeekChatProvider(BaseProvider):
                     
             except Exception as e:
                 error_msg = str(e)
+                last_error = error_msg
                 self.logger.warning(f"DeepSeek API attempt {attempt + 1} failed: {error_msg}")
                 
                 if attempt < self.max_retries - 1:
@@ -95,7 +97,8 @@ class DeepSeekChatProvider(BaseProvider):
                     sleep_time = (0.5 * (2 ** attempt)) + random.uniform(0, 1)
                     await asyncio.sleep(sleep_time)
                     continue
-        return final_response
+        # All attempts failed, return fallback
+        return self._fallback_response(request, start_time, error=last_error)
     
     async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
         """Generate streaming response with full safety and intelligence routing."""
@@ -355,7 +358,7 @@ class DeepSeekChatProvider(BaseProvider):
                 metadata={"error": str(e), "stream_failed": True}
             )
     
-    def _fallback_response(self, request: GenRequest, start_time: float, error: str = None) -> GenResponse:
+    def _fallback_response(self, request: GenRequest, start_time: float, error: Optional[str] = None) -> GenResponse:
         """Generate fallback response when API is unavailable."""
         fallback_content = (
             "I apologize, but I'm currently experiencing connectivity issues with the DeepSeek service. "
@@ -373,36 +376,26 @@ class DeepSeekChatProvider(BaseProvider):
         )
     
     async def health_check(self) -> Dict[str, Any]:
-        """Check DeepSeek API health."""
+        """Check DeepSeek API health quickly (single attempt, short timeout)."""
         if not self.api_key:
-            return {
-                "status": "unavailable",
-                "reason": "no_api_key",
-                "provider": self.name
-            }
-            
+            return {"status": "unavailable", "reason": "no_api_key", "provider": self.name}
+
+        if httpx is None:
+            return {"status": "unavailable", "reason": "httpx_missing", "provider": self.name}
+
+        # Minimal request with short timeout, no retries
+        messages = [{"role": "user", "content": "ping"}]
+        payload = {"model": self.model, "messages": messages, "max_tokens": 1, "temperature": 0.0, "stream": False}
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         try:
-            # Simple health check with minimal request
-            test_request = GenRequest(
-                prompt="Hello",
-                max_tokens=5,
-                temperature=0.1
-            )
-            response = await self.generate(test_request)
-            
-            return {
-                "status": "healthy" if response.content and not response.metadata.get("fallback") else "degraded",
-                "provider": self.name,
-                "model": self.model,
-                "latency_ms": response.latency_ms
-            }
-            
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.post(self.base_url, json=payload, headers=headers)
+                if resp.status_code == 401:
+                    return {"status": "unhealthy", "reason": "unauthorized", "provider": self.name}
+                resp.raise_for_status()
+                return {"status": "healthy", "provider": self.name, "model": self.model}
         except Exception as e:
-            return {
-                "status": "unhealthy",
-                "reason": str(e),
-                "provider": self.name
-            }
+            return {"status": "unhealthy", "reason": str(e), "provider": self.name}
     
     def _estimate_cost(self, prompt_tokens: int, output_tokens: int) -> float:
         """Estimate cost for DeepSeek V3.1."""

@@ -158,7 +158,7 @@ Begin your response with <think> and end with your final answer outside the tags
             
         return final_answer
     
-    def _fallback_response(self, request: GenRequest, start_time: float, error: str = None) -> GenResponse:
+    def _fallback_response(self, request: GenRequest, start_time: float, error: Optional[str] = None) -> GenResponse:
         """Generate fallback response when API is unavailable."""
         fallback_content = (
             "I apologize, but I'm currently experiencing connectivity issues with the DeepSeek thinking service. "
@@ -176,38 +176,28 @@ Begin your response with <think> and end with your final answer outside the tags
         )
     
     async def health_check(self) -> Dict[str, Any]:
-        """Check DeepSeek thinking API health."""
+        """Quick health check for DeepSeek thinking API (single attempt, short timeout)."""
         if not self.api_key:
-            return {
-                "status": "unavailable",
-                "reason": "no_api_key",
-                "provider": self.name
-            }
-            
+            return {"status": "unavailable", "reason": "no_api_key", "provider": self.name}
+
+        if httpx is None:
+            return {"status": "unavailable", "reason": "httpx_missing", "provider": self.name}
+
+        messages = [
+            {"role": "system", "content": "Think step by step, but keep it minimal."},
+            {"role": "user", "content": "ping"}
+        ]
+        payload = {"model": self.model, "messages": messages, "max_tokens": 1, "temperature": 0.0, "stream": False}
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         try:
-            # Simple health check with minimal thinking request
-            test_request = GenRequest(
-                prompt="What is 2+2? Think step by step.",
-                max_tokens=100,
-                temperature=0.1,
-                cot_budget=50
-            )
-            response = await self.generate(test_request)
-            
-            return {
-                "status": "healthy" if response.content and not response.metadata.get("fallback") else "degraded",
-                "provider": self.name,
-                "model": self.model,
-                "latency_ms": response.latency_ms,
-                "thinking_mode": True
-            }
-            
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.post(self.base_url, json=payload, headers=headers)
+                if resp.status_code == 401:
+                    return {"status": "unhealthy", "reason": "unauthorized", "provider": self.name}
+                resp.raise_for_status()
+                return {"status": "healthy", "provider": self.name, "model": self.model, "thinking_mode": True}
         except Exception as e:
-            return {
-                "status": "unhealthy",
-                "reason": str(e),
-                "provider": self.name
-            }
+            return {"status": "unhealthy", "reason": str(e), "provider": self.name}
     
     def _estimate_cost(self, prompt_tokens: int, output_tokens: int) -> float:
         """Estimate cost for DeepSeek V3.1 thinking mode."""

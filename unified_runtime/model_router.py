@@ -107,6 +107,8 @@ class RouterConfig:
     @classmethod
     def from_env(cls) -> 'RouterConfig':
         """Load configuration from environment variables."""
+        # Support both HF_TOKEN and HUGGING_FACE_HUB_TOKEN
+        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGING_FACE_HUB_TOKEN")
         return cls(
             conf_threshold=float(os.getenv("CONF_THRESHOLD", "0.62")),
             support_threshold=float(os.getenv("SUPPORT_THRESHOLD", "0.55")),
@@ -115,7 +117,7 @@ class RouterConfig:
             max_oracle_usd_per_day=float(os.getenv("MAX_ORACLE_USD_PER_DAY", "50.0")),
             budget_enforcement=os.getenv("BUDGET_ENFORCEMENT", "hard"),
             deepseek_api_key=os.getenv("DEEPSEEK_API_KEY"),
-            hf_token=os.getenv("HF_TOKEN")
+            hf_token=hf_token
         )
 
 class DSRouter:
@@ -250,6 +252,36 @@ class DSRouter:
             
         except Exception as e:
             self.logger.error(f"Failed to initialize providers: {e}")
+
+    def refresh_config_from_env(self) -> None:
+        """Refresh config values from environment and rebuild providers/circuit breakers."""
+        try:
+            self.config.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+            self.config.hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGING_FACE_HUB_TOKEN")
+
+            # Rebuild providers dict fresh
+            new_providers: Dict[str, BaseProvider] = {}
+            deepseek_config = {"api_key": self.config.deepseek_api_key}
+            try:
+                new_providers["deepseek_chat"] = DeepSeekChatProvider(deepseek_config)
+                new_providers["deepseek_thinking"] = DeepSeekThinkingProvider(deepseek_config)
+                new_providers["deepseek_r1"] = DeepSeekR1Provider(deepseek_config)
+            except Exception as e:
+                self.logger.warning(f"DeepSeek providers refresh error: {e}")
+
+            qwen_config = {"hf_token": self.config.hf_token}
+            try:
+                new_providers["qwen_cpu"] = QwenCPUProvider(qwen_config)
+            except Exception as e:
+                self.logger.warning(f"Qwen provider refresh error: {e}")
+
+            self.providers = new_providers
+
+            # Rebuild circuit breakers for new providers
+            self._initialize_circuit_breakers()
+            self.logger.info("Router config refreshed from env; providers reloaded: %s", list(self.providers.keys()))
+        except Exception as e:
+            self.logger.error(f"Failed to refresh router config: {e}")
     
     def _compile_hard_patterns(self) -> List[re.Pattern]:
         """Compile regex patterns for detecting hard problems."""

@@ -1,15 +1,16 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Paper, TextField, IconButton, Stack, Typography, Button, Switch, FormControlLabel, Grid, Accordion, AccordionSummary, AccordionDetails, Chip, CircularProgress, Alert } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import SendIcon from '@mui/icons-material/Send';
-import StreamIcon from '@mui/icons-material/PlayArrow';
 import CacheIcon from '@mui/icons-material/Memory';
+import StreamIcon from '@mui/icons-material/PlayArrow';
+import SendIcon from '@mui/icons-material/Send';
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip, CircularProgress, FormControlLabel, Grid, IconButton, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useDispatch, useSelector } from 'react-redux';
+import { getBackendWsBase } from '../services/env';
 import { addChat, updateLastMessage } from '../store';
 import ContextSidebar from './ContextSidebar';
-const StreamingChatPanel = ({ apiBaseUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001' }) => {
+const StreamingChatPanel = () => {
     // State management
     const [input, setInput] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
@@ -34,7 +35,8 @@ const StreamingChatPanel = ({ apiBaseUrl = process.env.REACT_APP_BACKEND_URL || 
             return;
         }
         setConnectionStatus('connecting');
-        const wsUrl = `${apiBaseUrl.replace('http', 'ws')}/api/ws/chat`;
+        const wsBase = getBackendWsBase();
+        const wsUrl = `${wsBase}/api/ws/chat`;
         const ws = new WebSocket(wsUrl);
         ws.onopen = () => {
             setConnectionStatus('connected');
@@ -60,7 +62,7 @@ const StreamingChatPanel = ({ apiBaseUrl = process.env.REACT_APP_BACKEND_URL || 
             console.error('WebSocket error:', error);
         };
         wsRef.current = ws;
-    }, [apiBaseUrl]);
+    }, []);
     // Handle WebSocket messages
     const handleWebSocketMessage = (data) => {
         switch (data.type) {

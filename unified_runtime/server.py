@@ -139,6 +139,13 @@ except Exception:
     get_semantic_cache = None
     create_cache_manager = None
 
+# Secrets manager (optional import, endpoints guard against absence)
+try:
+    from hivemind.secrets_manager import secrets_manager as _secrets_manager, SecretProvider as _SecretProvider  # type: ignore
+except Exception:
+    _secrets_manager = None  # type: ignore
+    _SecretProvider = None  # type: ignore
+
 # Curiosity Engine (Genesis Spark)
 try:
     from hivemind.autonomy.curiosity import CuriosityEngine  # type: ignore
@@ -449,6 +456,83 @@ async def secrets_health() -> dict[str, Any]:
         return {"error": str(exc)}
 
 
+@app.get(f"{API_PREFIX}/secrets/exists")
+async def secret_exists(name: str) -> Dict[str, Any]:
+    """Check whether a secret exists (without returning its value)."""
+    try:
+        if _secrets_manager is None:
+            return {"error": "Secrets manager unavailable"}
+        # Guardrail for name format
+        if not name or not all(c.isalnum() or c in ("_", ".", "/", "-") for c in name):
+            return {"error": "Invalid secret name"}
+        exists = _secrets_manager.get_secret(name) is not None  # type: ignore
+        return {"name": name, "exists": bool(exists)}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@app.post(f"{API_PREFIX}/secrets/set")
+async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    """Store a secret via the configured secrets provider.
+
+    Expected body: { "name": string, "value": string | object }
+    - For provider 'vault': writes to Vault KV (if configured)
+    - For provider 'environment': writes to process env and persists to .env
+    - For provider 'aws_secrets_manager': returns an error (write not supported here)
+    """
+    try:
+        if _secrets_manager is None:
+            return {"error": "Secrets manager unavailable"}
+        # Optional admin token check: if ADMIN_TOKEN is set, require matching header
+        admin_token = os.getenv("ADMIN_TOKEN")
+        if admin_token:
+            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            if header_token != admin_token:
+                return {"error": "Unauthorized"}
+
+        name = str(payload.get("name") or "").strip()
+        value = payload.get("value")
+        if not name:
+            return {"error": "Missing secret name"}
+        if not all(c.isalnum() or c in ("_", ".", "/", "-") for c in name):
+            return {"error": "Invalid secret name"}
+        if value is None:
+            return {"error": "Missing secret value"}
+
+        provider = _secrets_manager.get_provider()  # type: ignore
+        # Disallow overly large values to avoid abuse
+        try:
+            serialized = json.dumps(value)
+        except Exception:
+            # Fallback to string conversion
+            serialized = str(value)
+        if len(serialized) > 32 * 1024:
+            return {"error": "Secret value too large"}
+
+        # Attempt to store via secrets manager
+        ok = _secrets_manager.store_secret(name, value)  # type: ignore
+        if not ok:
+            # If provider is AWS, inform user to set secrets via AWS console or CI
+            prov_name = provider.value if provider else "unknown"
+            return {
+                "error": f"Write not supported for provider '{prov_name}'. Configure this secret in your provider.",
+                "provider": prov_name,
+            }
+
+        # Persist to .env when using environment provider to survive restarts
+        if _SecretProvider is not None and provider == _SecretProvider.ENVIRONMENT:
+            try:
+                _env_write(name, serialized if isinstance(value, (dict, list)) else str(value))
+            except Exception:
+                # Non-fatal
+                pass
+
+        # Do not return the secret value
+        return {"status": "stored", "name": name, "provider": provider.value if provider else None}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 async def _get_approvals() -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     if engine is None:
@@ -738,6 +822,31 @@ async def reset_budget() -> Dict[str, Any]:
         return {"status": "budget_reset", "details": result}
     else:
         return {"error": "Router or budget tracker not available"}
+
+
+@app.post(f"{API_PREFIX}/admin/router/reload-secrets")
+async def reload_router_secrets(request: Request) -> Dict[str, Any]:
+    """Reload DS-Router config from environment after secrets update.
+
+    Requires x-admin-token header if ADMIN_TOKEN is configured.
+    """
+    try:
+        admin_token = os.environ.get("ADMIN_TOKEN")
+        if admin_token:
+            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            if header_token != admin_token:
+                return {"error": "Unauthorized"}
+
+        if ds_router is None:
+            return {"error": "DS-Router not available"}
+        # DSRouter exposes refresh_config_from_env()
+        if hasattr(ds_router, 'refresh_config_from_env'):
+            ds_router.refresh_config_from_env()  # type: ignore
+            return {"status": "reloaded"}
+        else:
+            return {"error": "Reload not supported in this build"}
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 @app.get(f"{API_PREFIX}/tools")
@@ -1755,17 +1864,17 @@ async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
             "error": f"Fallback generation failed: {str(e)}"
         })
 
-# Mount GUI SPA
+# Mount GUI SPA (prefer frontend/dist, then frontend/build, fallback to legacy gui paths)
 try:
     import pathlib
     repo_root = pathlib.Path(__file__).resolve().parents[1]
-    gui_dist_path = repo_root / "gui" / "dist"
-    gui_build_path = repo_root / "gui" / "build"
-    static_root: Optional[pathlib.Path] = None
-    if gui_dist_path.exists():
-        static_root = gui_dist_path
-    elif gui_build_path.exists():
-        static_root = gui_build_path
+    candidates = [
+        repo_root / "frontend" / "dist",
+        repo_root / "frontend" / "build",
+        repo_root / "gui" / "dist",
+        repo_root / "gui" / "build",
+    ]
+    static_root = next((p for p in candidates if p.exists()), None)
     if static_root is not None:
         app.mount("/", StaticFiles(directory=str(static_root), html=True), name="gui")
 except Exception:
