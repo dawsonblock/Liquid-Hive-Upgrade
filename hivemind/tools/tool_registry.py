@@ -150,8 +150,9 @@ class ToolRegistry:
             for name, tool in self.tools.items()
         }
     
-    async def execute_tool(self, name: str, parameters: Dict[str, Any]) -> ToolResult:
-        """Execute a tool by name with given parameters."""
+    async def execute_tool(self, name: str, parameters: Dict[str, Any], 
+                          operator_id: Optional[str] = None) -> ToolResult:
+        """Enhanced tool execution with approval workflow and analytics."""
         tool = self.get_tool(name)
         if not tool:
             return ToolResult(
@@ -159,17 +160,48 @@ class ToolRegistry:
                 error=f"Tool '{name}' not found"
             )
         
-        # Log tool execution
-        self.logger.info(f"Executing tool: {name} with parameters: {list(parameters.keys())}")
+        # Check if tool requires approval
+        if tool.requires_approval and not self._is_approved(name, parameters, operator_id):
+            approval_id = self._create_approval_request(name, parameters, operator_id)
+            return ToolResult(
+                success=False,
+                error=f"Tool '{name}' requires approval. Approval request ID: {approval_id}",
+                metadata={
+                    "requires_approval": True,
+                    "approval_id": approval_id,
+                    "risk_level": tool.risk_level
+                }
+            )
         
-        # Execute with safety wrapper
+        # Record execution start
+        start_time = time.time()
+        execution_id = f"{name}_{int(start_time * 1000000)}"
+        
+        self.logger.info(f"Executing tool: {name} (ID: {execution_id}) with parameters: {list(parameters.keys())}")
+        
+        # Execute with safety wrapper and enhanced tracking
         result = await tool.safe_execute(parameters)
         
-        # Log result
+        # Record execution metrics
+        execution_time = time.time() - start_time
+        self._record_execution_metrics(name, result, execution_time, parameters, operator_id)
+        
+        # Log execution details
+        self._log_tool_usage(name, parameters, result, execution_time, operator_id, execution_id)
+        
+        # Enhanced logging based on result
         if result.success:
-            self.logger.info(f"Tool {name} executed successfully")
+            self.logger.info(f"Tool {name} (ID: {execution_id}) executed successfully in {execution_time:.3f}s")
         else:
-            self.logger.warning(f"Tool {name} execution failed: {result.error}")
+            self.logger.warning(f"Tool {name} (ID: {execution_id}) execution failed: {result.error}")
+        
+        # Add execution metadata to result
+        result.metadata.update({
+            "execution_id": execution_id,
+            "execution_time": execution_time,
+            "operator_id": operator_id,
+            "timestamp": datetime.utcnow().isoformat()
+        })
         
         return result
     
