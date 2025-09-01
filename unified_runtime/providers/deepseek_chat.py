@@ -1,6 +1,6 @@
 """
-DeepSeek V3.1 Chat Provider
-==========================
+DeepSeek V3.1 Chat Provider with Streaming Support
+=================================================
 """
 
 from __future__ import annotations
@@ -8,9 +8,9 @@ import asyncio
 import json
 import os
 import random
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, AsyncGenerator
 
-from .base_provider import BaseProvider, GenRequest, GenResponse
+from .base_provider import BaseProvider, GenRequest, GenResponse, StreamChunk
 
 try:
     import httpx
