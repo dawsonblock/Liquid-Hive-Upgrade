@@ -204,10 +204,30 @@ async def startup() -> None:
         
         if WebSearchTool is not None:
             tool_registry.register_tool_class(WebSearchTool)
+            
+        if FileOperationsTool is not None:
+            tool_registry.register_tool_class(FileOperationsTool)
+            
+        if DatabaseQueryTool is not None:
+            tool_registry.register_tool_class(DatabaseQueryTool)
+            
+        if CodeAnalysisTool is not None:
+            tool_registry.register_tool_class(CodeAnalysisTool)
+            
+        if TextProcessingTool is not None:
+            tool_registry.register_tool_class(TextProcessingTool)
+            
+        if SystemInfoTool is not None:
+            tool_registry.register_tool_class(SystemInfoTool)
         
         # Discover additional tools
         tools_discovered = tool_registry.discover_tools()
-        print(f"🛠️ Tool Registry initialized with {len(tool_registry.tools)} tools")
+        print(f"🛠️ Enhanced Tool Registry initialized with {len(tool_registry.tools)} tools")
+        print(f"📊 Tool categories: {', '.join(tool_registry.get_tools_by_category().keys())}")
+        approval_tools = tool_registry.get_approval_required_tools()
+        if approval_tools:
+            print(f"🔒 Tools requiring approval: {', '.join(approval_tools)}")
+    
     
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
