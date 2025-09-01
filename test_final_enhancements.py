@@ -48,13 +48,13 @@ async def test_complete_enhancement_suite():
         
         registry = ToolRegistry()
         
-        # Test tool registration
+        # Test tool registration with ALL 7 tools
         tools = [
             CalculatorTool(),
             TextProcessingTool(), 
             CodeAnalysisTool(),
-            # FileOperationsTool(),  # Requires approval
-            # SystemInfoTool()       # Requires approval
+            FileOperationsTool(),    # Include approval-required tools
+            SystemInfoTool()         # Include approval-required tools
         ]
         
         registered_count = 0
