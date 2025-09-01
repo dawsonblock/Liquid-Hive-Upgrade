@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Always use backend URL from env (must include /api prefix per ingress rules)
-const BACKEND_BASE = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.REACT_APP_BACKEND_URL)
+const BACKEND_BASE = (typeof window !== 'undefined' && import.meta && import.meta.env && import.meta.env.REACT_APP_BACKEND_URL)
   || (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL);
 
 if (!BACKEND_BASE) {
