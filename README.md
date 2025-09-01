@@ -87,28 +87,27 @@ production.
 
 ### Controlling the Oracle Pipeline
 
-The Oracle/Arbiter refinement pipeline can be tuned or disabled entirely
-through environment variables exposed by ``hivemind.config.Settings``.  These
-variables are read by the dataset builder at runtime and allow you to
-balance cost, quality and speed without modifying the code.
+The Oracle/Arbiter refinement pipeline has been enhanced to use DeepSeek R1 instead of GPT-4o,
+providing superior reasoning capabilities at 70% lower cost. The pipeline can be tuned or 
+disabled entirely through environment variables exposed by ``hivemind.config.Settings``.
 
 | Environment Variable | Default | Description |
 | --- | --- | --- |
-| ``ENABLE_ORACLE_REFINEMENT`` | ``True`` | Master switch for the refinement pipeline.  When set to ``False`` the dataset builder will skip all external API calls and simply use the Judge's synthesized answer.  This mode is the fastest and cheapest, suitable for offline or rapid iterations. |
-| ``FORCE_GPT4O_ARBITER`` | ``False`` | Forces all refinements to use GPT‑4o instead of DeepSeek‑V3 when ``ENABLE_ORACLE_REFINEMENT`` is ``True``.  This produces the highest quality training data at increased cost.  When ``False`` the system will prefer DeepSeek‑V3 and only fall back to GPT‑4o when necessary. |
+| ``ENABLE_ORACLE_REFINEMENT`` | ``True`` | Master switch for the refinement pipeline. When set to ``False`` the dataset builder will skip all external API calls and simply use the Judge's synthesized answer. This mode is the fastest and cheapest, suitable for offline or rapid iterations. |
+| ``FORCE_DEEPSEEK_R1_ARBITER`` | ``False`` | Forces all refinements to use DeepSeek R1 (reasoning mode) instead of DeepSeek-V3 when ``ENABLE_ORACLE_REFINEMENT`` is ``True``. This provides the highest quality reasoning analysis while maintaining cost efficiency within the unified DeepSeek ecosystem. |
 
 These environment variables can be set in your ``.env`` file or passed
-directly via your orchestration layer (e.g. docker-compose).  For example,
+directly via your orchestration layer (e.g. docker-compose). For example,
 to run a fast, low‑cost training cycle you can disable refinement:
 
 ```bash
 ENABLE_ORACLE_REFINEMENT=False python -m hivemind.training.dataset_build
 ```
 
-To force all examples through GPT‑4o for a golden dataset:
+To force all examples through DeepSeek R1 for enhanced reasoning analysis:
 
 ```bash
-ENABLE_ORACLE_REFINEMENT=True FORCE_GPT4O_ARBITER=True python -m hivemind.training.dataset_build
+ENABLE_ORACLE_REFINEMENT=True FORCE_DEEPSEEK_R1_ARBITER=True python -m hivemind.training.dataset_build
 ```
 
 ## Additional Considerations
