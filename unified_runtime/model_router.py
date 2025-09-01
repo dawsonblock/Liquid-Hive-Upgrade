@@ -119,7 +119,7 @@ class RouterConfig:
         )
 
 class DSRouter:
-    """Intelligent model router with safety and fallback capabilities."""
+    """Intelligent model router with safety, fallback, and circuit breaker capabilities."""
     
     def __init__(self, config: RouterConfig = None):
         self.config = config or RouterConfig.from_env()
@@ -129,15 +129,108 @@ class DSRouter:
         self.providers: Dict[str, BaseProvider] = {}
         self._initialize_providers()
         
+        # Initialize circuit breakers for each provider
+        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._initialize_circuit_breakers()
+        
         # Initialize safety guards
         self.pre_guard = PreGuard() if PreGuard else None
         self.post_guard = PostGuard() if PostGuard else None
         
-        # Budget tracking (should use Redis in production)
+        # Budget tracking (now uses Redis for distributed state)
         self._budget_tracker = BudgetTracker(self.config)
         
         # Compile regex patterns for hard problem detection
         self._hard_patterns = self._compile_hard_patterns()
+        
+        # Start background health check task
+        self._health_check_task = None
+        self._start_health_monitoring()
+        
+    def _initialize_circuit_breakers(self):
+        """Initialize circuit breakers for all providers."""
+        breaker_config = CircuitBreakerConfig(
+            failure_threshold=int(os.getenv("PROVIDER_FAILURE_THRESHOLD", "5")),
+            recovery_timeout=int(os.getenv("PROVIDER_RECOVERY_TIMEOUT", "300")),
+            success_threshold=int(os.getenv("PROVIDER_SUCCESS_THRESHOLD", "3")),
+            timeout_seconds=int(os.getenv("PROVIDER_TIMEOUT_SECONDS", "30"))
+        )
+        
+        for provider_name in self.providers.keys():
+            self.circuit_breakers[provider_name] = CircuitBreaker(breaker_config)
+        
+        self.logger.info("Initialized circuit breakers for providers: %s", list(self.circuit_breakers.keys()))
+    
+    def _start_health_monitoring(self):
+        """Start background task for periodic health checks."""
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            self._health_check_task = loop.create_task(self._periodic_health_check())
+        except Exception as e:
+            self.logger.warning(f"Could not start health monitoring: {e}")
+    
+    async def _periodic_health_check(self):
+        """Periodically check provider health and update circuit breakers."""
+        while True:
+            try:
+                await asyncio.sleep(60)  # Check every minute
+                
+                for provider_name, provider in self.providers.items():
+                    circuit_breaker = self.circuit_breakers.get(provider_name)
+                    if not circuit_breaker:
+                        continue
+                    
+                    # Only check health for providers in OPEN state (trying to recover)
+                    if circuit_breaker.state == CircuitState.OPEN:
+                        try:
+                            health_result = await asyncio.wait_for(
+                                provider.health_check(), 
+                                timeout=circuit_breaker.config.timeout_seconds
+                            )
+                            
+                            if health_result.get("status") == "healthy":
+                                self.logger.info(f"Provider {provider_name} health recovered, transitioning to HALF_OPEN")
+                                circuit_breaker.state = CircuitState.HALF_OPEN
+                                circuit_breaker.success_count = 0
+                            
+                        except Exception as e:
+                            self.logger.debug(f"Health check failed for {provider_name}: {e}")
+                            # Keep circuit open
+                            
+            except Exception as e:
+                self.logger.error(f"Health monitoring error: {e}")
+                
+    async def _call_provider_with_circuit_breaker(self, provider_name: str, request: GenRequest) -> GenResponse:
+        """Call provider with circuit breaker protection."""
+        circuit_breaker = self.circuit_breakers.get(provider_name)
+        provider = self.providers.get(provider_name)
+        
+        if not circuit_breaker or not provider:
+            raise ValueError(f"Provider {provider_name} or circuit breaker not found")
+        
+        # Check if circuit breaker allows the call
+        if not circuit_breaker.should_attempt_call():
+            raise Exception(f"Provider {provider_name} circuit breaker is OPEN (too many failures)")
+        
+        try:
+            # Make the actual provider call with timeout
+            response = await asyncio.wait_for(
+                provider.generate(request),
+                timeout=circuit_breaker.config.timeout_seconds
+            )
+            
+            # Record success
+            circuit_breaker.record_success()
+            self.logger.debug(f"Provider {provider_name} call successful, circuit state: {circuit_breaker.state}")
+            
+            return response
+            
+        except Exception as e:
+            # Record failure
+            circuit_breaker.record_failure()
+            self.logger.warning(f"Provider {provider_name} call failed, circuit state: {circuit_breaker.state}, error: {e}")
+            raise
         
     def _initialize_providers(self):
         """Initialize all available providers."""
