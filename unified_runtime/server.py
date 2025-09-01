@@ -56,11 +56,25 @@ except Exception:
 
 try:
     from .model_router import DSRouter, RouterConfig
-    from .providers import GenRequest
 except Exception:
     DSRouter = None  # type: ignore
     RouterConfig = None  # type: ignore
-    GenRequest = None  # type: ignore
+
+try:
+    from .providers import (
+        BaseProvider, GenRequest, GenResponse, StreamChunk,
+        DeepSeekChatProvider, DeepSeekThinkingProvider, 
+        DeepSeekR1Provider, QwenCPUProvider
+    )
+except Exception:
+    BaseProvider = None  # type: ignore
+    GenRequest = None  # type: ignore 
+    GenResponse = None  # type: ignore
+    StreamChunk = None  # type: ignore
+    DeepSeekChatProvider = None  # type: ignore
+    DeepSeekThinkingProvider = None  # type: ignore
+    DeepSeekR1Provider = None  # type: ignore
+    QwenCPUProvider = None  # type: ignore
 
 try:
     from hivemind.roles_text import TextRoles
