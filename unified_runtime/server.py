@@ -109,9 +109,11 @@ except Exception:
     SystemInfoTool = None  # type: ignore
 
 try:
-    import redis  # type: ignore
+    from hivemind.cache import SemanticCache, get_semantic_cache, create_cache_manager
 except Exception:
-    redis = None  # type: ignore
+    SemanticCache = None
+    get_semantic_cache = None
+    create_cache_manager = None
 
 # Curiosity Engine (Genesis Spark)
 try:
