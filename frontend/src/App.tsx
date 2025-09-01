@@ -38,7 +38,7 @@ const darkTheme = createTheme({
 });
 
 export default function App() {
-  const [panel, setPanel] = useState<'chat' | 'system' | 'forge'>('chat');
+  const [panel, setPanel] = useState<'chat' | 'streaming' | 'system' | 'forge'>('streaming');
   return (
     <Provider store={store}>
       <ThemeProvider theme={darkTheme}>
@@ -46,7 +46,7 @@ export default function App() {
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
           <Toolbar>
             <Typography variant="h6" noWrap component="div">
-              Cerebral Operator Console
+              LIQUID-HIVE Enhanced Cognitive Console
             </Typography>
           </Toolbar>
         </AppBar>
@@ -61,15 +61,21 @@ export default function App() {
           <Toolbar />
           <List>
             <ListItem disablePadding>
+              <ListItemButton selected={panel === 'streaming'} onClick={() => setPanel('streaming')}>
+                <ListItemIcon><StreamIcon /></ListItemIcon>
+                <ListItemText primary="Streaming Chat" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
               <ListItemButton selected={panel === 'chat'} onClick={() => setPanel('chat')}>
                 <ListItemIcon><ChatIcon /></ListItemIcon>
-                <ListItemText primary="Cognitive Core" />
+                <ListItemText primary="Classic Chat" />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton selected={panel === 'system'} onClick={() => setPanel('system')}>
                 <ListItemIcon><DashboardIcon /></ListItemIcon>
-                <ListItemText primary="Operator Console" />
+                <ListItemText primary="System Console" />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
@@ -82,6 +88,7 @@ export default function App() {
         </Drawer>
         <Box component="main" sx={{ flexGrow: 1, p: 3, ml: `${drawerWidth}px` }}>
           <Toolbar />
+          {panel === 'streaming' && <StreamingChatPanel />}
           {panel === 'chat' && <ChatPanel />}
           {panel === 'system' && <SystemPanel />}
           {panel === 'forge' && <ForgePanel />}
