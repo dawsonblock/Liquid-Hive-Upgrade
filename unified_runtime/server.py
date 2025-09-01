@@ -993,6 +993,41 @@ async def get_cache_health() -> Dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
+@app.get(f"{API_PREFIX}/tools/health")
+async def get_tools_health() -> Dict[str, Any]:
+    """Get health status of all tools."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    health_status = {}
+    total_tools = len(tool_registry.tools)
+    healthy_tools = 0
+    
+    for tool_name, tool in tool_registry.tools.items():
+        try:
+            # Basic health check - could be enhanced
+            health_status[tool_name] = {
+                "status": "healthy",
+                "category": tool.category,
+                "risk_level": tool.risk_level,
+                "requires_approval": tool.requires_approval,
+                "version": tool.version
+            }
+            healthy_tools += 1
+        except Exception as e:
+            health_status[tool_name] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+    
+    return {
+        "overall_health": "healthy" if healthy_tools == total_tools else "degraded",
+        "healthy_tools": healthy_tools,
+        "total_tools": total_tools,
+        "tools": health_status
+    }
+
+
 @app.post(f"{API_PREFIX}/tools/batch_execute")
 async def batch_execute_tools(requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Execute multiple tools in sequence."""
