@@ -100,6 +100,100 @@ class DeepSeekChatProvider(BaseProvider):
                     self._log_generation(request, None, error_msg)
                     return self._fallback_response(request, start_time, error=error_msg)
     
+    async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
+        """Generate streaming response using DeepSeek chat mode."""
+        if not self.api_key or httpx is None:
+            # Fallback to base implementation
+            async for chunk in super().generate_stream(request):
+                yield chunk
+            return
+            
+        messages = []
+        if request.system_prompt:
+            messages.append({"role": "system", "content": request.system_prompt})
+        messages.append({"role": "user", "content": request.prompt})
+        
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": request.max_tokens or 2048,
+            "temperature": request.temperature or 0.7,
+            "stream": True
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        chunk_id = 0
+        accumulated_content = ""
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with client.stream("POST", self.base_url, json=payload, headers=headers) as response:
+                    response.raise_for_status()
+                    
+                    async for line in response.aiter_lines():
+                        if not line.strip():
+                            continue
+                        
+                        if not line.startswith("data: "):
+                            continue
+                        
+                        data_str = line[6:]  # Remove "data: " prefix
+                        
+                        if data_str.strip() == "[DONE]":
+                            # Send final chunk
+                            yield StreamChunk(
+                                content="",
+                                chunk_id=chunk_id,
+                                is_final=True,
+                                provider=self.name,
+                                metadata={
+                                    "model": self.model,
+                                    "total_content": accumulated_content,
+                                    "stream_complete": True
+                                }
+                            )
+                            break
+                        
+                        try:
+                            data = json.loads(data_str)
+                            choice = data.get("choices", [{}])[0]
+                            delta = choice.get("delta", {})
+                            content = delta.get("content", "")
+                            
+                            if content:
+                                accumulated_content += content
+                                
+                                yield StreamChunk(
+                                    content=content,
+                                    chunk_id=chunk_id,
+                                    is_final=False,
+                                    provider=self.name,
+                                    metadata={
+                                        "model": self.model,
+                                        "accumulated_length": len(accumulated_content)
+                                    }
+                                )
+                                
+                                chunk_id += 1
+                                
+                        except json.JSONDecodeError:
+                            # Skip malformed chunks
+                            continue
+                            
+        except Exception as e:
+            # Send error chunk
+            yield StreamChunk(
+                content=f"[Streaming Error: {str(e)}]",
+                chunk_id=chunk_id,
+                is_final=True,
+                provider=f"{self.name}_error",
+                metadata={"error": str(e), "stream_failed": True}
+            )
+    
     def _fallback_response(self, request: GenRequest, start_time: float, error: str = None) -> GenResponse:
         """Generate fallback response when API is unavailable."""
         fallback_content = (
