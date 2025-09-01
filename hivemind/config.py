@@ -48,9 +48,9 @@ class Settings(BaseSettings):
     # Foundational adapter path (centralized)
     foundational_adapter_path: str = "/app/adapters/foundational/champion_v1"
 
-    # --- Arbiter Governor Controls ---
+    # --- Arbiter Governor Controls (Updated to use DeepSeek R1) ---
     ENABLE_ORACLE_REFINEMENT: bool = True
-    FORCE_GPT4O_ARBITER: bool = False
+    FORCE_DEEPSEEK_R1_ARBITER: bool = False  # Replaces FORCE_GPT4O_ARBITER
 
     # --- Autonomy Governor ---
     ENABLE_AUTONOMOUS_EXECUTIVE: bool = True
