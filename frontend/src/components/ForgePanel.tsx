@@ -4,7 +4,7 @@ import { getAdaptersState, promoteAdapter, getGovernor, setGovernor, startTraini
 
 const ForgePanel: React.FC = () => {
   const [adapters, setAdapters] = useState<any>({ state: {} });
-  const [gov, setGov] = useState<{ ENABLE_ORACLE_REFINEMENT?: boolean; FORCE_GPT4O_ARBITER?: boolean }>({});
+  const [gov, setGov] = useState<{ ENABLE_ORACLE_REFINEMENT?: boolean; FORCE_DEEPSEEK_R1_ARBITER?: boolean }>({});
   const [loadingTrain, setLoadingTrain] = useState(false);
   const [trainStatus, setTrainStatus] = useState<string | null>(null);
 
