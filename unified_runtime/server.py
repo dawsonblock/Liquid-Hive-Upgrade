@@ -1532,7 +1532,223 @@ async def vision(question: str, file: UploadFile = File(...), grounding_required
         resp["critique"] = critique
     if grounding:
         resp["grounding"] = grounding
-    return resp
+@app.websocket(f"{API_PREFIX}/ws/chat")
+async def websocket_chat_endpoint(websocket: WebSocket):
+    """Enhanced WebSocket endpoint for streaming chat responses."""
+    await websocket.accept()
+    
+    try:
+        while True:
+            # Receive message from client
+            message = await websocket.receive_text()
+            
+            try:
+                data = json.loads(message)
+                query = data.get("q", "")
+                stream_mode = data.get("stream", True)
+                
+                if not query:
+                    await websocket.send_json({
+                        "type": "error",
+                        "error": "Query is required"
+                    })
+                    continue
+                
+                # Sanitize input
+                query = sanitize_input(query)
+                
+                # Add to engine memory
+                if engine is not None:
+                    engine.add_memory("user", query)
+                
+                # Check semantic cache first
+                cached_response = None
+                if semantic_cache and semantic_cache.is_ready:
+                    try:
+                        cached_response = await semantic_cache.get(query)
+                    except Exception as e:
+                        log.warning(f"Cache check failed: {e}")
+                
+                if cached_response:
+                    # Send cached response immediately
+                    await websocket.send_json({
+                        "type": "cached_response",
+                        "content": cached_response["answer"],
+                        "metadata": {
+                            "cached": True,
+                            "cache_similarity": cached_response.get("cache_similarity", 1.0),
+                            "provider": cached_response.get("provider", "cache")
+                        }
+                    })
+                    
+                    # Add to engine memory
+                    if engine is not None:
+                        engine.add_memory("assistant", cached_response["answer"])
+                    
+                    # Send completion signal
+                    await websocket.send_json({"type": "stream_complete"})
+                    continue
+                
+                # No cache hit - generate streaming response
+                if stream_mode and ds_router is not None and GenRequest is not None:
+                    await _handle_streaming_generation(websocket, query)
+                else:
+                    # Fallback to non-streaming
+                    await _handle_non_streaming_generation(websocket, query)
+                
+            except json.JSONDecodeError:
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "Invalid JSON message"
+                })
+            except Exception as e:
+                await websocket.send_json({
+                    "type": "error", 
+                    "error": f"Processing error: {str(e)}"
+                })
+                
+    except WebSocketDisconnect:
+        log.info("WebSocket client disconnected from streaming chat")
+    except Exception as e:
+        log.error(f"WebSocket chat error: {e}")
+
+
+async def _handle_streaming_generation(websocket: WebSocket, query: str):
+    """Handle streaming generation using DS-Router."""
+    try:
+        # Prepare RAG context
+        context_txt = ""
+        enhanced_prompt = query
+        
+        if retriever is not None:
+            try:
+                docs = await retriever.search(query, k=5)
+                if hasattr(retriever, 'format_context'):
+                    context_txt = retriever.format_context(docs)
+                else:
+                    # Fallback context formatting
+                    context_txt = "\n\n".join([doc.page_content[:200] for doc in docs[:3]])
+                
+                enhanced_prompt = (
+                    f"[CONTEXT]\n{context_txt}\n\n"
+                    f"[QUESTION]\n{query}\n\n"
+                    "Cite using [#]. If not in context, say 'Not in context'."
+                )
+            except Exception as e:
+                log.warning(f"RAG retrieval failed: {e}")
+                enhanced_prompt = query
+        
+        # Create streaming request
+        gen_request = GenRequest(
+            prompt=enhanced_prompt,
+            system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
+            max_tokens=getattr(settings, 'max_new_tokens', 1024) if settings else 1024,
+            temperature=0.7,
+            stream=True
+        )
+        
+        # Send stream start notification
+        await websocket.send_json({
+            "type": "stream_start",
+            "metadata": {
+                "has_context": bool(context_txt),
+                "enhanced_prompt_length": len(enhanced_prompt)
+            }
+        })
+        
+        # Stream response chunks
+        accumulated_content = ""
+        chunk_count = 0
+        
+        async for chunk in ds_router.generate_stream(gen_request):
+            accumulated_content += chunk.content
+            chunk_count += 1
+            
+            # Send chunk to client
+            await websocket.send_json({
+                "type": "chunk",
+                "content": chunk.content,
+                "chunk_id": chunk.chunk_id,
+                "is_final": chunk.is_final,
+                "provider": chunk.provider,
+                "metadata": {
+                    **chunk.metadata,
+                    "accumulated_length": len(accumulated_content),
+                    "total_chunks": chunk_count
+                }
+            })
+            
+            if chunk.is_final:
+                break
+        
+        # Add complete response to engine memory
+        if engine is not None and accumulated_content:
+            engine.add_memory("assistant", accumulated_content)
+        
+        # Cache the complete response
+        if semantic_cache and semantic_cache.is_ready and accumulated_content:
+            try:
+                response_to_cache = {
+                    "answer": accumulated_content,
+                    "provider": chunk.provider if 'chunk' in locals() else "ds_router_stream",
+                    "context": context_txt if context_txt else None,
+                    "streaming": True
+                }
+                
+                await semantic_cache.set(query, response_to_cache)
+                log.debug(f"Cached streaming response for: {query[:50]}...")
+                
+            except Exception as e:
+                log.warning(f"Failed to cache streaming response: {e}")
+        
+        # Send completion signal
+        await websocket.send_json({
+            "type": "stream_complete",
+            "metadata": {
+                "total_chunks": chunk_count,
+                "total_length": len(accumulated_content),
+                "cached": True if semantic_cache else False
+            }
+        })
+        
+    except Exception as e:
+        await websocket.send_json({
+            "type": "error",
+            "error": f"Streaming generation failed: {str(e)}"
+        })
+
+
+async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
+    """Handle non-streaming generation as fallback."""
+    try:
+        # Use the existing chat logic but send as stream
+        # This is a simplified version - you could enhance this further
+        
+        await websocket.send_json({
+            "type": "stream_start",
+            "metadata": {"fallback_mode": True}
+        })
+        
+        # Generate response (simplified)
+        response_content = "This is a fallback response when streaming is not available."
+        
+        # Send as single chunk
+        await websocket.send_json({
+            "type": "chunk", 
+            "content": response_content,
+            "chunk_id": 0,
+            "is_final": True,
+            "provider": "fallback",
+            "metadata": {"non_streaming_fallback": True}
+        })
+        
+        await websocket.send_json({"type": "stream_complete"})
+        
+    except Exception as e:
+        await websocket.send_json({
+            "type": "error",
+            "error": f"Fallback generation failed: {str(e)}"
+        })
 
 # Mount GUI SPA
 try:
