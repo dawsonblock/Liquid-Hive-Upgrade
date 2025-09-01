@@ -18,6 +18,8 @@ import time
 import logging
 from datetime import datetime
 
+log = logging.getLogger(__name__)
+
 from fastapi import FastAPI, UploadFile, File, Request
 
 # Integrate internet agent advanced routes and metrics
