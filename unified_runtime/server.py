@@ -89,6 +89,16 @@ except Exception:
     TrustPolicy = None  # type: ignore
 
 try:
+    from hivemind.tools import ToolRegistry, global_registry
+    from hivemind.tools.calculator_tool import CalculatorTool
+    from hivemind.tools.web_search_tool import WebSearchTool
+except Exception:
+    ToolRegistry = None  # type: ignore
+    global_registry = None  # type: ignore
+    CalculatorTool = None  # type: ignore
+    WebSearchTool = None  # type: ignore
+
+try:
     import redis  # type: ignore
 except Exception:
     redis = None  # type: ignore
