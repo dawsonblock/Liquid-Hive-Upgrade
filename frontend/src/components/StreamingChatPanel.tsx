@@ -1,6 +1,7 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CacheIcon from '@mui/icons-material/Memory';
 import StreamIcon from '@mui/icons-material/PlayArrow';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import SendIcon from '@mui/icons-material/Send';
 import {
   Accordion,
@@ -20,12 +21,11 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useDispatch, useSelector } from 'react-redux';
-import { getBackendWsBase } from '../services/env';
 import { getProvidersStatus } from '../services/api';
+import { getBackendWsBase } from '../services/env';
 import type { RootState } from '../store';
 import { addChat, updateLastMessage } from '../store';
 import ContextSidebar from './ContextSidebar';
@@ -242,6 +242,14 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     };
   }, [streamingEnabled, connectWebSocket, refreshProviders]);
 
+  // Auto refresh providers periodically
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      refreshProviders();
+    }, 15000); // 15s cadence
+    return () => window.clearInterval(id);
+  }, [refreshProviders]);
+
   // Connection status indicator
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
@@ -301,7 +309,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                 {Object.entries(providers).map(([name, info]) => (
                   <Chip key={name} size="small" label={`${name}: ${info?.status || 'unknown'}`}
-                        color={(info?.status === 'healthy' ? 'success' : (info?.status ? 'warning' : 'default')) as any}
+                    color={(info?.status === 'healthy' ? 'success' : (info?.status ? 'warning' : 'default')) as any}
                   />
                 ))}
               </Stack>

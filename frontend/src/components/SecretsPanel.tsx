@@ -1,3 +1,4 @@
+import RefreshIcon from '@mui/icons-material/Refresh';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -8,8 +9,8 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Switch from '@mui/material/Switch';
 import { useEffect, useMemo, useState } from 'react';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import { getProvidersStatus, getSecretsHealth, reloadRouterSecrets, secretExists, setSecret } from '../services/api';
 
 const SECRET_KEYS = [
@@ -28,6 +29,7 @@ export default function SecretsPanel() {
     const [health, setHealth] = useState<any>(null);
     const [providers, setProviders] = useState<Record<string, any>>({});
     const [providersLoading, setProvidersLoading] = useState<boolean>(false);
+    const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
     useEffect(() => {
         // Load health and existence of known secrets
@@ -103,6 +105,14 @@ export default function SecretsPanel() {
         } catch { } finally { setProvidersLoading(false); }
     };
 
+    useEffect(() => {
+        if (!autoRefresh) return;
+        const id = window.setInterval(() => {
+            refreshProviders();
+        }, 15000);
+        return () => window.clearInterval(id);
+    }, [autoRefresh]);
+
     return (
         <Box>
             <Typography variant="h5" gutterBottom>Secrets & API Tokens</Typography>
@@ -147,13 +157,17 @@ export default function SecretsPanel() {
                 ))}
             </Grid>
 
-        {!!providers && Object.keys(providers).length > 0 && (
+            {!!providers && Object.keys(providers).length > 0 && (
                 <Paper variant="outlined" sx={{ p: 2, mt: 3 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between">
-            <Typography variant="subtitle1">Provider Status</Typography>
-            <Button size="small" variant="outlined" onClick={refreshProviders} startIcon={<RefreshIcon />}
-                disabled={providersLoading}>{providersLoading ? 'Refreshing…' : 'Refresh'}</Button>
-            </Stack>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between">
+                        <Typography variant="subtitle1">Provider Status</Typography>
+                        <Button size="small" variant="outlined" onClick={refreshProviders} startIcon={<RefreshIcon />}
+                            disabled={providersLoading}>{providersLoading ? 'Refreshing…' : 'Refresh'}</Button>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography variant="caption">Auto Refresh</Typography>
+                            <Switch size="small" checked={!!autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+                        </Stack>
+                    </Stack>
                     <Grid container spacing={1}>
                         {Object.entries(providers).map(([name, info]) => (
                             <Grid key={name} item>
