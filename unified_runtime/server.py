@@ -848,39 +848,149 @@ async def deny_tool_execution(approval_id: str, denial_reason: str = "",
         return {"error": f"Approval {approval_id} not found or already processed"}
 
 
-@app.get(f"{API_PREFIX}/tools/health")
-async def get_tools_health() -> Dict[str, Any]:
-    """Get health status of all tools."""
-    if tool_registry is None:
-        return {"error": "Tool registry not available"}
+@app.get(f"{API_PREFIX}/cache/status")
+async def get_cache_status() -> Dict[str, Any]:
+    """Get semantic cache status and analytics."""
+    if not semantic_cache:
+        return {"status": "disabled", "reason": "Semantic cache not initialized"}
     
-    health_status = {}
-    total_tools = len(tool_registry.tools)
-    healthy_tools = 0
+    try:
+        analytics = await semantic_cache.get_analytics()
+        health = await semantic_cache.health_check()
+        
+        return {
+            "status": "enabled" if semantic_cache.is_ready else "error",
+            "health": health,
+            "analytics": analytics,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get(f"{API_PREFIX}/cache/analytics")
+async def get_cache_analytics() -> Dict[str, Any]:
+    """Get detailed cache analytics."""
+    if not semantic_cache:
+        return {"error": "Semantic cache not available"}
     
-    for tool_name, tool in tool_registry.tools.items():
-        try:
-            # Basic health check - could be enhanced
-            health_status[tool_name] = {
-                "status": "healthy",
-                "category": tool.category,
-                "risk_level": tool.risk_level,
-                "requires_approval": tool.requires_approval,
-                "version": tool.version
+    try:
+        if cache_manager:
+            analysis = await cache_manager.analyze_cache_performance()
+            return analysis
+        else:
+            return await semantic_cache.get_analytics()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get(f"{API_PREFIX}/cache/report")
+async def get_cache_report() -> Dict[str, Any]:
+    """Get comprehensive cache performance report."""
+    if not cache_manager:
+        return {"error": "Cache manager not available"}
+    
+    try:
+        report = await cache_manager.cache_statistics_report()
+        return {"report": report}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post(f"{API_PREFIX}/cache/clear")
+async def clear_cache(pattern: str = None) -> Dict[str, Any]:
+    """Clear semantic cache entries."""
+    if not semantic_cache:
+        return {"error": "Semantic cache not available"}
+    
+    try:
+        result = await semantic_cache.clear_cache(pattern)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post(f"{API_PREFIX}/cache/optimize")
+async def optimize_cache(target_hit_rate: float = 0.5) -> Dict[str, Any]:
+    """Optimize cache settings for better performance."""
+    if not cache_manager:
+        return {"error": "Cache manager not available"}
+    
+    try:
+        if target_hit_rate < 0.1 or target_hit_rate > 0.9:
+            return {"error": "Target hit rate must be between 0.1 and 0.9"}
+        
+        result = await cache_manager.optimize_cache_settings(target_hit_rate)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post(f"{API_PREFIX}/cache/warm")
+async def warm_cache() -> Dict[str, Any]:
+    """Warm the cache with common queries."""
+    if not cache_manager:
+        return {"error": "Cache manager not available"}
+    
+    try:
+        # Use some default queries for warming
+        common_queries = [
+            {
+                "query": "What is artificial intelligence?",
+                "response": {
+                    "answer": "Artificial Intelligence (AI) is a branch of computer science that focuses on creating systems capable of performing tasks that typically require human intelligence, such as learning, reasoning, problem-solving, and understanding natural language.",
+                    "provider": "cache_warming"
+                }
+            },
+            {
+                "query": "How does machine learning work?",
+                "response": {
+                    "answer": "Machine learning works by using algorithms to analyze data, identify patterns, and make predictions or decisions without being explicitly programmed for each specific task. It involves training models on data so they can learn and improve their performance over time.",
+                    "provider": "cache_warming"
+                }
+            },
+            {
+                "query": "Explain neural networks",
+                "response": {
+                    "answer": "Neural networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers that process information by passing signals through weighted connections. They can learn patterns in data through training.",
+                    "provider": "cache_warming"
+                }
             }
-            healthy_tools += 1
-        except Exception as e:
-            health_status[tool_name] = {
-                "status": "unhealthy",
-                "error": str(e)
-            }
+        ]
+        
+        result = await cache_manager.warm_cache(common_queries)
+        return result
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get(f"{API_PREFIX}/cache/health")
+async def get_cache_health() -> Dict[str, Any]:
+    """Perform comprehensive cache health check."""
+    if not semantic_cache:
+        return {
+            "status": "disabled",
+            "semantic_cache": False,
+            "cache_manager": False,
+            "redis_connected": False
+        }
     
-    return {
-        "overall_health": "healthy" if healthy_tools == total_tools else "degraded",
-        "healthy_tools": healthy_tools,
-        "total_tools": total_tools,
-        "tools": health_status
-    }
+    try:
+        health = await semantic_cache.health_check()
+        
+        return {
+            "status": health["status"],
+            "semantic_cache": semantic_cache.is_ready,
+            "cache_manager": cache_manager is not None,
+            "redis_connected": health.get("redis_connected", False),
+            "embedding_model_loaded": health.get("embedding_model_loaded", False),
+            "last_error": health.get("last_error"),
+            "strategy": semantic_cache.strategy.value,
+            "similarity_threshold": semantic_cache.similarity_threshold
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @app.post(f"{API_PREFIX}/tools/batch_execute")
