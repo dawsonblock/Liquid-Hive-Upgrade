@@ -26,8 +26,8 @@ export const getAdaptersState = () => api.get('/adapters/state').then(r => r.dat
 export const promoteAdapter = (role: string) => api.post(`/adapters/promote/${encodeURIComponent(role)}`).then(r => r.data);
 
 export const getGovernor = () => api.get('/config/governor').then(r => r.data);
-export const setGovernor = (enabled: boolean, force_gpt4o: boolean) =>
-  api.post('/config/governor', { enabled, force_gpt4o }).then(r => r.data);
+export const setGovernor = (enabled: boolean, force_deepseek_r1: boolean) =>
+  api.post('/config/governor', { enabled, force_deepseek_r1 }).then(r => r.data);
 
 export const startTraining = () => api.post('/train').then(r => r.data);
 
