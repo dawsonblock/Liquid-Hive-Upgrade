@@ -183,6 +183,7 @@ async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
+    global semantic_cache, cache_manager
     
     # Initialize settings
     if Settings is not None:
