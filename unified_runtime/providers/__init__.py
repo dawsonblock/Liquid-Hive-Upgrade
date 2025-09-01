@@ -19,6 +19,7 @@ __all__ = [
     "BaseProvider", 
     "GenRequest", 
     "GenResponse",
+    "StreamChunk",
     "DeepSeekChatProvider",
     "DeepSeekThinkingProvider", 
     "DeepSeekR1Provider",
