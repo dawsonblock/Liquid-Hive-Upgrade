@@ -344,30 +344,89 @@ class DSRouter:
         return final_response
     
     async def _determine_routing(self, request: GenRequest) -> 'RoutingDecision':
-        """Determine which provider to use based on request characteristics."""
+        """Determine which provider to use based on request characteristics and RAG support."""
         
         # Check if this is a hard problem
         is_hard = self._is_hard_problem(request.prompt)
         
-        # TODO: Implement RAG support scoring
-        # support_score = await self._get_rag_support_score(request.prompt)
-        support_score = 0.7  # Mock for now
+        # RAG-Aware Routing: Get semantic support score
+        support_score = await self._get_rag_support_score(request.prompt)
         
-        if support_score < self.config.support_threshold:
-            is_hard = True
-        
-        if not is_hard:
+        # Enhanced routing logic based on RAG availability
+        if support_score >= self.config.support_threshold:
+            # High RAG support - use faster model with RAG-focused instructions
+            self.logger.debug(f"High RAG support ({support_score:.2f}) - routing to DeepSeek Chat with RAG context")
+            return RoutingDecision(
+                provider="deepseek_chat",
+                reasoning="high_rag_support",
+                cot_budget=None,
+                rag_enhanced=True
+            )
+        elif support_score < 0.3:
+            # Low RAG support - novel question, escalate to reasoning model
+            self.logger.debug(f"Low RAG support ({support_score:.2f}) - escalating to DeepSeek R1 for novel reasoning")
+            return RoutingDecision(
+                provider="deepseek_r1", 
+                reasoning="novel_query_no_rag_support",
+                cot_budget=self.config.max_cot_tokens,
+                rag_enhanced=False
+            )
+        elif is_hard:
+            # Hard problem with moderate RAG support - use thinking mode
+            self.logger.debug(f"Hard problem with moderate RAG support ({support_score:.2f}) - using DeepSeek Thinking")
+            return RoutingDecision(
+                provider="deepseek_thinking", 
+                reasoning="complex_query_with_context",
+                cot_budget=min(self.config.max_cot_tokens, 3000),
+                rag_enhanced=True
+            )
+        else:
+            # Simple query - use chat model
             return RoutingDecision(
                 provider="deepseek_chat",
                 reasoning="simple_query",
-                cot_budget=None
+                cot_budget=None,
+                rag_enhanced=bool(support_score > 0.1)
             )
-        else:
-            return RoutingDecision(
-                provider="deepseek_thinking", 
-                reasoning="complex_query",
-                cot_budget=min(self.config.max_cot_tokens, 3000)
-            )
+    
+    async def _get_rag_support_score(self, prompt: str) -> float:
+        """Get semantic similarity score from RAG system to determine context availability."""
+        try:
+            # Try to import and use the retriever if available
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+            
+            from hivemind.rag.retriever import Retriever
+            from hivemind.config import Settings
+            
+            settings = Settings()
+            retriever = Retriever(settings.rag_index, settings.embed_model)
+            
+            if not retriever.is_ready:
+                self.logger.debug("RAG retriever not ready, assuming low support")
+                return 0.3  # Assume moderate support if RAG unavailable
+            
+            # Perform semantic search and get relevance scores
+            docs = await retriever.search(prompt, k=3)
+            
+            if not docs:
+                return 0.0  # No relevant documents found
+            
+            # Calculate average relevance score
+            relevance_scores = [doc.get('score', 0.0) for doc in docs]
+            avg_score = sum(relevance_scores) / len(relevance_scores)
+            
+            # Normalize score to 0-1 range (typical FAISS scores can vary)
+            # Assuming scores > 0.8 are highly relevant
+            normalized_score = min(avg_score / 0.8, 1.0)
+            
+            self.logger.debug(f"RAG support score: {normalized_score:.3f} (raw: {avg_score:.3f})")
+            return normalized_score
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to get RAG support score: {e}")
+            return 0.5  # Fallback to moderate support
     
     def _is_hard_problem(self, prompt: str) -> bool:
         """Detect if a prompt represents a hard problem requiring reasoning."""
