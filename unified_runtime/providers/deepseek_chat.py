@@ -49,7 +49,7 @@ class DeepSeekChatProvider(BaseProvider):
             "messages": messages,
             "max_tokens": request.max_tokens or 2048,
             "temperature": request.temperature or 0.7,
-            "stream": False
+            "stream": request.stream
         }
         
         headers = {
