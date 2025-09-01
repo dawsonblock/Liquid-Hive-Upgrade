@@ -307,10 +307,12 @@ async def test_websocket_connectivity():
     print("-" * 40)
     
     try:
+        import websockets
+        
         # Try to connect to WebSocket endpoint
         uri = "ws://localhost:8000/api/ws/chat"
         
-        async with websockets.connect(uri, timeout=5) as websocket:
+        async with websockets.connect(uri) as websocket:
             print("✅ WebSocket connection successful")
             
             # Send test message
@@ -325,7 +327,7 @@ async def test_websocket_connectivity():
             
         return True
         
-    except websockets.exceptions.ConnectionRefusedError:
+    except ConnectionRefusedError:
         print("⚠️ WebSocket server not running (start with: python -m unified_runtime)")
         return True  # Not a failure - just server not running
     except asyncio.TimeoutError:
