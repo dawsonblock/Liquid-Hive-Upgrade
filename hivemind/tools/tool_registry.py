@@ -2,15 +2,19 @@
 Tool Registry for LIQUID-HIVE Tool Framework
 ===========================================
 
-Manages discovery, loading, and execution of tools.
+Enhanced registry with approval workflows, analytics, and audit capabilities.
 """
 
 import importlib
 import inspect
 import logging
 import pkgutil
+import time
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Type, Any
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from .base_tool import BaseTool, ToolResult
 
