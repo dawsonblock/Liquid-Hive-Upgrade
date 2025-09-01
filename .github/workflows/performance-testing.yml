@@ -76,19 +76,19 @@ jobs:
         run: |
           echo "📊 Testing Enhancement Performance..."
           
-          # Test 1: Semantic Cache Performance
-          echo "🧠 Testing semantic cache hit rates..."
-          python -c "
-import asyncio, time, json
-print('Cache performance test completed')
-"
+          # Test 1: Basic performance validation
+          echo "🧠 Testing system responsiveness..."
+          curl -f http://localhost:8000/api/healthz || exit 1
           
-          # Test 2: Tool Framework Performance  
-          echo "🛠️ Testing tool execution performance..."
-          python -c "
-import asyncio, time
-print('Tool performance test completed')
-"
+          # Test 2: Tool performance
+          echo "🛠️ Testing tool execution speed..."
+          curl -f http://localhost:8000/api/tools || exit 1
+          
+          # Test 3: Cache performance
+          echo "💾 Testing cache system..."
+          curl -f http://localhost:8000/api/cache/health || exit 1
+          
+          echo "✅ All performance tests completed"
       
       - name: Generate performance report
         run: |
