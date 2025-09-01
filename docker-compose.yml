@@ -17,6 +17,7 @@ services:
       - redis
       - neo4j
       - vllm
+      - qdrant
     networks: [fusionnet]
 
   prometheus:
