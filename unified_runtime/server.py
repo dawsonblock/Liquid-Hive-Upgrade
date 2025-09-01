@@ -92,11 +92,21 @@ try:
     from hivemind.tools import ToolRegistry, global_registry
     from hivemind.tools.calculator_tool import CalculatorTool
     from hivemind.tools.web_search_tool import WebSearchTool
+    from hivemind.tools.file_operations_tool import FileOperationsTool
+    from hivemind.tools.database_query_tool import DatabaseQueryTool
+    from hivemind.tools.code_analysis_tool import CodeAnalysisTool
+    from hivemind.tools.text_processing_tool import TextProcessingTool
+    from hivemind.tools.system_info_tool import SystemInfoTool
 except Exception:
     ToolRegistry = None  # type: ignore
     global_registry = None  # type: ignore
     CalculatorTool = None  # type: ignore
     WebSearchTool = None  # type: ignore
+    FileOperationsTool = None  # type: ignore
+    DatabaseQueryTool = None  # type: ignore
+    CodeAnalysisTool = None  # type: ignore
+    TextProcessingTool = None  # type: ignore
+    SystemInfoTool = None  # type: ignore
 
 try:
     import redis  # type: ignore
