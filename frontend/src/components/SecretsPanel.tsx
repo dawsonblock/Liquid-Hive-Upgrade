@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { getProvidersStatus, getSecretsHealth, reloadRouterSecrets, secretExists, setSecret } from '../services/api';
 
 const SECRET_KEYS = [
@@ -26,6 +27,7 @@ export default function SecretsPanel() {
     const [error, setError] = useState<string>('');
     const [health, setHealth] = useState<any>(null);
     const [providers, setProviders] = useState<Record<string, any>>({});
+    const [providersLoading, setProvidersLoading] = useState<boolean>(false);
 
     useEffect(() => {
         // Load health and existence of known secrets
@@ -82,14 +84,23 @@ export default function SecretsPanel() {
                 // Refresh providers after a short delay to allow warm-up
                 setTimeout(async () => {
                     try {
+                        setProvidersLoading(true);
                         const ps = await getProvidersStatus();
                         if (ps?.providers) setProviders(ps.providers);
-                    } catch { }
+                    } catch { } finally { setProvidersLoading(false); }
                 }, 800);
             }
         } catch (e: any) {
             setError(e?.message || 'Failed to reload');
         }
+    };
+
+    const refreshProviders = async () => {
+        try {
+            setProvidersLoading(true);
+            const ps = await getProvidersStatus();
+            if (ps?.providers) setProviders(ps.providers);
+        } catch { } finally { setProvidersLoading(false); }
     };
 
     return (
@@ -136,9 +147,13 @@ export default function SecretsPanel() {
                 ))}
             </Grid>
 
-            {!!providers && Object.keys(providers).length > 0 && (
+        {!!providers && Object.keys(providers).length > 0 && (
                 <Paper variant="outlined" sx={{ p: 2, mt: 3 }}>
-                    <Typography variant="subtitle1" gutterBottom>Provider Status</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between">
+            <Typography variant="subtitle1">Provider Status</Typography>
+            <Button size="small" variant="outlined" onClick={refreshProviders} startIcon={<RefreshIcon />}
+                disabled={providersLoading}>{providersLoading ? 'Refreshing…' : 'Refresh'}</Button>
+            </Stack>
                     <Grid container spacing={1}>
                         {Object.entries(providers).map(([name, info]) => (
                             <Grid key={name} item>

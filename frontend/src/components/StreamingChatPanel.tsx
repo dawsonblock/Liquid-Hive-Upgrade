@@ -20,10 +20,12 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBackendWsBase } from '../services/env';
+import { getProvidersStatus } from '../services/api';
 import type { RootState } from '../store';
 import { addChat, updateLastMessage } from '../store';
 import ContextSidebar from './ContextSidebar';
@@ -48,6 +50,8 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [streamMetadata, setStreamMetadata] = useState<any>(null);
+  const [providers, setProviders] = useState<Record<string, any>>({});
+  const [providersLoading, setProvidersLoading] = useState<boolean>(false);
 
   // Context and metadata state
   const [lastContext, setLastContext] = useState<string | undefined>();
@@ -62,6 +66,18 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   // WebSocket reference
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const refreshProviders = useCallback(async () => {
+    try {
+      setProvidersLoading(true);
+      const ps = await getProvidersStatus();
+      if (ps?.providers) setProviders(ps.providers);
+    } catch {
+      // ignore
+    } finally {
+      setProvidersLoading(false);
+    }
+  }, []);
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
@@ -216,12 +232,15 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       connectWebSocket();
     }
 
+    // Initial provider fetch (non-blocking)
+    refreshProviders();
+
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, [streamingEnabled, connectWebSocket]);
+  }, [streamingEnabled, connectWebSocket, refreshProviders]);
 
   // Connection status indicator
   const getConnectionStatusColor = () => {
@@ -263,8 +282,31 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                   Generating response...
                 </Typography>
               )}
+
+              <Box sx={{ flex: 1 }} />
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={refreshProviders}
+                startIcon={providersLoading ? <CircularProgress size={14} /> : <RefreshIcon />}
+              >
+                Refresh Providers
+              </Button>
             </Stack>
           </Paper>
+
+          {/* Provider chips */}
+          {providers && Object.keys(providers).length > 0 && (
+            <Paper variant="outlined" sx={{ p: 1 }}>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                {Object.entries(providers).map(([name, info]) => (
+                  <Chip key={name} size="small" label={`${name}: ${info?.status || 'unknown'}`}
+                        color={(info?.status === 'healthy' ? 'success' : (info?.status ? 'warning' : 'default')) as any}
+                  />
+                ))}
+              </Stack>
+            </Paper>
+          )}
 
           {/* Chat History */}
           <Paper variant="outlined" sx={{ p: 2, height: 500, overflowY: 'auto', bgcolor: 'background.default' }}>
