@@ -64,31 +64,39 @@ async def test_complete_enhancement_suite():
         
         print(f"✅ Tool Registration: {registered_count}/{len(tools)} tools registered")
         
-        # Test tool execution
-        calc_result = await registry.execute_tool("calculator", {"expression": "fibonacci(10) = 10th term"})
+        # Test tool execution with improved test
+        calc_result = await registry.execute_tool("calculator", {"expression": "sqrt(16) + 2 * 3"})  # Should equal 10
         text_result = await registry.execute_tool("text_processing", {
             "operation": "sentiment", 
             "text": "The LIQUID-HIVE enhancements are absolutely fantastic and revolutionary!"
         })
         
         execution_score = 0
-        if calc_result.success:
+        if calc_result.success and calc_result.data == 10.0:  # Verify correct calculation
             execution_score += 1
-            print(f"✅ Calculator Tool: Working")
+            print(f"✅ Calculator Tool: {calc_result.data} (complex calculation)")
+        else:
+            print(f"❌ Calculator Tool: {calc_result.error if not calc_result.success else f'Wrong result: {calc_result.data}'}")
         
         if text_result.success:
             execution_score += 1
             sentiment = text_result.data.get("sentiment", "unknown")
-            print(f"✅ Text Processing Tool: {sentiment} sentiment detected")
+            confidence = text_result.data.get("confidence", 0)
+            print(f"✅ Text Processing Tool: {sentiment} sentiment (confidence: {confidence:.2f})")
+        else:
+            print(f"❌ Text Processing Tool: {text_result.error}")
         
-        # Test analytics
+        # Test analytics with enhanced verification
         analytics = registry.get_tool_analytics()
-        if analytics and "most_used_tools" in analytics:
+        if analytics and "most_used_tools" in analytics and len(analytics["overall_stats"]) >= 2:
             execution_score += 1
-            print("✅ Tool Analytics: Performance tracking working")
+            total_executions = analytics["performance_summary"]["total_executions"]
+            print(f"✅ Tool Analytics: {total_executions} executions tracked across {len(analytics['overall_stats'])} tools")
+        else:
+            print(f"❌ Tool Analytics: Insufficient data or missing features")
         
         enhancement_status["1_enhanced_tools"]["score"] = execution_score
-        enhancement_status["1_enhanced_tools"]["status"] = execution_score >= 2
+        enhancement_status["1_enhanced_tools"]["status"] = execution_score >= 3  # Need perfect score
         
         print(f"🎯 Enhancement 1 Score: {execution_score}/3")
         
