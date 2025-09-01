@@ -8,9 +8,10 @@ import asyncio
 import re
 import logging
 import os
-from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass
-from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple, Union
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
 
 from .providers import (
     BaseProvider, GenRequest, GenResponse,
@@ -26,6 +27,68 @@ except ImportError:
     PostGuard = None
 
 log = logging.getLogger(__name__)
+
+class CircuitState(Enum):
+    """Circuit breaker states."""
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Provider disabled due to failures
+    HALF_OPEN = "half_open"  # Testing if provider recovered
+
+@dataclass
+class CircuitBreakerConfig:
+    """Configuration for circuit breaker."""
+    failure_threshold: int = 5          # Failures before opening circuit
+    recovery_timeout: int = 300         # Seconds before attempting recovery
+    success_threshold: int = 3          # Successes needed to close circuit
+    timeout_seconds: int = 30           # Request timeout
+
+@dataclass 
+class CircuitBreaker:
+    """Circuit breaker for provider health management."""
+    config: CircuitBreakerConfig = field(default_factory=CircuitBreakerConfig)
+    failure_count: int = 0
+    success_count: int = 0
+    last_failure_time: Optional[datetime] = None
+    state: CircuitState = CircuitState.CLOSED
+    
+    def should_attempt_call(self) -> bool:
+        """Determine if we should attempt to call the provider."""
+        if self.state == CircuitState.CLOSED:
+            return True
+        elif self.state == CircuitState.OPEN:
+            # Check if we should transition to half-open
+            if (self.last_failure_time and 
+                datetime.utcnow() - self.last_failure_time > timedelta(seconds=self.config.recovery_timeout)):
+                self.state = CircuitState.HALF_OPEN
+                self.success_count = 0
+                return True
+            return False
+        elif self.state == CircuitState.HALF_OPEN:
+            return True
+        return False
+    
+    def record_success(self):
+        """Record a successful call."""
+        if self.state == CircuitState.HALF_OPEN:
+            self.success_count += 1
+            if self.success_count >= self.config.success_threshold:
+                self.state = CircuitState.CLOSED
+                self.failure_count = 0
+        elif self.state == CircuitState.CLOSED:
+            # Reset failure count on success
+            self.failure_count = max(0, self.failure_count - 1)
+    
+    def record_failure(self):
+        """Record a failed call."""
+        self.failure_count += 1
+        self.last_failure_time = datetime.utcnow()
+        
+        if self.state == CircuitState.CLOSED:
+            if self.failure_count >= self.config.failure_threshold:
+                self.state = CircuitState.OPEN
+        elif self.state == CircuitState.HALF_OPEN:
+            self.state = CircuitState.OPEN
+            self.success_count = 0
 
 @dataclass
 class RouterConfig:
