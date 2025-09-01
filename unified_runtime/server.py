@@ -636,6 +636,79 @@ async def reset_budget() -> Dict[str, Any]:
         return {"error": "Router or budget tracker not available"}
 
 
+@app.get(f"{API_PREFIX}/tools")
+async def list_tools() -> Dict[str, Any]:
+    """Get list of all available tools."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    return {
+        "tools": tool_registry.get_all_schemas(),
+        "categories": tool_registry.get_tools_by_category(),
+        "high_risk": tool_registry.get_high_risk_tools(),
+        "approval_required": tool_registry.get_approval_required_tools(),
+        "total_count": len(tool_registry.tools)
+    }
+
+
+@app.get(f"{API_PREFIX}/tools/{{tool_name}}")
+async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
+    """Get schema for a specific tool."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    schema = tool_registry.get_tool_schema(tool_name)
+    if schema is None:
+        return {"error": f"Tool '{tool_name}' not found"}
+    
+    return schema
+
+
+@app.post(f"{API_PREFIX}/tools/{{tool_name}}/execute")
+async def execute_tool(tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute a tool with given parameters."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    # Check if tool requires approval
+    tool = tool_registry.get_tool(tool_name)
+    if tool and tool.requires_approval:
+        # For now, just warn - in production you'd check approval status
+        return {"error": f"Tool '{tool_name}' requires operator approval before execution"}
+    
+    # Execute the tool
+    result = await tool_registry.execute_tool(tool_name, parameters)
+    return result.to_dict()
+
+
+@app.post(f"{API_PREFIX}/tools/batch_execute")
+async def batch_execute_tools(requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Execute multiple tools in sequence."""
+    if tool_registry is None:
+        return [{"error": "Tool registry not available"}]
+    
+    results = []
+    for request in requests:
+        tool_name = request.get("tool")
+        parameters = request.get("parameters", {})
+        
+        if not tool_name:
+            results.append({"error": "Missing tool name in request"})
+            continue
+        
+        # Check approval requirement
+        tool = tool_registry.get_tool(tool_name)
+        if tool and tool.requires_approval:
+            results.append({"error": f"Tool '{tool_name}' requires operator approval"})
+            continue
+        
+        # Execute
+        result = await tool_registry.execute_tool(tool_name, parameters)
+        results.append(result.to_dict())
+    
+    return results
+
+
 @app.post(f"{API_PREFIX}/admin/router/set-thresholds")
 async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
     """Set router confidence and support thresholds (Admin only)."""
