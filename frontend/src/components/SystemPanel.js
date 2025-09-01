@@ -1,112 +1,57 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Snackbar, Alert } from '@mui/material';
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { useEffect, useMemo, useState } from 'react';
+import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, IconButton, Stack, Chip, Button, Snackbar, Alert } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
-import { getApprovals, approveProposal, denyProposal, fetchState } from '../services/api';
-
-const resolveWsUrl = () => {
-  const base = (typeof import !== 'undefined' && import.meta && import.meta.env && import.meta.env.REACT_APP_BACKEND_URL)
-    || (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL);
-  if (!base) {
-    console.error('REACT_APP_BACKEND_URL missing; cannot connect WebSocket');
-    return null;
-  }
-  if (base.startsWith('/')) {
-    return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/ws';
-  }
-  try {
-    const u = new URL(base);
-    const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
-    const path = (u.pathname.endsWith('/') ? u.pathname.slice(0, -1) : u.pathname) + '/ws';
-    return `${wsProto}//${u.host}${path}`;
-  } catch (e) {
-    console.error('Invalid REACT_APP_BACKEND_URL for WebSocket:', e);
-    return null;
-  }
-};
-
+import { getApprovals, approveProposal, denyProposal, fetchState, previewAutopromote } from '../services/api';
 const SystemPanel = () => {
-  const [approvals, setApprovals] = useState([]);
-  const [stateSummary, setStateSummary] = useState(null);
-  const [snack, setSnack] = useState([]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setApprovals(await getApprovals());
-        setStateSummary(await fetchState());
-      } catch {}
+    const [approvals, setApprovals] = useState([]);
+    const [stateSummary, setStateSummary] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [snack, setSnack] = useState([]);
+    const [preview, setPreview] = useState([]);
+    useEffect(() => {
+        const load = async () => {
+            try {
+                setApprovals(await getApprovals());
+                setStateSummary(await fetchState());
+            }
+            catch { }
+        };
+        load();
+        const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
+        ws.onmessage = (ev) => {
+            try {
+                const msg = JSON.parse(ev.data);
+                if (msg.type === 'state_update')
+                    setStateSummary(msg.payload);
+                if (msg.type === 'approvals_update')
+                    setApprovals(msg.payload);
+                if (msg.type === 'autonomy_events') {
+                    setEvents(msg.payload || []);
+                    // Show a toast for each event
+                    (msg.payload || []).forEach((e) => {
+                        const text = e?.message || `Auto‑promotion: role ${e?.role} → ${e?.new_active}`;
+                        setSnack(prev => [...prev, { open: true, msg: text }]);
+                    });
+                }
+            }
+            catch { }
+        };
+        return () => ws.close();
+    }, []);
+    const vitals = useMemo(() => stateSummary?.self_awareness_metrics || {}, [stateSummary]);
+    const handlePreview = async () => {
+        try {
+            const res = await previewAutopromote();
+            setPreview(res?.candidates || []);
+            if (!res?.candidates?.length)
+                setSnack(prev => [...prev, { open: true, msg: 'No auto‑promotion candidates at this time.' }]);
+        }
+        catch (e) {
+            setSnack(prev => [...prev, { open: true, msg: 'Preview failed.' }]);
+        }
     };
-    load();
-
-    const wsUrl = resolveWsUrl();
-    if (!wsUrl) return;
-
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data);
-        if (msg.type === 'state_update') setStateSummary(msg.payload);
-        if (msg.type === 'approvals_update') setApprovals(msg.payload);
-      } catch {}
-    };
-    return () => ws.close();
-  }, []);
-
-  const vitals = useMemo(() => stateSummary?.self_awareness_metrics || {}, [stateSummary]);
-
-  return (
-    <>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="h6">Core Vitals & Self‑Awareness (Φ)</Typography>
-            <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-              <Chip label={`Phi: ${vitals.phi ?? 'N/A'}`} color="primary" />
-              <Chip label={`Memories: ${stateSummary?.memory_size ?? 'N/A'}`} />
-            </Stack>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2">Operator Intent</Typography>
-              <Typography variant="body2" color="text.secondary">{stateSummary?.operator_intent ?? 'Unknown'}</Typography>
-            </Box>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="h6">Approval Queue</Typography>
-            <List>
-              {approvals.map((a) => (
-                <ListItem key={a.id}
-                  secondaryAction={
-                    <Box>
-                      <IconButton color="success" onClick={async () => { await approveProposal(a.id); setApprovals(await getApprovals()); }}>
-                        <CheckIcon />
-                      </IconButton>
-                      <IconButton color="error" onClick={async () => { await denyProposal(a.id); setApprovals(await getApprovals()); }}>
-                        <CloseIcon />
-                      </IconButton>
-                    </Box>
-                  }
-                >
-                  <ListItemText primary={a.content} />
-                </ListItem>
-              ))}
-              {approvals.length === 0 && <Typography variant="body2" color="text.secondary">No pending approvals.</Typography>}
-            </List>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {snack.map((s, idx) => (
-        <Snackbar key={idx} open={s.open} autoHideDuration={6000} onClose={() => setSnack(prev => prev.filter((_, i) => i !== idx))}>
-          <Alert onClose={() => setSnack(prev => prev.filter((_, i) => i !== idx))} severity="info" sx={{ width: '100%' }}>
-            {s.msg}
-          </Alert>
-        </Snackbar>
-      ))}
-    </>
-  );
+    return (_jsxs(_Fragment, { children: [_jsxs(Grid, { container: true, spacing: 2, children: [_jsx(Grid, { item: true, xs: 12, md: 6, children: _jsxs(Paper, { variant: "outlined", sx: { p: 2 }, children: [_jsxs(Stack, { direction: "row", spacing: 2, alignItems: "center", justifyContent: "space-between", children: [_jsx(Typography, { variant: "h6", children: "Core Vitals & Self\u2011Awareness (\u03A6)" }), _jsx(Button, { size: "small", variant: "outlined", onClick: handlePreview, children: "Preview Auto\u2011Promotions" })] }), _jsxs(Stack, { direction: "row", spacing: 2, sx: { mt: 1 }, children: [_jsx(Chip, { label: `Phi: ${vitals.phi ?? 'N/A'}`, color: "primary" }), _jsx(Chip, { label: `Memories: ${stateSummary?.memory_size ?? 'N/A'}` })] }), _jsxs(Box, { sx: { mt: 2 }, children: [_jsx(Typography, { variant: "subtitle2", children: "Operator Intent" }), _jsx(Typography, { variant: "body2", color: "text.secondary", children: stateSummary?.operator_intent ?? 'Unknown' })] }), preview.length > 0 && (_jsxs(Box, { sx: { mt: 2 }, children: [_jsx(Typography, { variant: "subtitle2", children: "Auto\u2011Promotion Candidates" }), _jsx(List, { dense: true, children: preview.map((p, i) => (_jsx(ListItem, { children: _jsx(ListItemText, { primary: `Role ${p.role}: ${p.challenger} vs ${p.active}`, secondary: `p95 ${p.p95_c?.toFixed?.(3)}s vs ${p.p95_a?.toFixed?.(3)}s; cost ${p.cost_c?.toFixed?.(6)} vs ${p.cost_a?.toFixed?.(6)}` }) }, i))) })] }))] }) }), _jsx(Grid, { item: true, xs: 12, md: 6, children: _jsxs(Paper, { variant: "outlined", sx: { p: 2 }, children: [_jsx(Typography, { variant: "h6", children: "Approval Queue" }), _jsxs(List, { children: [approvals.map((a) => (_jsx(ListItem, { secondaryAction: _jsxs(Box, { children: [_jsx(IconButton, { color: "success", onClick: async () => { await approveProposal(a.id); setApprovals(await getApprovals()); }, children: _jsx(CheckIcon, {}) }), _jsx(IconButton, { color: "error", onClick: async () => { await denyProposal(a.id); setApprovals(await getApprovals()); }, children: _jsx(CloseIcon, {}) })] }), children: _jsx(ListItemText, { primary: a.content }) }, a.id))), approvals.length === 0 && _jsx(Typography, { variant: "body2", color: "text.secondary", children: "No pending approvals." })] })] }) })] }), snack.map((s, idx) => (_jsx(Snackbar, { open: s.open, autoHideDuration: 6000, onClose: () => setSnack(prev => prev.filter((_, i) => i !== idx)), children: _jsx(Alert, { onClose: () => setSnack(prev => prev.filter((_, i) => i !== idx)), severity: "info", sx: { width: '100%' }, children: s.msg }) }, idx)))] }));
 };
-
 export default SystemPanel;

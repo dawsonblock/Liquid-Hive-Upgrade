@@ -1,6 +1,7 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from 'react';
-import { Box, Paper, TextField, IconButton, Stack, Typography, Button, Switch, FormControlLabel, Grid } from '@mui/material';
+import { Box, Paper, TextField, IconButton, Stack, Typography, Button, Switch, FormControlLabel, Grid, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ReactMarkdown from 'react-markdown';
@@ -15,6 +16,9 @@ const ChatPanel = () => {
     const [lastContext, setLastContext] = useState();
     const [lastReasoning, setLastReasoning] = useState();
     const [lastIntent, setLastIntent] = useState();
+    const [lastRationale, setLastRationale] = useState();
+    const [lastCritique, setLastCritique] = useState();
+    const [lastCorrection, setLastCorrection] = useState();
     const dispatch = useDispatch();
     const history = useSelector((s) => s.chatHistory);
     const sendText = async () => {
@@ -25,6 +29,7 @@ const ChatPanel = () => {
         dispatch(addChat({ role: 'assistant', content: res.answer }));
         setLastContext(res.context);
         setLastReasoning(res.reasoning_strategy);
+        setLastRationale(res.selector_reason);
         try {
             const st = await fetchState();
             setLastIntent(st?.operator_intent);
@@ -40,15 +45,16 @@ const ChatPanel = () => {
         form.append('question', input || 'What is in this image?');
         const res = await postVision(form, groundingRequired);
         dispatch(addChat({ role: 'assistant', content: res.answer }));
+        setLastCritique(res.critique);
         try {
             const st = await fetchState();
             setLastIntent(st?.operator_intent);
         }
         catch { }
     };
-    return (_jsxs(Grid, { container: true, spacing: 2, children: [_jsx(Grid, { item: true, xs: 12, md: 8, children: _jsxs(Stack, { spacing: 2, children: [_jsxs(Paper, { variant: "outlined", sx: { p: 2, height: 500, overflowY: 'auto', bgcolor: 'background.default' }, children: [history.length === 0 && (_jsx(Typography, { variant: "body2", color: "text.secondary", children: "Start the conversation with the Cognitive Core. Attach an image to ask visual questions." })), history.map((m, i) => (_jsxs(Box, { sx: { mb: 2 }, children: [_jsx(Typography, { variant: "caption", color: "text.secondary", children: m.role.toUpperCase() }), _jsx(ReactMarkdown, { children: m.content })] }, i)))] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(TextField, { fullWidth: true, size: "small", placeholder: "Type a message...", value: input, onChange: e => setInput(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter' && !e.shiftKey) {
+    return (_jsxs(Grid, { container: true, spacing: 2, children: [_jsx(Grid, { item: true, xs: 12, md: 8, children: _jsxs(Stack, { spacing: 2, children: [_jsxs(Paper, { variant: "outlined", sx: { p: 2, height: 500, overflowY: 'auto', bgcolor: 'background.default' }, children: [history.length === 0 && (_jsx(Typography, { variant: "body2", color: "text.secondary", children: "Start the conversation with the Cognitive Core. Attach an image to ask visual questions." })), history.map((m, i) => (_jsxs(Box, { sx: { mb: 2 }, children: [_jsx(Typography, { variant: "caption", color: "text.secondary", children: m.role.toUpperCase() }), _jsx(ReactMarkdown, { children: m.content }), (lastCritique || lastCorrection) && m.role === 'assistant' && (_jsxs(Accordion, { sx: { mt: 1 }, children: [_jsx(AccordionSummary, { expandIcon: _jsx(ExpandMoreIcon, {}), children: _jsx(Typography, { variant: "caption", children: "Show Reasoning" }) }), _jsxs(AccordionDetails, { children: [lastCritique && _jsxs(_Fragment, { children: [_jsx(Typography, { variant: "subtitle2", children: "Judge Critique" }), _jsx(Typography, { variant: "body2", color: "text.secondary", children: lastCritique })] }), lastCorrection && _jsxs(_Fragment, { children: [_jsx(Typography, { variant: "subtitle2", sx: { mt: 1 }, children: "Correction Analysis" }), _jsx(Typography, { variant: "body2", color: "text.secondary", children: lastCorrection })] })] })] }))] }, i)))] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(TextField, { fullWidth: true, size: "small", placeholder: "Type a message...", value: input, onChange: e => setInput(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
                                         sendText();
-                                    } } }), _jsxs(IconButton, { component: "label", color: imageFile ? 'secondary' : 'default', children: [_jsx(AttachFileIcon, {}), _jsx("input", { type: "file", hidden: true, accept: "image/*", onChange: e => setImageFile(e.target.files?.[0] || null) })] }), _jsx(IconButton, { color: "primary", onClick: sendText, children: _jsx(SendIcon, {}) }), _jsx(Button, { variant: "outlined", onClick: sendVision, disabled: !imageFile, children: "Send Image" })] }), _jsx(FormControlLabel, { control: _jsx(Switch, { checked: groundingRequired, onChange: e => setGroundingRequired(e.target.checked) }), label: "Grounding Required" })] }) }), _jsx(Grid, { item: true, xs: 12, md: 4, children: _jsx(ContextSidebar, { context: lastContext, reasoning: lastReasoning, intent: lastIntent }) })] }));
+                                    } } }), _jsxs(IconButton, { component: "label", color: imageFile ? 'secondary' : 'default', children: [_jsx(AttachFileIcon, {}), _jsx("input", { type: "file", hidden: true, accept: "image/*", onChange: e => setImageFile(e.target.files?.[0] || null) })] }), _jsx(IconButton, { color: "primary", onClick: sendText, children: _jsx(SendIcon, {}) }), _jsx(Button, { variant: "outlined", onClick: sendVision, disabled: !imageFile, children: "Send Image" })] }), _jsx(FormControlLabel, { control: _jsx(Switch, { checked: groundingRequired, onChange: e => setGroundingRequired(e.target.checked) }), label: "Grounding Required" })] }) }), _jsx(Grid, { item: true, xs: 12, md: 4, children: _jsx(ContextSidebar, { context: lastContext, reasoning: lastReasoning, intent: lastIntent, rationale: lastRationale }) })] }));
 };
 export default ChatPanel;
