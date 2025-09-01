@@ -695,20 +695,140 @@ async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/tools/{{tool_name}}/execute")
-async def execute_tool(tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+async def execute_tool(tool_name: str, parameters: Dict[str, Any], request: Request) -> Dict[str, Any]:
     """Execute a tool with given parameters."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
     
+    # Get operator ID from request if available
+    operator_id = request.headers.get("X-Operator-ID")
+    
     # Check if tool requires approval
     tool = tool_registry.get_tool(tool_name)
     if tool and tool.requires_approval:
-        # For now, just warn - in production you'd check approval status
-        return {"error": f"Tool '{tool_name}' requires operator approval before execution"}
+        # Enhanced approval check
+        approval_status = await check_tool_approval(tool_name, parameters, operator_id)
+        if not approval_status["approved"]:
+            return {
+                "error": f"Tool '{tool_name}' requires approval",
+                "approval_required": True,
+                "approval_id": approval_status.get("approval_id"),
+                "risk_level": tool.risk_level,
+                "reason": approval_status.get("reason")
+            }
     
-    # Execute the tool
-    result = await tool_registry.execute_tool(tool_name, parameters)
+    # Execute the tool with enhanced tracking
+    result = await tool_registry.execute_tool(tool_name, parameters, operator_id)
     return result.to_dict()
+
+
+async def check_tool_approval(tool_name: str, parameters: Dict[str, Any], 
+                             operator_id: Optional[str]) -> Dict[str, Any]:
+    """Check tool approval status."""
+    # This would integrate with your approval system
+    # For now, return mock approval check
+    return {
+        "approved": False,
+        "reason": "Tool requires operator approval due to security requirements"
+    }
+
+
+@app.get(f"{API_PREFIX}/tools/analytics")
+async def get_tool_analytics() -> Dict[str, Any]:
+    """Get comprehensive tool analytics."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    return tool_registry.get_tool_analytics()
+
+
+@app.get(f"{API_PREFIX}/tools/analytics/{{tool_name}}")
+async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> Dict[str, Any]:
+    """Get analytics for a specific tool."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    return tool_registry.get_tool_analytics(tool_name, days)
+
+
+@app.get(f"{API_PREFIX}/tools/approvals")
+async def get_pending_approvals() -> Dict[str, Any]:
+    """Get pending tool execution approvals."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    return {
+        "pending_approvals": tool_registry.get_pending_approvals(),
+        "approval_history": tool_registry.approval_history[-20:]  # Last 20 approvals
+    }
+
+
+@app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/approve")
+async def approve_tool_execution(approval_id: str, request: Request) -> Dict[str, Any]:
+    """Approve a pending tool execution."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    approver_id = request.headers.get("X-Operator-ID", "unknown")
+    
+    success = tool_registry.approve_tool_execution(approval_id, approver_id)
+    
+    if success:
+        return {"status": "approved", "approval_id": approval_id, "approved_by": approver_id}
+    else:
+        return {"error": f"Approval {approval_id} not found or already processed"}
+
+
+@app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/deny")
+async def deny_tool_execution(approval_id: str, denial_reason: str = "", 
+                             request: Request = None) -> Dict[str, Any]:
+    """Deny a pending tool execution."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    approver_id = request.headers.get("X-Operator-ID", "unknown") if request else "unknown"
+    
+    success = tool_registry.deny_tool_execution(approval_id, approver_id, denial_reason)
+    
+    if success:
+        return {"status": "denied", "approval_id": approval_id, "denied_by": approver_id}
+    else:
+        return {"error": f"Approval {approval_id} not found or already processed"}
+
+
+@app.get(f"{API_PREFIX}/tools/health")
+async def get_tools_health() -> Dict[str, Any]:
+    """Get health status of all tools."""
+    if tool_registry is None:
+        return {"error": "Tool registry not available"}
+    
+    health_status = {}
+    total_tools = len(tool_registry.tools)
+    healthy_tools = 0
+    
+    for tool_name, tool in tool_registry.tools.items():
+        try:
+            # Basic health check - could be enhanced
+            health_status[tool_name] = {
+                "status": "healthy",
+                "category": tool.category,
+                "risk_level": tool.risk_level,
+                "requires_approval": tool.requires_approval,
+                "version": tool.version
+            }
+            healthy_tools += 1
+        except Exception as e:
+            health_status[tool_name] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+    
+    return {
+        "overall_health": "healthy" if healthy_tools == total_tools else "degraded",
+        "healthy_tools": healthy_tools,
+        "total_tools": total_tools,
+        "tools": health_status
+    }
 
 
 @app.post(f"{API_PREFIX}/tools/batch_execute")
