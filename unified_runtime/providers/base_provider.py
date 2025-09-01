@@ -62,7 +62,7 @@ class StreamChunk:
             self.metadata = {}
 
 class BaseProvider(ABC):
-    """Abstract base class for all LLM providers."""
+    """Abstract base class for all LLM providers with streaming support."""
     
     def __init__(self, name: str, config: Dict[str, Any] = None):
         self.name = name
@@ -73,11 +73,40 @@ class BaseProvider(ABC):
     async def generate(self, request: GenRequest) -> GenResponse:
         """Generate response from the provider."""
         pass
+    
+    async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Generate streaming response from the provider.
+        Default implementation falls back to non-streaming.
+        Subclasses should override this for true streaming support.
+        """
+        # Default fallback: generate full response and yield as single chunk
+        response = await self.generate(request)
+        
+        yield StreamChunk(
+            content=response.content,
+            chunk_id=0,
+            is_final=True,
+            provider=self.name,
+            metadata={
+                "fallback_stream": True,
+                "original_latency_ms": response.latency_ms,
+                "tokens": response.output_tokens
+            }
+        )
         
     @abstractmethod
     async def health_check(self) -> Dict[str, Any]:
         """Check provider health status."""
         pass
+    
+    def supports_streaming(self) -> bool:
+        """Check if this provider supports native streaming."""
+        # Check if the provider has overridden generate_stream
+        return (
+            hasattr(self.__class__, 'generate_stream') and
+            self.__class__.generate_stream != BaseProvider.generate_stream
+        )
         
     def _log_generation(self, request: GenRequest, response: GenResponse, error: Optional[str] = None):
         """Log generation attempt with structured data."""
