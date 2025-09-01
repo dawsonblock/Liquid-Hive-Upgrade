@@ -47,7 +47,7 @@ const ForgePanel: React.FC = () => {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <FormControlLabel control={<Switch checked={!!gov.ENABLE_ORACLE_REFINEMENT} onChange={e => onToggleGov('ENABLE_ORACLE_REFINEMENT', e.target.checked)} />} label="Enable Oracle Refinement" />
-            <FormControlLabel control={<Switch checked={!!gov.FORCE_GPT4O_ARBITER} onChange={e => onToggleGov('FORCE_GPT4O_ARBITER', e.target.checked)} />} label="Force GPT‑4o Arbiter" />
+            <FormControlLabel control={<Switch checked={!!gov.FORCE_DEEPSEEK_R1_ARBITER} onChange={e => onToggleGov('FORCE_DEEPSEEK_R1_ARBITER', e.target.checked)} />} label="Force DeepSeek‑R1 Arbiter" />
             <Box flexGrow={1} />
             <Button variant="contained" color="secondary" onClick={onTrain} disabled={loadingTrain}>
               {loadingTrain ? <><CircularProgress size={18} sx={{ mr: 1 }} />Igniting...</> : 'Ignite Training Cycle'}
