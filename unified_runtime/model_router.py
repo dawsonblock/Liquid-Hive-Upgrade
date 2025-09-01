@@ -377,22 +377,42 @@ class DSRouter:
         return False
     
     async def _generate_with_routing(self, request: GenRequest, decision: 'RoutingDecision') -> GenResponse:
-        """Generate response using the specified routing decision."""
-        provider = self.providers.get(decision.provider)
-        if not provider:
-            raise ValueError(f"Provider {decision.provider} not available")
-        
-        # Modify request for CoT budget if applicable
-        if decision.cot_budget:
-            request.cot_budget = decision.cot_budget
-        
-        response = await provider.generate(request)
-        response.metadata.update({
-            "routing_decision": decision.provider,
-            "routing_reasoning": decision.reasoning
-        })
-        
-        return response
+        """Generate response using the specified routing decision with circuit breaker protection."""
+        try:
+            response = await self._call_provider_with_circuit_breaker(decision.provider, request)
+            response.metadata.update({
+                "routing_decision": decision.provider,
+                "routing_reasoning": decision.reasoning
+            })
+            return response
+            
+        except Exception as e:
+            # If primary provider fails, attempt fallback
+            self.logger.warning(f"Provider {decision.provider} failed: {e}")
+            
+            # Try fallback providers in order
+            fallback_order = ["qwen_cpu"]  # Local fallback
+            
+            for fallback_provider in fallback_order:
+                if fallback_provider == decision.provider:
+                    continue  # Skip if it's the same provider that failed
+                
+                try:
+                    response = await self._call_provider_with_circuit_breaker(fallback_provider, request)
+                    response.metadata.update({
+                        "routing_decision": fallback_provider,
+                        "routing_reasoning": f"fallback_from_{decision.provider}",
+                        "original_provider_failed": decision.provider,
+                        "fallback_reason": str(e)
+                    })
+                    return response
+                    
+                except Exception as fallback_error:
+                    self.logger.warning(f"Fallback provider {fallback_provider} also failed: {fallback_error}")
+                    continue
+            
+            # All providers failed, raise the original error
+            raise e
     
     async def _fallback_generate(self, request: GenRequest, error: str) -> GenResponse:
         """Generate response using local fallback provider."""
