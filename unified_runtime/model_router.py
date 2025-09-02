@@ -837,8 +837,7 @@ class BudgetTracker:
     async def record_usage(self, response: GenResponse):
         """Record token and cost usage atomically."""
         # Some tests mock responses without token/cost fields; default to 0
-        try:
-            tokens = int(getattr(response, 'prompt_tokens', 0) or 0) + int(getattr(response, 'output_tokens', 0) or 0)
+            tokens = getattr(response, 'prompt_tokens', 0) + getattr(response, 'output_tokens', 0)
         except Exception:
             tokens = 0
         try:
