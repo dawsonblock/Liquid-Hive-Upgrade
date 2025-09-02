@@ -35,7 +35,8 @@ COPY --from=pybuilder /install /usr/local
 # Copy repository
 COPY . /app
 # Copy built GUI from guibuilder stage
-COPY --from=guibuilder /app/gui/dist /app/src/capsule_brain/gui/static
+# Place built assets where server.py looks for them: /app/src/frontend/dist
+COPY --from=guibuilder /app/gui/dist /app/src/frontend/dist
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000
