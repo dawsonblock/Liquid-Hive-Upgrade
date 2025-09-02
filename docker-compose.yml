@@ -48,7 +48,7 @@ services:
       GRAFANA_SLACK_WARNING_CHANNEL: "${GRAFANA_SLACK_WARNING_CHANNEL}"
       GRAFANA_WEBHOOK_URL: "${GRAFANA_WEBHOOK_URL}"
       GRAFANA_ALERT_EMAILS: "${GRAFANA_ALERT_EMAILS}"
-      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/your/webhook/url}"
+  SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
@@ -69,7 +69,7 @@ services:
   neo4j:
     image: neo4j:5.15
     environment:
-      NEO4J_AUTH: "${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-change_this_password}"
+  NEO4J_AUTH: "${NEO4J_USER:?}/${NEO4J_PASSWORD:?}"
     ports:
       - "7687:7687"
     networks:

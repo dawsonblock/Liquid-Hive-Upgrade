@@ -41,11 +41,20 @@ class PostGuard:
     
     def _compile_safety_patterns(self) -> Dict[str, Pattern[str]]:
         """Compile patterns for detecting unsafe output."""
+        flags = re.IGNORECASE | re.DOTALL
         return {
             # Catch generic and step-by-step instructions that include harming others
-            "explicit_violence": re.compile(r'(?:detailed\s+instructions?.*(?:kill|harm|hurt|attack)|step-?by-?step.*(?:kill|harm|hurt|attack|violence|weapon|bomb))', re.IGNORECASE),
-            # Broaden illegal instructions detection to catch phrasing in tests
-            "illegal_instructions": re.compile(r'(?:how\s+to\s+(?:hack|steal|commit|break)\b|instructions?\s+to\s+(?:hack|steal|harm)|\b(?:illegal|criminal)\b)', re.IGNORECASE),
+            "explicit_violence": re.compile(
+                r'(?:detailed\s+instructions?.*(?:kill|harm|hurt|attack)|step-?by-?step.*(?:kill|harm|hurt|attack|violence|weapon|bomb))',
+                flags,
+            ),
+            # Broaden illegal instructions detection to catch phrasing in tests but avoid bare 'break'
+            "illegal_instructions": re.compile(
+                r'(?:how\s+to\s+(?:hack|steal|commit\s+(?:a\s+crime|fraud|murder)|break\s+(?:in|into))\b'
+                r'|instructions?\s+to\s+(?:hack|steal|harm)'
+                r'|\b(?:illegal|criminal)\b)',
+                flags,
+            ),
             "self_harm_promotion": re.compile(r'\b(?:encourage.*(?:suicide|self-harm)|promote.*(?:cutting|ending life))\b', re.IGNORECASE),
             "hate_speech_output": re.compile(r'\b(?:all.*(?:race|gender).*are.*(?:inferior|bad|evil)|promote.*(?:discrimination|hatred))\b', re.IGNORECASE),
             # Include direct insults like in tests
@@ -119,7 +128,7 @@ class PostGuard:
     
     def _detect_safety_violations(self, content: str) -> List[str]:
         """Detect safety violations in the generated content."""
-        violations = []
+        violations: List[str] = []
         
         for violation_type, pattern in self.safety_patterns.items():
             if pattern.search(content):

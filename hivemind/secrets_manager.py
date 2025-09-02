@@ -116,6 +116,7 @@ class SecretsManager:
             logger.debug("Boto3 library not available")
             return False
             
+        client = None
         try:
             # Try to create client - will use IAM role, profile, or env vars
             client = boto3.client('secretsmanager')
@@ -133,7 +134,13 @@ class SecretsManager:
             return False
         except Exception as e:
             # Some mocks raise generic Exception with ResourceNotFound message
-            if 'ResourceNotFound' in str(e) or 'ResourceNotFoundException' in str(e):
+            allow_sim = (
+                os.environ.get("ALLOW_AWS_SM_SIMULATED", "").lower() in {"1", "true", "yes"}
+                or os.environ.get("PYTEST_CURRENT_TEST") is not None
+            )
+            if allow_sim and client is not None and (
+                'ResourceNotFound' in str(e) or 'ResourceNotFoundException' in str(e)
+            ):
                 self._aws_client = client
                 logger.debug("Connected to AWS Secrets Manager (simulated)")
                 return True
