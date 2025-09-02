@@ -21,13 +21,19 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
-  # TODO: configure your cloud/kube auth here (e.g., EKS, GKE, AKS) using OIDC.
-  # Example for AWS EKS:
-      # - name: Configure AWS auth (example)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_DEV }}
-      #     aws-region: us-east-1
+      # AWS EKS auth via OIDC (requires repo secrets):
+      # - AWS_OIDC_ROLE_ARN_DEV: Role ARN with EKS + deploy permissions
+      # - AWS_REGION: AWS region of your EKS cluster
+      # - EKS_CLUSTER_DEV: EKS cluster name
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_DEV }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig for EKS (dev)
+        run: |
+          aws eks update-kubeconfig --name "${{ secrets.EKS_CLUSTER_DEV }}" --region "${{ secrets.AWS_REGION }}"
 
       - name: Helm upgrade (dev)
         run: |

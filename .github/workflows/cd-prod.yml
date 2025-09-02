@@ -22,12 +22,19 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
-  # TODO: configure your prod cloud/kube auth with OIDC. Example for AWS EKS:
-      # - name: Configure AWS auth (prod)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_PROD }}
-      #     aws-region: us-east-1
+      # AWS EKS auth via OIDC (requires repo secrets):
+      # - AWS_OIDC_ROLE_ARN_PROD: Role ARN with EKS + deploy permissions
+      # - AWS_REGION: AWS region of your EKS cluster
+      # - EKS_CLUSTER_PROD: EKS cluster name
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_PROD }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig for EKS (prod)
+        run: |
+          aws eks update-kubeconfig --name "${{ secrets.EKS_CLUSTER_PROD }}" --region "${{ secrets.AWS_REGION }}"
 
       - name: Helm upgrade (prod)
         run: |
