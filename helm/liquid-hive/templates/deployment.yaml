@@ -18,7 +18,17 @@ spec:
       labels:
         {{- include "liquid-hive.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.secrets.aws.serviceAccount.create }}
+      serviceAccountName: {{ include "liquid-hive.serviceAccountName" . }}
+      {{- else if .Values.serviceAccount.create }}
       serviceAccountName: {{ include "liquid-hive.serviceAccountName" . }}
       {{- end }}
       securityContext:
@@ -27,10 +37,19 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+          {{- if .Values.externalSecrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ include "liquid-hive.fullname" . }}-runtime-secrets
+          {{- end }}
           env:
             # Secrets Management Configuration
             {{- if eq .Values.secrets.provider "vault" }}
@@ -118,13 +137,13 @@ spec:
               
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /api/healthz
               port: http
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /api/healthz
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10

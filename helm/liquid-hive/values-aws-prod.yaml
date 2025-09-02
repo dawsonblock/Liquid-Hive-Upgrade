@@ -81,6 +81,59 @@ storage:
 # Node affinity for production workloads
 affinity:
   nodeAffinity:
+serviceMonitor:
+  enabled: true
+
+externalSecrets:
+  enabled: true
+  secretStore:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  # Map runtime environment variables from AWS Secrets Manager keys
+  # Update the remoteRef.key paths to match your secrets layout
+  data:
+    MONGO_URL:
+      key: liquid-hive/prod/MONGO_URL
+    REDIS_URL:
+      key: liquid-hive/prod/REDIS_URL
+    NEO4J_URL:
+      key: liquid-hive/prod/NEO4J_URL
+    VLLM_ENDPOINT:
+      key: liquid-hive/prod/VLLM_ENDPOINT
+    VLLM_ENDPOINT_SMALL:
+      key: liquid-hive/prod/VLLM_ENDPOINT_SMALL
+    VLLM_ENDPOINT_LARGE:
+      key: liquid-hive/prod/VLLM_ENDPOINT_LARGE
+    VLLM_API_KEY:
+      key: liquid-hive/prod/VLLM_API_KEY
+    PROMETHEUS_BASE_URL:
+      key: liquid-hive/prod/PROMETHEUS_BASE_URL
+    ADMIN_TOKEN:
+      key: liquid-hive/prod/ADMIN_TOKEN
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  # Example: allow ingress from ingress-nginx and same namespace; allow egress to common ports
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector: {}
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 443
+        - port: 80
+        - port: 6379
+        - port: 7687
+        - port: 8000
+        - port: 6333
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
       - matchExpressions:

@@ -123,3 +123,9 @@ See docs/ADDITIONAL_CONSIDERATIONS.md for security, observability, migration, pe
 
 ## Final System Analysis & Graduation Report
 - Read the comprehensive, honest assessment here: docs/GRADUATION_REPORT.md
+
+## Deployment
+
+For Kubernetes deployment with Helm and GitHub Actions CI/CD, see:
+- docs/DEPLOYMENT.md (values, secrets, and workflows)
+- .github/workflows (CI build/test/scan; CD for dev/prod)
