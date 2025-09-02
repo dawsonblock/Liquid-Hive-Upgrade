@@ -12,11 +12,12 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO} # Uses .env LOG_LEVEL, defaults to INFO
       - LOG_JSON=${LOG_JSON:-1}     # Uses .env LOG_JSON, defaults to 1 (JSON)
+    # For local CPU-only runs, omit the GPU vLLM service by not enabling the 'gpu' profile.
+    # The app will use VLLM_ENDPOINT from config/secrets; default is http://vllm:8000 if present.
     depends_on:
       - prometheus
       - redis
       - neo4j
-      - vllm
       - qdrant
     networks: [fusionnet]
 
@@ -79,11 +80,21 @@ services:
   # the agent roles and judge.  In production this should run on a GPU host.
   vllm:
     image: vllm/vllm-openai:latest
+    profiles:
+      - gpu
     environment:
       - MODEL_NAME=llama-2-13b-chat-hf
+      - NVIDIA_VISIBLE_DEVICES=all
     ports:
       - "8001:8000"
     networks: [fusionnet]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   # Qdrant vector database for production-grade RAG capabilities.
   # Replaces FAISS with a scalable, production-ready vector database.
