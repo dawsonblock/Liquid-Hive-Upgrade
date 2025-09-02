@@ -3,7 +3,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { Alert, Box, Button, Chip, Grid, IconButton, List, ListItem, ListItemText, Paper, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { approveProposal, denyProposal, fetchState, getApprovals, previewAutopromote, getSwarmStatus, setRouterThresholds } from '../services/api';
+import { approveProposal, denyProposal, fetchState, getApprovals, getSwarmStatus, previewAutopromote, setRouterThresholds } from '../services/api';
 import { getBackendWsBase } from '../services/env';
 const SystemPanel = () => {
     const [approvals, setApprovals] = useState([]);

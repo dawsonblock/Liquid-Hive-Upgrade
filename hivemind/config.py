@@ -85,28 +85,30 @@ class Settings(BaseSettings):
         if not secrets_manager:
             return
             
-        # Database URL
-        if not self.redis_url:
-            redis_url = secrets_manager.get_redis_url()
-            if redis_url:
-                self.redis_url = redis_url
+        # Database URL (secrets take precedence over env)
+        redis_url = secrets_manager.get_redis_url()
+        if redis_url:
+            self.redis_url = redis_url
                 
-        # Prometheus URL
-        if not self.PROMETHEUS_BASE_URL:
-            prometheus_url = secrets_manager.get_prometheus_url()
-            if prometheus_url:
-                self.PROMETHEUS_BASE_URL = prometheus_url
+        # Prometheus URL (secrets take precedence over env)
+        prometheus_url = secrets_manager.get_prometheus_url()
+        if prometheus_url:
+            self.PROMETHEUS_BASE_URL = prometheus_url
                 
-        # vLLM configuration
+        # vLLM configuration (secrets take precedence over defaults/env)
         vllm_config = secrets_manager.get_vllm_config()
-        if not self.vllm_endpoint and vllm_config.get('vllm_endpoint'):
-            self.vllm_endpoint = vllm_config['vllm_endpoint']
-        if not self.vllm_endpoint_small and vllm_config.get('vllm_endpoint_small'):
-            self.vllm_endpoint_small = vllm_config['vllm_endpoint_small']
-        if not self.vllm_endpoint_large and vllm_config.get('vllm_endpoint_large'):
-            self.vllm_endpoint_large = vllm_config['vllm_endpoint_large']
-        if self.vllm_api_key == "unused" and vllm_config.get('vllm_api_key'):
-            self.vllm_api_key = vllm_config['vllm_api_key']
+        ve = vllm_config.get('vllm_endpoint')
+        if ve:
+            self.vllm_endpoint = ve
+        ves = vllm_config.get('vllm_endpoint_small')
+        if ves:
+            self.vllm_endpoint_small = ves
+        vel = vllm_config.get('vllm_endpoint_large')
+        if vel:
+            self.vllm_endpoint_large = vel
+        vak = vllm_config.get('vllm_api_key')
+        if vak:
+            self.vllm_api_key = vak
             
         # Neo4j URL
         if not self.neo4j_url:

@@ -19,7 +19,7 @@ import hashlib
 import pathlib
 import uuid
 from typing import List, Dict, Any, Optional, Tuple, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import numpy as np
@@ -296,7 +296,7 @@ class QdrantRetriever:
                         "chunk_index": i,
                         "total_chunks": len(chunks),
                         "chunk_size": len(chunk),
-                        "created_at": datetime.utcnow().isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "content_type": self._detect_content_type(path, chunk)
                     }
                     
@@ -480,7 +480,7 @@ class QdrantRetriever:
                     # Add search-specific metadata
                     metadata["search_score"] = result.score
                     metadata["search_query"] = query
-                    metadata["search_timestamp"] = datetime.utcnow().isoformat()
+                    metadata["search_timestamp"] = datetime.now(timezone.utc).isoformat()
                     
                     documents.append(Document(content, metadata))
                     

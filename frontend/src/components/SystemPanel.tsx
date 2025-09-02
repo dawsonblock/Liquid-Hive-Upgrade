@@ -2,7 +2,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { Alert, Box, Button, Chip, Grid, IconButton, List, ListItem, ListItemText, Paper, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
-import { approveProposal, denyProposal, fetchState, getApprovals, previewAutopromote, getSwarmStatus, setRouterThresholds } from '../services/api';
+import { approveProposal, denyProposal, fetchState, getApprovals, getSwarmStatus, previewAutopromote, setRouterThresholds } from '../services/api';
 import { getBackendWsBase } from '../services/env';
 
 const SystemPanel: React.FC = () => {
@@ -47,10 +47,10 @@ const SystemPanel: React.FC = () => {
 
   useEffect(() => {
     const run = async () => {
-      try { setSwarm(await getSwarmStatus()); } catch {}
+      try { setSwarm(await getSwarmStatus()); } catch { }
       try {
         // optional: pull current thresholds from stateSummary if exposed later
-      } catch {}
+      } catch { }
     };
     run();
   }, []);
@@ -144,7 +144,7 @@ const SystemPanel: React.FC = () => {
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h6">Swarm Status</Typography>
-              <Button size="small" variant="outlined" onClick={async () => { try { setSwarm(await getSwarmStatus()); } catch {} }}>Refresh</Button>
+              <Button size="small" variant="outlined" onClick={async () => { try { setSwarm(await getSwarmStatus()); } catch { } }}>Refresh</Button>
             </Stack>
             <Typography variant="body2" sx={{ mt: 1 }}>
               {swarm ? `Enabled: ${String(swarm.swarm_enabled)} • Nodes: ${swarm.active_nodes ?? 0}` : 'No swarm info'}

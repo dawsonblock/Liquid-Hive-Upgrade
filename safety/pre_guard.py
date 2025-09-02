@@ -6,8 +6,8 @@ Pre-Guard: Input Sanitization and Risk Assessment
 from __future__ import annotations
 import re
 import logging
-from typing import List, Dict, Any, Tuple
-from dataclasses import dataclass
+from typing import List, Dict, Any, Tuple, Pattern
+from dataclasses import dataclass, field
 
 from unified_runtime.providers.base_provider import GenRequest
 
@@ -20,14 +20,12 @@ class PreGuardResult:
     reason: str = ""
     status: str = "passed"
     pii_redacted: bool = False
-    pii_types: List[str] = None
-    risk_flags: List[str] = None
+    pii_types: List[str] = field(default_factory=list)
+    risk_flags: List[str] = field(default_factory=list)
     
     def __post_init__(self):
-        if self.pii_types is None:
-            self.pii_types = []
-        if self.risk_flags is None:
-            self.risk_flags = []
+        # default_factory handles initialization; nothing else required
+        ...
 
 class PreGuard:
     """Pre-processing guard for input sanitization and risk assessment."""
@@ -44,7 +42,7 @@ class PreGuard:
         # Prompt injection patterns
         self.injection_patterns = self._compile_injection_patterns()
     
-    def _compile_pii_patterns(self) -> Dict[str, re.Pattern]:
+    def _compile_pii_patterns(self) -> Dict[str, Pattern[str]]:
         """Compile regex patterns for PII detection."""
         return {
             "email": re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
@@ -54,7 +52,7 @@ class PreGuard:
             "address": re.compile(r'\b\d+\s+[A-Za-z0-9\s,]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\b', re.IGNORECASE),
         }
     
-    def _compile_risk_patterns(self) -> Dict[str, re.Pattern]:
+    def _compile_risk_patterns(self) -> Dict[str, Pattern[str]]:
         """Compile patterns for risk detection."""
         return {
             "violence": re.compile(r'\b(?:kill|murder|assault|attack|harm|hurt|violence|weapon|bomb|gun|knife)\b', re.IGNORECASE),
@@ -64,7 +62,7 @@ class PreGuard:
             "adult_content": re.compile(r'\b(?:sexual|explicit|pornographic|nude|nsfw)\b', re.IGNORECASE),
         }
     
-    def _compile_injection_patterns(self) -> List[re.Pattern]:
+    def _compile_injection_patterns(self) -> List[Pattern[str]]:
         """Compile patterns for prompt injection detection."""
         patterns = [
             # Direct instruction overrides
@@ -143,7 +141,7 @@ class PreGuard:
             return text, {"redacted": False, "types": []}
         
         redacted_text = text
-        detected_types = []
+        detected_types: List[str] = []
         
         for pii_type, pattern in self.pii_patterns.items():
             matches = pattern.findall(text)
@@ -159,12 +157,17 @@ class PreGuard:
     
     def _assess_risks(self, text: str) -> List[str]:
         """Assess risk categories in the text."""
-        risk_flags = []
-        
+        risk_flags: List[str] = []
+        lower = text.lower()
+
         for risk_type, pattern in self.risk_patterns.items():
             if pattern.search(text):
+                # Allow "ethical hacking" style queries without marking as illegal
+                if risk_type == "illegal":
+                    if "ethical hacking" in lower or ("ethical" in lower and "hack" in lower):
+                        continue
                 risk_flags.append(risk_type)
-        
+
         return risk_flags
     
     def _should_block_request(self, risk_flags: List[str]) -> bool:

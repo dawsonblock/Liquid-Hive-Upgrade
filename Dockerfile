@@ -11,16 +11,18 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
-# 2) Build the Cerebral GUI
+# 2) Build the Cerebral GUI (now located in 'frontend')
 FROM node:20-alpine as guibuilder
-WORKDIR /app/gui
-COPY gui/package.json ./package.json
-COPY gui/yarn.lock ./yarn.lock
-COPY gui/tsconfig.json ./tsconfig.json
-COPY gui/vite.config.ts ./vite.config.ts
-COPY gui/index.html ./index.html
-COPY gui/src ./src
-RUN yarn install --frozen-lockfile && yarn build
+WORKDIR /app/frontend
+# Copy manifest and config first for better layer caching
+COPY frontend/package.json ./package.json
+COPY frontend/tsconfig.json ./tsconfig.json
+COPY frontend/vite.config.ts ./vite.config.ts
+COPY frontend/index.html ./index.html
+COPY frontend/public ./public
+COPY frontend/src ./src
+# Install deps and build
+RUN npm install && npm run build
 
 # 3) Runtime image
 FROM python:3.11-slim
@@ -32,7 +34,7 @@ COPY --from=pybuilder /install /usr/local
 # Copy repository
 COPY . /app
 # Copy built GUI from guibuilder stage
-COPY --from=guibuilder /app/gui/dist /app/gui/dist
+COPY --from=guibuilder /app/frontend/dist /app/frontend/dist
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000

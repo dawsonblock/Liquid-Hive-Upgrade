@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Type, Any
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .base_tool import BaseTool, ToolResult
 
@@ -200,7 +200,7 @@ class ToolRegistry:
             "execution_id": execution_id,
             "execution_time": execution_time,
             "operator_id": operator_id,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         
         return result
@@ -257,7 +257,7 @@ class ToolRegistry:
             "parameters": parameters,
             "operator_id": operator_id,
             "risk_level": tool.risk_level if tool else "unknown",
-            "requested_at": datetime.utcnow().isoformat(),
+            "requested_at": datetime.now(timezone.utc).isoformat(),
             "status": "pending",
             "reason": f"Tool '{tool_name}' requires approval due to {tool.risk_level} risk level"
         }
@@ -275,7 +275,7 @@ class ToolRegistry:
             if approval["approval_id"] == approval_id:
                 approval["status"] = "approved"
                 approval["approved_by"] = approver_id
-                approval["approved_at"] = datetime.utcnow().isoformat()
+                approval["approved_at"] = datetime.now(timezone.utc).isoformat()
                 
                 # Add to approval history
                 self.approval_history.append(approval.copy())
@@ -291,7 +291,7 @@ class ToolRegistry:
             if approval["approval_id"] == approval_id:
                 approval["status"] = "denied"
                 approval["denied_by"] = approver_id
-                approval["denied_at"] = datetime.utcnow().isoformat()
+                approval["denied_at"] = datetime.now(timezone.utc).isoformat()
                 approval["denial_reason"] = reason
                 
                 # Add to approval history
@@ -318,7 +318,7 @@ class ToolRegistry:
         
         stats["total_executions"] += 1
         stats["total_execution_time"] += execution_time
-        stats["last_executed"] = datetime.utcnow().isoformat()
+    stats["last_executed"] = datetime.now(timezone.utc).isoformat()
         
         if result.success:
             stats["successful_executions"] += 1
@@ -340,7 +340,7 @@ class ToolRegistry:
             "execution_id": execution_id,
             "tool_name": tool_name,
             "operator_id": operator_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "parameters": parameters,
             "success": result.success,
             "error": result.error if not result.success else None,
@@ -391,7 +391,7 @@ class ToolRegistry:
     
     def _get_recent_usage(self, tool_name: str, days: int) -> List[Dict[str, Any]]:
         """Get recent usage for a specific tool."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         recent_usage = [
             entry for entry in self.tool_usage_log
