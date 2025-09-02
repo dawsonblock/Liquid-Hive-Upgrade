@@ -14,6 +14,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -58,25 +59,62 @@ export default function App() {
     const theme = useMemo(() => responsiveFontSizes(createTheme({
         palette: {
             mode,
-            primary: { main: '#0ea5e9' },
-            secondary: { main: '#e11d48' },
+            primary: { main: '#1a73e8' },
+            secondary: { main: '#10b981' },
             background: {
-                default: mode === 'dark' ? '#0b1220' : '#f6f8fc',
+                default: mode === 'dark' ? '#0b1220' : '#f7f9fc',
                 paper: mode === 'dark' ? '#0f172a' : '#ffffff'
             }
         },
-        shape: { borderRadius: 12 }
+        shape: { borderRadius: 14 },
+        typography: {
+            fontFamily: [
+                'Inter',
+                'ui-sans-serif',
+                'system-ui',
+                '-apple-system',
+                'Segoe UI',
+                'Roboto',
+                'Helvetica Neue',
+                'Arial',
+                'Noto Sans',
+                'Apple Color Emoji',
+                'Segoe UI Emoji',
+                'Segoe UI Symbol'
+            ].join(','),
+            h6: { fontWeight: 600 }
+        },
+        components: {
+            MuiPaper: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: 'box-shadow .2s ease',
+                        boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.06)'
+                    })
+                }
+            },
+            MuiButton: {
+                defaultProps: { disableElevation: true }
+            }
+        }
     })), [mode]);
     const [panel, setPanel] = useState('streaming');
     const [mobileOpen, setMobileOpen] = useState(false);
     const isMdUp = useMediaQuery('(min-width:900px)');
     const online = useBackendHealth();
     return (_jsx(Provider, { store: store, children: _jsx(ProvidersProvider, { children: _jsxs(ThemeProvider, { theme: theme, children: [_jsx(CssBaseline, {}), _jsx(AppBar, { position: "fixed", color: "transparent", elevation: 0, sx: {
-                            backdropFilter: 'blur(8px)',
-                            bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.6)',
+                            backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.7)',
                             borderBottom: (t) => `1px solid ${t.palette.divider}`,
                             zIndex: (t) => t.zIndex.drawer + 1
-                        }, children: _jsxs(Toolbar, { children: [!isMdUp && (_jsx(IconButton, { color: "inherit", edge: "start", onClick: () => setMobileOpen(v => !v), sx: { mr: 1 }, children: _jsx(MenuIcon, {}) })), _jsx(Typography, { variant: "h6", noWrap: true, component: "div", sx: { flexGrow: 1 }, children: "LIQUID-HIVE Console" }), _jsx(Tooltip, { title: online ? 'Backend online' : 'Backend offline', children: _jsx(Chip, { size: "small", label: online ? 'Online' : 'Offline', color: online ? 'success' : 'error', sx: { mr: 1 } }) }), _jsx(HeaderPollingChip, {}), _jsx(Tooltip, { title: mode === 'dark' ? 'Switch to light' : 'Switch to dark', children: _jsx(IconButton, { color: "inherit", onClick: () => setMode(m => m === 'dark' ? 'light' : 'dark'), children: mode === 'dark' ? _jsx(WbSunnyRoundedIcon, {}) : _jsx(DarkModeRoundedIcon, {}) }) })] }) }), _jsxs(Drawer, { variant: isMdUp ? 'permanent' : 'temporary', open: isMdUp ? true : mobileOpen, onClose: () => setMobileOpen(false), ModalProps: { keepMounted: true }, sx: {
+                        }, children: _jsxs(Toolbar, { children: [!isMdUp && (_jsx(IconButton, { color: "inherit", edge: "start", onClick: () => setMobileOpen(v => !v), sx: { mr: 1 }, children: _jsx(MenuIcon, {}) })), _jsxs(Stack, { direction: "row", spacing: 1.25, alignItems: "center", sx: { flexGrow: 1, minWidth: 0 }, children: [_jsx(Box, { component: "img", src: "/logo.svg", alt: "Liquid Hive", sx: { width: 28, height: 28, borderRadius: 1 } }), _jsxs(Typography, { variant: "h6", noWrap: true, component: "div", sx: { fontWeight: 700, letterSpacing: 0.2 }, children: [_jsx(Box, { component: "span", sx: {
+                                                        background: (t) => t.palette.mode === 'dark'
+                                                            ? 'linear-gradient(90deg,#60a5fa 0%,#34d399 50%,#22d3ee 100%)'
+                                                            : 'linear-gradient(90deg,#1a73e8 0%,#10b981 50%,#06b6d4 100%)',
+                                                        WebkitBackgroundClip: 'text',
+                                                        WebkitTextFillColor: 'transparent'
+                                                    }, children: "LIQUID\u2011HIVE" }), " Console"] })] }), _jsx(Tooltip, { title: online ? 'Backend online' : 'Backend offline', children: _jsx(Chip, { size: "small", label: online ? 'Online' : 'Offline', color: online ? 'success' : 'error', sx: { mr: 1 } }) }), _jsx(HeaderPollingChip, {}), _jsx(Tooltip, { title: mode === 'dark' ? 'Switch to light' : 'Switch to dark', children: _jsx(IconButton, { color: "inherit", onClick: () => setMode(m => m === 'dark' ? 'light' : 'dark'), children: mode === 'dark' ? _jsx(WbSunnyRoundedIcon, {}) : _jsx(DarkModeRoundedIcon, {}) }) })] }) }), _jsxs(Drawer, { variant: isMdUp ? 'permanent' : 'temporary', open: isMdUp ? true : mobileOpen, onClose: () => setMobileOpen(false), ModalProps: { keepMounted: true }, sx: {
                             display: 'block',
                             [`& .MuiDrawer-paper`]: {
                                 width: drawerWidth,
@@ -84,7 +122,7 @@ export default function App() {
                                 borderRight: (t) => `1px solid ${t.palette.divider}`,
                                 backgroundImage: (t) => t.palette.mode === 'dark'
                                     ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
-                                    : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,248,252,1) 100%)'
+                                    : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(247,249,252,1) 100%)'
                             },
                         }, children: [_jsx(Toolbar, {}), _jsxs(List, { children: [_jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'streaming', onClick: () => setPanel('streaming'), children: [_jsx(ListItemIcon, { children: _jsx(StreamIcon, {}) }), _jsx(ListItemText, { primary: "Streaming Chat" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'chat', onClick: () => setPanel('chat'), children: [_jsx(ListItemIcon, { children: _jsx(ChatIcon, {}) }), _jsx(ListItemText, { primary: "Classic Chat" })] }) }), _jsx(Divider, { sx: { my: 1 } }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'system', onClick: () => setPanel('system'), children: [_jsx(ListItemIcon, { children: _jsx(DashboardIcon, {}) }), _jsx(ListItemText, { primary: "System Console" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'cache', onClick: () => setPanel('cache'), children: [_jsx(ListItemIcon, { children: _jsx(SettingsIcon, {}) }), _jsx(ListItemText, { primary: "Cache Admin" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'secrets', onClick: () => setPanel('secrets'), children: [_jsx(ListItemIcon, { children: _jsx(VpnKeyIcon, {}) }), _jsx(ListItemText, { primary: "Secrets" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'forge', onClick: () => setPanel('forge'), children: [_jsx(ListItemIcon, { children: _jsx(SettingsIcon, {}) }), _jsx(ListItemText, { primary: "Cognitive Forge" })] }) })] })] }), _jsxs(Box, { component: "main", sx: {
                             flexGrow: 1,
@@ -92,9 +130,9 @@ export default function App() {
                             ml: { xs: 0, md: `${drawerWidth}px` },
                             minHeight: '100vh',
                             background: (t) => t.palette.mode === 'dark'
-                                ? 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.12), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.10), transparent)'
-                                : 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.06), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.05), transparent)'
-                        }, children: [_jsx(Toolbar, {}), panel === 'streaming' && _jsx(StreamingChatPanel, {}), panel === 'chat' && _jsx(ChatPanel, {}), panel === 'system' && _jsx(SystemPanel, {}), panel === 'cache' && _jsx(CacheAdminPanel, {}), panel === 'secrets' && _jsx(SecretsPanel, {}), panel === 'forge' && _jsx(ForgePanel, {})] })] }) }) }));
+                                ? 'radial-gradient(1200px 600px at -200px -200px, rgba(29,78,216,0.20), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.16), transparent)'
+                                : 'radial-gradient(1200px 600px at -200px -200px, rgba(26,115,232,0.08), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.06), transparent)'
+                        }, children: [_jsx(Toolbar, {}), _jsxs(Box, { sx: { mx: 'auto', width: '100%', maxWidth: 1200 }, children: [panel === 'streaming' && _jsx(StreamingChatPanel, {}), panel === 'chat' && _jsx(ChatPanel, {}), panel === 'system' && _jsx(SystemPanel, {}), panel === 'cache' && _jsx(CacheAdminPanel, {}), panel === 'secrets' && _jsx(SecretsPanel, {}), panel === 'forge' && _jsx(ForgePanel, {})] })] })] }) }) }));
 }
 function HeaderPollingChip() {
     // Lightweight consumer for header; safe because ProvidersProvider wraps App

@@ -5,7 +5,14 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-redux', '@mui/material', '@mui/icons-material']
+        }
+      }
+    }
   },
   server: {
     host: '0.0.0.0',

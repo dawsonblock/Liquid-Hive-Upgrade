@@ -51,3 +51,4 @@ const appSlice = createSlice({
 });
 export const { addChat, updateLastMessage, updateStreamingStatus, finalizeStreamingMessage, setApprovals, setStateSummary } = appSlice.actions;
 export const store = configureStore({ reducer: appSlice.reducer });
+export const makeStore = () => configureStore({ reducer: appSlice.reducer });
