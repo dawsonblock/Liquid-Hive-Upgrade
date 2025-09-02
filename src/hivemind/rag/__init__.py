@@ -10,7 +10,7 @@ for the LIQUID-HIVE system. It includes:
 - Context formatting for LLM prompts
 """
 
-from .retriever import Retriever, Document
 from .citations import format_context
+from .retriever import Document, Retriever
 
 __all__ = ["Retriever", "Document", "format_context"]

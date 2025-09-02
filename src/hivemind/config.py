@@ -2,12 +2,14 @@ try:
     from pydantic_settings import BaseSettings
 except ImportError:
     from pydantic import BaseSettings
-from typing import Optional
+
 import os
+from typing import Optional
 
 # Import secrets manager with graceful fallback
 try:
     from .secrets_manager import secrets_manager
+
     SECRETS_MANAGER_AVAILABLE = True
 except ImportError:
     secrets_manager = None
@@ -22,8 +24,8 @@ class Settings(BaseSettings):
     vllm_endpoint_large: Optional[str] = None
     MODEL_ROUTING_ENABLED: bool = False
     vllm_api_key: str = "unused"
-    redis_url: Optional[str] = None      # e.g., redis://redis:6379
-    neo4j_url: Optional[str] = None      # e.g., bolt://neo4j:7687
+    redis_url: Optional[str] = None  # e.g., redis://redis:6379
+    neo4j_url: Optional[str] = None  # e.g., bolt://neo4j:7687
 
     # Observability / estimator config
     PROMETHEUS_BASE_URL: Optional[str] = None
@@ -75,42 +77,44 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
+
         # Initialize secrets from secrets manager if available
         if SECRETS_MANAGER_AVAILABLE and secrets_manager:
             self._load_secrets_from_manager()
-    
+
     def _load_secrets_from_manager(self):
         """Load configuration from secrets manager with fallback to env vars."""
         if not secrets_manager:
             return
-            
+
         # Database URL
         if not self.redis_url:
             redis_url = secrets_manager.get_redis_url()
             if redis_url:
                 self.redis_url = redis_url
-                
+
         # Prometheus URL
         if not self.PROMETHEUS_BASE_URL:
             prometheus_url = secrets_manager.get_prometheus_url()
             if prometheus_url:
                 self.PROMETHEUS_BASE_URL = prometheus_url
-                
+
         # vLLM configuration
         vllm_config = secrets_manager.get_vllm_config()
-        if not self.vllm_endpoint and vllm_config.get('vllm_endpoint'):
-            self.vllm_endpoint = vllm_config['vllm_endpoint']
-        if not self.vllm_endpoint_small and vllm_config.get('vllm_endpoint_small'):
-            self.vllm_endpoint_small = vllm_config['vllm_endpoint_small']
-        if not self.vllm_endpoint_large and vllm_config.get('vllm_endpoint_large'):
-            self.vllm_endpoint_large = vllm_config['vllm_endpoint_large']
-        if self.vllm_api_key == "unused" and vllm_config.get('vllm_api_key'):
-            self.vllm_api_key = vllm_config['vllm_api_key']
-            
+        if not self.vllm_endpoint and vllm_config.get("vllm_endpoint"):
+            self.vllm_endpoint = vllm_config["vllm_endpoint"]
+        if not self.vllm_endpoint_small and vllm_config.get("vllm_endpoint_small"):
+            self.vllm_endpoint_small = vllm_config["vllm_endpoint_small"]
+        if not self.vllm_endpoint_large and vllm_config.get("vllm_endpoint_large"):
+            self.vllm_endpoint_large = vllm_config["vllm_endpoint_large"]
+        if self.vllm_api_key == "unused" and vllm_config.get("vllm_api_key"):
+            self.vllm_api_key = vllm_config["vllm_api_key"]
+
         # Neo4j URL
         if not self.neo4j_url:
-            neo4j_url = secrets_manager.get_secret('neo4j_url') or secrets_manager.get_secret('NEO4J_URL')
+            neo4j_url = secrets_manager.get_secret(
+                "neo4j_url"
+            ) or secrets_manager.get_secret("NEO4J_URL")
             if neo4j_url:
                 self.neo4j_url = str(neo4j_url)
 
@@ -118,8 +122,8 @@ class Settings(BaseSettings):
         """Get secrets manager health status."""
         if SECRETS_MANAGER_AVAILABLE and secrets_manager:
             return secrets_manager.health_check()
-        return {'status': 'not_available', 'providers': {}}
-        
+        return {"status": "not_available", "providers": {}}
+
     def get_secret(self, key: str, default=None):
         """Get a secret value from the secrets manager."""
         if SECRETS_MANAGER_AVAILABLE and secrets_manager:

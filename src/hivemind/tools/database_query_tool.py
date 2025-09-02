@@ -6,50 +6,53 @@ A secure database query tool that can interact with the Neo4j knowledge graph
 and other configured databases with proper security restrictions.
 """
 
-import json
-from typing import Dict, Any, List, Optional
 import asyncio
+import json
+from typing import Any, Dict, List, Optional
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 try:
     import neo4j
+
     NEO4J_AVAILABLE = True
 except ImportError:
     NEO4J_AVAILABLE = False
 
+
 class DatabaseQueryTool(BaseTool):
     """Secure database query tool for Neo4j and other databases."""
-    
+
     def __init__(self):
         self.neo4j_driver: Optional[neo4j.Driver] = None
         self._initialize_connections()
-    
+
     def _initialize_connections(self):
         """Initialize database connections."""
         if NEO4J_AVAILABLE:
             try:
                 import os
+
                 neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
                 neo4j_user = os.getenv("NEO4J_USER", "neo4j")
                 neo4j_password = os.getenv("NEO4J_PASSWORD", "change_this_password")
-                
+
                 self.neo4j_driver = neo4j.GraphDatabase.driver(
                     neo4j_uri,
                     auth=(neo4j_user, neo4j_password),
-                    max_connection_lifetime=3600
+                    max_connection_lifetime=3600,
                 )
             except Exception as e:
                 print(f"Failed to connect to Neo4j: {e}")
-    
+
     @property
     def name(self) -> str:
         return "database_query"
-    
+
     @property
     def description(self) -> str:
         return "Execute safe database queries against Neo4j knowledge graph and other configured databases"
-    
+
     @property
     def parameters(self) -> List[ToolParameter]:
         return [
@@ -58,20 +61,20 @@ class DatabaseQueryTool(BaseTool):
                 type=ToolParameterType.STRING,
                 description="Target database",
                 required=True,
-                choices=["neo4j", "knowledge_graph"]
+                choices=["neo4j", "knowledge_graph"],
             ),
             ToolParameter(
                 name="query",
                 type=ToolParameterType.STRING,
                 description="Database query to execute (Cypher for Neo4j)",
-                required=True
+                required=True,
             ),
             ToolParameter(
                 name="parameters",
                 type=ToolParameterType.DICT,
                 description="Query parameters",
                 required=False,
-                default={}
+                default={},
             ),
             ToolParameter(
                 name="limit",
@@ -80,57 +83,68 @@ class DatabaseQueryTool(BaseTool):
                 required=False,
                 default=100,
                 min_value=1,
-                max_value=1000
+                max_value=1000,
             ),
             ToolParameter(
                 name="read_only",
                 type=ToolParameterType.BOOLEAN,
                 description="Ensure query is read-only (recommended)",
                 required=False,
-                default=True
-            )
+                default=True,
+            ),
         ]
-    
+
     @property
     def category(self) -> str:
         return "data"
-    
+
     @property
     def requires_approval(self) -> bool:
         return True  # Database access requires approval
-    
+
     @property
     def risk_level(self) -> str:
         return "high"  # Database queries can be dangerous
-    
+
     def _validate_cypher_query(self, query: str, read_only: bool) -> List[str]:
         """Validate Cypher query for safety."""
         errors = []
         query_lower = query.lower().strip()
-        
+
         # Check for dangerous operations if read_only is True
         if read_only:
             dangerous_keywords = [
-                'create', 'merge', 'set', 'delete', 'remove', 
-                'drop', 'detach', 'foreach', 'load csv'
+                "create",
+                "merge",
+                "set",
+                "delete",
+                "remove",
+                "drop",
+                "detach",
+                "foreach",
+                "load csv",
             ]
-            
+
             for keyword in dangerous_keywords:
                 if keyword in query_lower:
-                    errors.append(f"Query contains dangerous keyword '{keyword}' but read_only is True")
-        
+                    errors.append(
+                        f"Query contains dangerous keyword '{keyword}' but read_only is True"
+                    )
+
         # Check for administrative operations (always dangerous)
-        admin_keywords = ['call dbms', 'call db.', 'create database', 'drop database']
+        admin_keywords = ["call dbms", "call db.", "create database", "drop database"]
         for keyword in admin_keywords:
             if keyword in query_lower:
-                errors.append(f"Query contains administrative operation '{keyword}' which is not allowed")
-        
+                errors.append(
+                    f"Query contains administrative operation '{keyword}' which is not allowed"
+                )
+
         # Basic syntax check
         if not query.strip():
             errors.append("Query cannot be empty")
-        
+
         return errors
-    
+
     async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
         """Execute database query."""
         database = parameters["database"]
@@ -138,51 +152,52 @@ class DatabaseQueryTool(BaseTool):
         query_params = parameters.get("parameters", {})
         limit = parameters.get("limit", 100)
         read_only = parameters.get("read_only", True)
-        
+
         try:
             if database in ["neo4j", "knowledge_graph"]:
-                return await self._execute_neo4j_query(query, query_params, limit, read_only)
+                return await self._execute_neo4j_query(
+                    query, query_params, limit, read_only
+                )
             else:
                 return ToolResult(
-                    success=False,
-                    error=f"Unsupported database: {database}"
+                    success=False, error=f"Unsupported database: {database}"
                 )
-                
+
         except Exception as e:
             return ToolResult(
                 success=False,
                 error=f"Database query failed: {str(e)}",
-                metadata={"database": database, "query_preview": query[:100]}
+                metadata={"database": database, "query_preview": query[:100]},
             )
-    
-    async def _execute_neo4j_query(self, query: str, params: Dict[str, Any], limit: int, read_only: bool) -> ToolResult:
+
+    async def _execute_neo4j_query(
+        self, query: str, params: Dict[str, Any], limit: int, read_only: bool
+    ) -> ToolResult:
         """Execute Neo4j Cypher query."""
         if not NEO4J_AVAILABLE:
             return ToolResult(
                 success=False,
-                error="Neo4j driver not available. Install neo4j package."
+                error="Neo4j driver not available. Install neo4j package.",
             )
-        
+
         if not self.neo4j_driver:
-            return ToolResult(
-                success=False,
-                error="Neo4j connection not established"
-            )
-        
+            return ToolResult(success=False, error="Neo4j connection not established")
+
         # Validate query
         validation_errors = self._validate_cypher_query(query, read_only)
         if validation_errors:
             return ToolResult(
                 success=False,
-                error=f"Query validation failed: {'; '.join(validation_errors)}"
+                error=f"Query validation failed: {'; '.join(validation_errors)}",
             )
-        
+
         # Add LIMIT clause if not present and limit is set
         query_with_limit = query
         if limit and "limit" not in query.lower():
             query_with_limit += f" LIMIT {limit}"
-        
+
         try:
+
             def run_query(tx, query_str, parameters):
                 result = tx.run(query_str, parameters)
                 records = []
@@ -191,37 +206,45 @@ class DatabaseQueryTool(BaseTool):
                     record_dict = {}
                     for key in record.keys():
                         value = record[key]
-                        if hasattr(value, '__dict__'):
+                        if hasattr(value, "__dict__"):
                             # Handle Neo4j node/relationship objects
-                            if hasattr(value, 'labels') and hasattr(value, 'id'):  # Node
+                            if hasattr(value, "labels") and hasattr(
+                                value, "id"
+                            ):  # Node
                                 record_dict[key] = {
-                                    'id': value.id,
-                                    'labels': list(value.labels),
-                                    'properties': dict(value)
+                                    "id": value.id,
+                                    "labels": list(value.labels),
+                                    "properties": dict(value),
                                 }
-                            elif hasattr(value, 'type') and hasattr(value, 'id'):  # Relationship
+                            elif hasattr(value, "type") and hasattr(
+                                value, "id"
+                            ):  # Relationship
                                 record_dict[key] = {
-                                    'id': value.id,
-                                    'type': value.type,
-                                    'properties': dict(value),
-                                    'start_node': value.start_node.id,
-                                    'end_node': value.end_node.id
+                                    "id": value.id,
+                                    "type": value.type,
+                                    "properties": dict(value),
+                                    "start_node": value.start_node.id,
+                                    "end_node": value.end_node.id,
                                 }
                             else:
                                 record_dict[key] = str(value)
                         else:
                             record_dict[key] = value
                     records.append(record_dict)
-                
+
                 return records, result.consume()
-            
+
             # Execute query
             with self.neo4j_driver.session() as session:
                 if read_only:
-                    records, summary = session.read_transaction(run_query, query_with_limit, params)
+                    records, summary = session.read_transaction(
+                        run_query, query_with_limit, params
+                    )
                 else:
-                    records, summary = session.write_transaction(run_query, query_with_limit, params)
-            
+                    records, summary = session.write_transaction(
+                        run_query, query_with_limit, params
+                    )
+
             return ToolResult(
                 success=True,
                 data=records,
@@ -232,31 +255,23 @@ class DatabaseQueryTool(BaseTool):
                     "records_returned": len(records),
                     "query_type": summary.query_type,
                     "execution_time_ms": summary.result_consumed_after,
-                    "read_only": read_only
-                }
+                    "read_only": read_only,
+                },
             )
-            
+
         except neo4j.CypherSyntaxError as e:
-            return ToolResult(
-                success=False,
-                error=f"Cypher syntax error: {str(e)}"
-            )
+            return ToolResult(success=False, error=f"Cypher syntax error: {str(e)}")
         except neo4j.CypherTypeError as e:
-            return ToolResult(
-                success=False,
-                error=f"Cypher type error: {str(e)}"
-            )
+            return ToolResult(success=False, error=f"Cypher type error: {str(e)}")
         except neo4j.ServiceUnavailable as e:
             return ToolResult(
-                success=False,
-                error=f"Neo4j service unavailable: {str(e)}"
+                success=False, error=f"Neo4j service unavailable: {str(e)}"
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                error=f"Neo4j query execution failed: {str(e)}"
+                success=False, error=f"Neo4j query execution failed: {str(e)}"
             )
-    
+
     def __del__(self):
         """Clean up database connections."""
         if self.neo4j_driver:

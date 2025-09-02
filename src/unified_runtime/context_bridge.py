@@ -11,11 +11,11 @@ is returned unchanged.
 
 from __future__ import annotations
 
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 try:
-    from hivemind.rag.retriever import Retriever
     from hivemind.rag.citations import format_context
+    from hivemind.rag.retriever import Retriever
 except Exception:
     Retriever = None  # type: ignore
     format_context = None  # type: ignore

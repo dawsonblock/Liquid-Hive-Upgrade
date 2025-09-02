@@ -1,5 +1,5 @@
-import logging
 import json
+import logging
 import os
 from typing import Any, Dict
 
@@ -25,7 +25,9 @@ def setup_logging() -> None:
     if os.environ.get("LOG_JSON", "1") == "1":
         handler.setFormatter(JsonFormatter())
     else:
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
+        )
     root = logging.getLogger()
     root.setLevel(level)
     # Remove existing handlers to avoid duplicate logs in reload

@@ -1,6 +1,9 @@
 from __future__ import annotations
-from typing import Optional, Dict, Any, List
+
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
+
 
 class PageContent(BaseModel):
     url: str
@@ -10,7 +13,7 @@ class PageContent(BaseModel):
     content: Optional[str] = None
     content_html: Optional[str] = None
     screenshot_png: Optional[bytes] = None
-    network_payloads: List[Dict[str,Any]] = Field(default_factory=list)
+    network_payloads: List[Dict[str, Any]] = Field(default_factory=list)
     fetched_at: float
     captcha_required: bool = False
     blocked: bool = False
@@ -19,4 +22,6 @@ class PageContent(BaseModel):
     rendered: bool = False
     elapsed_ms: Optional[int] = None
     # NEW:
-    challenge_status: Optional[str] = None  # one of: "none","challenge_detected","blocked"
+    challenge_status: Optional[str] = (
+        None  # one of: "none","challenge_detected","blocked"
+    )

@@ -1,18 +1,20 @@
 # LIQUID-HIVE-main/hivemind/rag/retriever.py
 
 from __future__ import annotations
-import os
-import logging
+
 import json
-import time
+import logging
+import os
 import pathlib
-from typing import List, Dict, Any, Optional, Tuple
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    import faiss  # FAISS for vector indexing
     import numpy as np
-    import faiss # FAISS for vector indexing
-    from sentence_transformers import SentenceTransformer # For embedding
-    from pypdf import PdfReader # For PDF parsing (if installed)
+    from pypdf import PdfReader  # For PDF parsing (if installed)
+    from sentence_transformers import SentenceTransformer  # For embedding
+
     DEPS_AVAILABLE = True
 except ImportError as e:
     faiss = None
@@ -20,14 +22,20 @@ except ImportError as e:
     SentenceTransformer = None
     PdfReader = None
     DEPS_AVAILABLE = False
-    logging.getLogger(__name__).warning(f"FAISS, NumPy, Sentence Transformers, or PyPDF not installed: {e}. RAG indexing will be disabled.")
+    logging.getLogger(__name__).warning(
+        f"FAISS, NumPy, Sentence Transformers, or PyPDF not installed: {e}. RAG indexing will be disabled."
+    )
 
+
+from capsule_brain.security.input_sanitizer import (  # To clean document content
+    sanitize_input,
+)
 
 # Assuming you have a settings object available
-from hivemind.config import Settings # Assuming Settings can be imported here
-from capsule_brain.security.input_sanitizer import sanitize_input # To clean document content
+from hivemind.config import Settings  # Assuming Settings can be imported here
 
 log = logging.getLogger(__name__)
+
 
 # Mock document structure for internal use
 class Document:
@@ -51,7 +59,7 @@ class Retriever:
         self.index_dir.mkdir(parents=True, exist_ok=True)
         self.embed_model_id = embed_model_id
         self.embedding_model: Optional[SentenceTransformer] = None
-        self.faiss_index: Optional[faiss.IndexFlatL2] = None # Using L2 for simplicity
+        self.faiss_index: Optional[faiss.IndexFlatL2] = None  # Using L2 for simplicity
         self.doc_store: List[Document] = []
         self.is_ready = False
 
@@ -60,13 +68,17 @@ class Retriever:
                 self.embedding_model = SentenceTransformer(self.embed_model_id)
                 self.load_or_create_index()
                 self.is_ready = True
-                log.info(f"RAG Retriever initialized with model: {self.embed_model_id} and index_dir: {self.index_dir}")
+                log.info(
+                    f"RAG Retriever initialized with model: {self.embed_model_id} and index_dir: {self.index_dir}"
+                )
             except Exception as e:
                 log.error(f"Failed to load embedding model or FAISS index: {e}")
                 self.embedding_model = None
                 self.is_ready = False
         else:
-            log.warning("RAG Retriever initialized without an embedding model (or missing deps). Indexing and search will be disabled.")
+            log.warning(
+                "RAG Retriever initialized without an embedding model (or missing deps). Indexing and search will be disabled."
+            )
 
     def load_or_create_index(self):
         index_path = self.index_dir / "faiss_index.bin"
@@ -78,7 +90,9 @@ class Retriever:
                 with open(doc_store_path, "r", encoding="utf-8") as f:
                     raw_docs = json.load(f)
                     self.doc_store = [Document.from_dict(d) for d in raw_docs]
-                log.info(f"Loaded existing FAISS index with {len(self.doc_store)} documents.")
+                log.info(
+                    f"Loaded existing FAISS index with {len(self.doc_store)} documents."
+                )
             except Exception as e:
                 log.error(f"Failed to load existing index: {e}. Creating new index.")
                 self.create_new_index()
@@ -91,7 +105,7 @@ class Retriever:
             embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
             self.faiss_index = faiss.IndexFlatL2(embedding_dim)
             self.doc_store = []
-            self.save_index() # Save empty index initially
+            self.save_index()  # Save empty index initially
             log.info(f"Created new empty FAISS index with dimension {embedding_dim}.")
         else:
             log.error("Cannot create index without an embedding model.")
@@ -100,7 +114,7 @@ class Retriever:
         if self.faiss_index is not None:
             index_path = self.index_dir / "faiss_index.bin"
             doc_store_path = self.index_dir / "doc_store.json"
-            
+
             faiss.write_index(self.faiss_index, str(index_path))
             with open(doc_store_path, "w", encoding="utf-8") as f:
                 json.dump([doc.to_dict() for doc in self.doc_store], f, indent=2)
@@ -108,7 +122,9 @@ class Retriever:
 
     async def add_documents(self, file_paths: List[str]) -> List[str]:
         if not self.is_ready or not self.embedding_model or not self.faiss_index:
-            log.warning("Retriever not ready to add documents. Embedding model or index not initialized.")
+            log.warning(
+                "Retriever not ready to add documents. Embedding model or index not initialized."
+            )
             return []
 
         indexed_files = []
@@ -140,15 +156,17 @@ class Retriever:
                 # Sanitize content before embedding and storing
                 cleaned_content = sanitize_input(content)
                 if not cleaned_content:
-                    log.warning(f"Skipping empty or unsanitizable content from {f_path}")
+                    log.warning(
+                        f"Skipping empty or unsanitizable content from {f_path}"
+                    )
                     continue
 
                 # Simple chunking if document is too long (optional but recommended for large docs)
                 # For now, index as one document. For production, add chunking logic here.
-                
+
                 doc = Document(
                     page_content=cleaned_content,
-                    metadata={"source": f_path, "timestamp": time.time()}
+                    metadata={"source": f_path, "timestamp": time.time()},
                 )
                 new_docs.append(doc)
                 new_embeddings.append(self.embedding_model.encode(cleaned_content))
@@ -159,7 +177,7 @@ class Retriever:
                 log.error(f"Error processing file {f_path}: {e}", exc_info=True)
 
         if new_docs:
-            self.faiss_index.add(np.array(new_embeddings).astype('float32'))
+            self.faiss_index.add(np.array(new_embeddings).astype("float32"))
             self.doc_store.extend(new_docs)
             self.save_index()
             log.info(f"Successfully indexed {len(new_docs)} new documents.")
@@ -169,7 +187,12 @@ class Retriever:
         return indexed_files
 
     async def search(self, query: str, k: int = 5) -> List[Document]:
-        if not self.is_ready or not self.embedding_model or not self.faiss_index or not self.doc_store:
+        if (
+            not self.is_ready
+            or not self.embedding_model
+            or not self.faiss_index
+            or not self.doc_store
+        ):
             log.warning("Retriever not ready for search. Returning empty results.")
             return []
         if not query.strip():
@@ -177,13 +200,15 @@ class Retriever:
 
         try:
             query_embedding = self.embedding_model.encode(query)
-            query_embedding = np.array([query_embedding]).astype('float32')
+            query_embedding = np.array([query_embedding]).astype("float32")
 
-            D, I = self.faiss_index.search(query_embedding, k) # D is distances, I is indices
-            
+            D, I = self.faiss_index.search(
+                query_embedding, k
+            )  # D is distances, I is indices
+
             results: List[Document] = []
             for idx in I[0]:
-                if idx < len(self.doc_store): # Ensure index is valid
+                if idx < len(self.doc_store):  # Ensure index is valid
                     results.append(self.doc_store[idx])
             log.debug(f"Search for '{query[:50]}' returned {len(results)} results.")
             return results
@@ -196,12 +221,14 @@ class Retriever:
     def format_context(self, documents: List[Document]) -> str:
         if not documents:
             return ""
-        
+
         context_lines = []
         for i, doc in enumerate(documents):
             source = doc.metadata.get("source", "unknown")
             # Simple chunking for display
-            snippet = doc.page_content[:200].strip() + ("..." if len(doc.page_content) > 200 else "")
+            snippet = doc.page_content[:200].strip() + (
+                "..." if len(doc.page_content) > 200 else ""
+            )
             context_lines.append(f"[{i+1}] Source: {source}\n{snippet}")
-        
+
         return "\n\n".join(context_lines)

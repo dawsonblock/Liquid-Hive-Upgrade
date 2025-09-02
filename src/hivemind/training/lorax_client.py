@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, Optional
-
-import urllib.request as req
 import urllib.error as err
+import urllib.request as req
+from typing import Any, Dict, Optional
 
 
 class LoRAXClient:
@@ -26,11 +25,15 @@ class LoRAXClient:
             h["Authorization"] = f"Bearer {self.api_key}"
         return h
 
-    def online_sft(self, prompt: str, response: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def online_sft(
+        self, prompt: str, response: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         if not self.base:
             return {"status": "disabled"}
         url = f"{self.base}/v1/lorax/online_sft"
-        body = json.dumps({"prompt": prompt, "response": response, "metadata": metadata or {}}).encode()
+        body = json.dumps(
+            {"prompt": prompt, "response": response, "metadata": metadata or {}}
+        ).encode()
         try:
             r = req.Request(url, data=body, headers=self._headers(), method="POST")
             with req.urlopen(r, timeout=30) as resp:

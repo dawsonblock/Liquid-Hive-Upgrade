@@ -14,9 +14,11 @@ heuristics to derive a single sentence summarising the user's goals from
 their recent prompts.  In a production system this would call out to a
 powerful LLM with a specialised prompt.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
+
 
 class IntentModeler:
     """Analyse user prompt history to derive high‑level operator intent."""
@@ -34,7 +36,9 @@ class IntentModeler:
         """
         # Retrieve the last N user memory capsules
         try:
-            memories: List[dict] = self.engine.get_recent_memories(role="user", limit=20)
+            memories: List[dict] = self.engine.get_recent_memories(
+                role="user", limit=20
+            )
         except Exception:
             memories = []
         prompts = [m.get("content", "") for m in memories if isinstance(m, dict)]

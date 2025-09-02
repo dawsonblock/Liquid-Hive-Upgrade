@@ -1,7 +1,9 @@
 from __future__ import annotations
+
+import trafilatura
 from bs4 import BeautifulSoup
 from readability import Document
-import trafilatura
+
 
 def extract_readable(html: str):
     meta = {}
@@ -17,9 +19,13 @@ def extract_readable(html: str):
         try:
             text = trafilatura.extract(html) or ""
             soup = BeautifulSoup(html, "lxml")
-            meta["title"] = soup.title.string.strip() if soup.title and soup.title.string else ""
+            meta["title"] = (
+                soup.title.string.strip() if soup.title and soup.title.string else ""
+            )
             return text, meta
         except Exception:
             soup = BeautifulSoup(html or "", "lxml")
-            meta["title"] = soup.title.string.strip() if soup.title and soup.title.string else ""
+            meta["title"] = (
+                soup.title.string.strip() if soup.title and soup.title.string else ""
+            )
             return soup.get_text("\n"), meta

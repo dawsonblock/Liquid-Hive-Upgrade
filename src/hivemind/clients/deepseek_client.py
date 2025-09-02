@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import random
-import logging
 from typing import Any, Optional
 
 try:
@@ -46,9 +46,13 @@ class DeepSeekClient:
     def __init__(self, api_key: Optional[str] | None = None) -> None:
         # Read the API key from the environment if not explicitly provided.
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
-        self.base_url = "https://api.deepseek.com/v1/chat/completions" # DeepSeek's actual endpoint
+        self.base_url = (
+            "https://api.deepseek.com/v1/chat/completions"  # DeepSeek's actual endpoint
+        )
         if not self.api_key:
-            logging.warning("DeepSeek API key not found. DeepSeekClient will use stub responses.")
+            logging.warning(
+                "DeepSeek API key not found. DeepSeekClient will use stub responses."
+            )
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Generate a response from the DeepSeek model.
@@ -68,7 +72,7 @@ class DeepSeekClient:
             cannot be contacted, the method will return a dummy JSON
             structure that simply echoes the synthesized answer.
         """
-        if not self.api_key or httpx is None: # Fallback to stub if no API key or httpx
+        if not self.api_key or httpx is None:  # Fallback to stub if no API key or httpx
             return self._stub_response(user_prompt)
 
         headers = {
@@ -76,25 +80,30 @@ class DeepSeekClient:
             "Authorization": f"Bearer {self.api_key}",
         }
         payload = {
-            "model": "deepseek-v3", # Confirm model name
+            "model": "deepseek-v3",  # Confirm model name
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 1024, # Adjust as needed
-            "temperature": 0.7, # Adjust as needed
+            "max_tokens": 1024,  # Adjust as needed
+            "temperature": 0.7,  # Adjust as needed
         }
-        
+
         async with httpx.AsyncClient(timeout=180) as client:
             try:
-                response = await client.post(self.base_url, headers=headers, json=payload)
-                response.raise_for_status() # Raise an exception for bad status codes
+                response = await client.post(
+                    self.base_url, headers=headers, json=payload
+                )
+                response.raise_for_status()  # Raise an exception for bad status codes
                 return response.json()["choices"][0]["message"]["content"]
             except httpx.RequestError as e:
                 logging.error(f"DeepSeek API request failed: {e}", exc_info=True)
                 return self._stub_response(user_prompt)
             except KeyError as e:
-                logging.error(f"DeepSeek API response format error: {e}, response: {response.text}", exc_info=True)
+                logging.error(
+                    f"DeepSeek API response format error: {e}, response: {response.text}",
+                    exc_info=True,
+                )
                 return self._stub_response(user_prompt)
 
     def _stub_response(self, user_prompt: str) -> str:
@@ -116,8 +125,10 @@ class DeepSeekClient:
             return json.dumps(response)
         except Exception:
             # Fallback minimal JSON
-            return json.dumps({
-                "correction_analysis": "Stubbed fallback; no analysis. Add DEEPSEEK_API_KEY to enable real Oracle refinement.",
-                "identified_flaws": [],
-                "final_platinum_answer": "",
-            })
+            return json.dumps(
+                {
+                    "correction_analysis": "Stubbed fallback; no analysis. Add DEEPSEEK_API_KEY to enable real Oracle refinement.",
+                    "identified_flaws": [],
+                    "final_platinum_answer": "",
+                }
+            )

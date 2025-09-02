@@ -1,13 +1,19 @@
 from __future__ import annotations
-import os, time, fnmatch, threading
-from typing import Optional, Dict, Any, Tuple
+
+import fnmatch
+import os
+import threading
+import time
 import urllib.parse
+from typing import Any, Dict, Optional, Tuple
+
 try:
     import redis  # optional
 except Exception:
     redis = None
 
-DEFAULT_TTL_S = int(os.getenv("CONSENT_TTL_S","3600"))
+DEFAULT_TTL_S = int(os.getenv("CONSENT_TTL_S", "3600"))
+
 
 class InMemoryStore:
     def __init__(self):
@@ -16,31 +22,37 @@ class InMemoryStore:
 
     def set(self, key: str, value: dict, ttl: int):
         with self._lock:
-            self._data[key] = (time.time()+ttl, value)
+            self._data[key] = (time.time() + ttl, value)
 
     def get(self, key: str) -> Optional[dict]:
         with self._lock:
             v = self._data.get(key)
-            if not v: return None
+            if not v:
+                return None
             exp, data = v
             if time.time() > exp:
-                del self._data[key]; return None
+                del self._data[key]
+                return None
             return data
 
     def delete(self, key: str):
         with self._lock:
             self._data.pop(key, None)
 
+
 def _host(url: str) -> str:
     return urllib.parse.urlsplit(url).netloc.lower()
 
+
 def _redis():
     url = os.getenv("REDIS_URL")
-    if not url or not redis: return None
+    if not url or not redis:
+        return None
     try:
         return redis.Redis.from_url(url)
     except Exception:
         return None
+
 
 class ConsentManager:
     def __init__(self, policy: dict):
@@ -65,13 +77,20 @@ class ConsentManager:
         # Enforce never-allowed scopes
         defaults = self.policy.get("defaults", {})
         cfg = defaults.get(scope, {"require_consent": False})
-        if scope in ("robots_override","captcha_bypass"):
+        if scope in ("robots_override", "captcha_bypass"):
             allowed = cfg.get("allowed", False)
-            return {"allowed": False, "reason": "prohibited_scope", "require_consent": True, "scope": scope}
+            return {
+                "allowed": False,
+                "reason": "prohibited_scope",
+                "require_consent": True,
+                "scope": scope,
+            }
 
         host = _host(target) if "://" in target else target
         domain_over = self.get_domain_rules(host).get(scope, {})
-        require = bool(domain_over.get("require_consent", cfg.get("require_consent", False)))
+        require = bool(
+            domain_over.get("require_consent", cfg.get("require_consent", False))
+        )
 
         key = self._key(scope, host)
         if self.r:
@@ -81,9 +100,19 @@ class ConsentManager:
         else:
             v = self.mem.get(key)
             if v:
-                return {"allowed": True, "scope": scope, "target": host, "via": "memory"}
+                return {
+                    "allowed": True,
+                    "scope": scope,
+                    "target": host,
+                    "via": "memory",
+                }
         if require:
-            return {"allowed": False, "reason": "consent_required", "scope": scope, "target": host}
+            return {
+                "allowed": False,
+                "reason": "consent_required",
+                "scope": scope,
+                "target": host,
+            }
         return {"allowed": True, "scope": scope, "target": host, "via": "default"}
 
     def approve(self, scope: str, target: str, ttl: Optional[int] = None):

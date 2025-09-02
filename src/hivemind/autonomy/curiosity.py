@@ -55,8 +55,12 @@ class CuriosityEngine:
         if self._running:
             return
         self._running = True
-        self._task = asyncio.create_task(self._run_loop(), name="curiosity_frontier_loop")
-        self._approvals_task = asyncio.create_task(self._approvals_watcher(), name="curiosity_approvals_watcher")
+        self._task = asyncio.create_task(
+            self._run_loop(), name="curiosity_frontier_loop"
+        )
+        self._approvals_task = asyncio.create_task(
+            self._approvals_watcher(), name="curiosity_approvals_watcher"
+        )
 
     async def stop(self) -> None:
         self._running = False
@@ -99,29 +103,39 @@ class CuriosityEngine:
                 # Expect nodes: [{id, degree, labels}], edges: [(src, dst)]
                 nodes = graph_info.get("nodes", [])
                 edges = graph_info.get("edges", [])
-                id_to_deg = {n.get("id"): int(n.get("degree", 0)) for n in nodes if n.get("id") is not None}
+                id_to_deg = {
+                    n.get("id"): int(n.get("degree", 0))
+                    for n in nodes
+                    if n.get("id") is not None
+                }
                 # Orphans / near-orphans
                 orphan_nodes = [nid for nid, deg in id_to_deg.items() if deg <= 1]
                 if orphan_nodes:
-                    results.append(KnowledgeFrontier(
-                        kind="orphan_nodes",
-                        description=f"{len(orphan_nodes)} low-degree nodes detected",
-                        nodes=orphan_nodes[:20],
-                    ))
+                    results.append(
+                        KnowledgeFrontier(
+                            kind="orphan_nodes",
+                            description=f"{len(orphan_nodes)} low-degree nodes detected",
+                            nodes=orphan_nodes[:20],
+                        )
+                    )
                 # Weak components: naive detection using edges
                 try:
                     comp = self._weakly_connected_components(nodes, edges)
                     if len(comp) > 1:
                         # Identify small components
-                        small = [c for c in comp if len(c) < max(5, int(0.05 * len(nodes)))]
+                        small = [
+                            c for c in comp if len(c) < max(5, int(0.05 * len(nodes)))
+                        ]
                         if small:
                             # Flatten small comps as nodes list
                             nodes_small = [n for sub in small for n in sub][:50]
-                            results.append(KnowledgeFrontier(
-                                kind="weak_component",
-                                description=f"{len(small)} small weakly-connected components",
-                                nodes=nodes_small,
-                            ))
+                            results.append(
+                                KnowledgeFrontier(
+                                    kind="weak_component",
+                                    description=f"{len(small)} small weakly-connected components",
+                                    nodes=nodes_small,
+                                )
+                            )
                 except Exception:
                     pass
             # Semantic gaps: heuristic - pick two high-degree nodes with no edge
@@ -132,17 +146,21 @@ class CuriosityEngine:
                     for s, t in graph_info.get("edges", []):
                         edges_set.add((s, t))
                         edges_set.add((t, s))
-                    ranked = sorted(nodes, key=lambda n: int(n.get("degree", 0)), reverse=True)
+                    ranked = sorted(
+                        nodes, key=lambda n: int(n.get("degree", 0)), reverse=True
+                    )
                     if len(ranked) >= 10:
                         a = ranked[0].get("id")
                         b = ranked[1].get("id")
                         if a and b and (a, b) not in edges_set:
-                            results.append(KnowledgeFrontier(
-                                kind="semantic_gap",
-                                description=f"High-degree nodes '{a}' and '{b}' are unconnected",
-                                nodes=[a, b],
-                                missing_edge=(a, b),
-                            ))
+                            results.append(
+                                KnowledgeFrontier(
+                                    kind="semantic_gap",
+                                    description=f"High-degree nodes '{a}' and '{b}' are unconnected",
+                                    nodes=[a, b],
+                                    missing_edge=(a, b),
+                                )
+                            )
             except Exception:
                 pass
         except Exception:
@@ -151,9 +169,15 @@ class CuriosityEngine:
         # Fallback: Neo4j direct analysis if configured
         if not results:
             try:
-                uri = getattr(self.settings, "neo4j_uri", None) or os.environ.get("NEO4J_URI")
-                user = getattr(self.settings, "neo4j_user", None) or os.environ.get("NEO4J_USER")
-                pwd = getattr(self.settings, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD")
+                uri = getattr(self.settings, "neo4j_uri", None) or os.environ.get(
+                    "NEO4J_URI"
+                )
+                user = getattr(self.settings, "neo4j_user", None) or os.environ.get(
+                    "NEO4J_USER"
+                )
+                pwd = getattr(self.settings, "neo4j_password", None) or os.environ.get(
+                    "NEO4J_PASSWORD"
+                )
                 if uri and user and pwd:
                     try:
                         from neo4j import GraphDatabase  # type: ignore
@@ -162,26 +186,32 @@ class CuriosityEngine:
                     driver = GraphDatabase.driver(uri, auth=(user, pwd))
                     with driver.session() as session:
                         # Orphans: nodes with degree <= 1
-                        orphan = session.run("""
+                        orphan = session.run(
+                            """
                             MATCH (n)
                             WITH n, size((n)--()) as deg
                             WHERE deg <= 1
                             RETURN n.id as id
                             LIMIT 50
-                        """)
+                        """
+                        )
                         orphan_ids = [r["id"] for r in orphan if r.get("id")]
                         if orphan_ids:
-                            results.append(KnowledgeFrontier(
-                                kind="orphan_nodes",
-                                description=f"{len(orphan_ids)} low-degree nodes detected",
-                                nodes=orphan_ids,
-                            ))
+                            results.append(
+                                KnowledgeFrontier(
+                                    kind="orphan_nodes",
+                                    description=f"{len(orphan_ids)} low-degree nodes detected",
+                                    nodes=orphan_ids,
+                                )
+                            )
             except Exception:
                 pass
 
         return results
 
-    def _weakly_connected_components(self, nodes: List[Dict[str, Any]], edges: List[Tuple[str, str]]):
+    def _weakly_connected_components(
+        self, nodes: List[Dict[str, Any]], edges: List[Tuple[str, str]]
+    ):
         idx = {n.get("id"): i for i, n in enumerate(nodes) if n.get("id") is not None}
         parent = list(range(len(idx)))
 
@@ -235,7 +265,9 @@ class CuriosityEngine:
             return f"What unknown relationships connect the following sparse concepts: {', '.join(frontier.nodes[:5])}?"
         return None
 
-    async def _submit_curiosity_quest(self, frontier: KnowledgeFrontier, question: str) -> None:
+    async def _submit_curiosity_quest(
+        self, frontier: KnowledgeFrontier, question: str
+    ) -> None:
         quest_id = uuid.uuid4().hex
         payload = {
             "type": "curiosity_quest",
@@ -251,7 +283,9 @@ class CuriosityEngine:
             pass
         # Persist payload for traceability
         try:
-            (self.curiosity_dir / f"quest_{quest_id}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            (self.curiosity_dir / f"quest_{quest_id}.json").write_text(
+                json.dumps(payload, indent=2), encoding="utf-8"
+            )
         except Exception:
             pass
 
@@ -269,16 +303,23 @@ class CuriosityEngine:
                 for item in events:
                     if item.get("role") == "approval_feedback":
                         content = str(item.get("content", ""))
-                        if content.startswith("APPROVED: ") and "[Curiosity Quest]" in content:
+                        if (
+                            content.startswith("APPROVED: ")
+                            and "[Curiosity Quest]" in content
+                        ):
                             # Extract JSON payload
                             try:
-                                json_start = content.index("[Curiosity Quest]") + len("[Curiosity Quest]")
+                                json_start = content.index("[Curiosity Quest]") + len(
+                                    "[Curiosity Quest]"
+                                )
                                 payload_str = content[json_start:].strip()
                                 payload = json.loads(payload_str)
                                 qid = payload.get("id")
                                 if qid and qid not in seen:
                                     seen.add(qid)
-                                    asyncio.create_task(self._research_workflow(payload))
+                                    asyncio.create_task(
+                                        self._research_workflow(payload)
+                                    )
                             except Exception:
                                 pass
                 await asyncio.sleep(5)
@@ -300,12 +341,18 @@ class CuriosityEngine:
                     "Return them as bullet points only, one per line.\n\n" + question
                 )
                 plan = await self.roles.architect(prompt)  # type: ignore
-                subqueries = [ln.strip("- •* ") for ln in plan.strip().splitlines() if ln.strip()]
+                subqueries = [
+                    ln.strip("- •* ") for ln in plan.strip().splitlines() if ln.strip()
+                ]
         except Exception:
             pass
         if not subqueries:
             # Heuristic fallback
-            subqueries = [question, f"background {question}", f"key concepts {question}"]
+            subqueries = [
+                question,
+                f"background {question}",
+                f"key concepts {question}",
+            ]
 
         # 2) Exploration (web search or local retrieval)
         docs: List[str] = []
@@ -316,7 +363,9 @@ class CuriosityEngine:
                     try:
                         res = self.retriever.search(q, k=3)  # type: ignore
                         for d in res:
-                            txt = str(getattr(d, "text", getattr(d, "page_content", "")))
+                            txt = str(
+                                getattr(d, "text", getattr(d, "page_content", ""))
+                            )
                             if txt:
                                 docs.append(txt)
                     except Exception:
@@ -325,14 +374,18 @@ class CuriosityEngine:
             pass
         # Persist quarantined docs
         try:
-            (workdir / "quarantine.txt").write_text("\n\n---\n\n".join(docs), encoding="utf-8")
+            (workdir / "quarantine.txt").write_text(
+                "\n\n---\n\n".join(docs), encoding="utf-8"
+            )
         except Exception:
             pass
 
         # 3) Ingestion: placeholder quarantine stage (could notify rag watcher if available)
         try:
             marker = {"quest_id": quest_id, "count": len(docs), "ts": int(time.time())}
-            (workdir / "quarantine_meta.json").write_text(json.dumps(marker, indent=2), encoding="utf-8")
+            (workdir / "quarantine_meta.json").write_text(
+                json.dumps(marker, indent=2), encoding="utf-8"
+            )
         except Exception:
             pass
 
@@ -362,13 +415,17 @@ class CuriosityEngine:
             "ts": int(time.time()),
         }
         try:
-            self.engine.add_memory("approval", f"[Curiosity Finding] {json.dumps(finding_payload)}")
+            self.engine.add_memory(
+                "approval", f"[Curiosity Finding] {json.dumps(finding_payload)}"
+            )
         except Exception:
             pass
 
         # Record full finding
         try:
-            (workdir / "finding.json").write_text(json.dumps(finding_payload, indent=2), encoding="utf-8")
+            (workdir / "finding.json").write_text(
+                json.dumps(finding_payload, indent=2), encoding="utf-8"
+            )
         except Exception:
             pass
 
@@ -391,17 +448,26 @@ class CuriosityEngine:
                 for item in events:
                     if item.get("role") == "approval_feedback":
                         content = str(item.get("content", ""))
-                        if f"[Curiosity Finding]" in content and "APPROVED:" in content and quest_id in content:
+                        if (
+                            f"[Curiosity Finding]" in content
+                            and "APPROVED:" in content
+                            and quest_id in content
+                        ):
                             # ENHANCED: Auto-feed to RAG ingestion for autonomous learning
                             await self._integrate_finding_into_rag(quest_id, workdir)
-                            
+
                             # Mark as merged (existing functionality)
                             try:
-                                (workdir / "merged").write_text("approved", encoding="utf-8")
+                                (workdir / "merged").write_text(
+                                    "approved", encoding="utf-8"
+                                )
                             except Exception:
                                 pass
                             try:
-                                self.engine.add_memory("self_extension", f"Merged curiosity finding {quest_id} into KB and RAG index.")
+                                self.engine.add_memory(
+                                    "self_extension",
+                                    f"Merged curiosity finding {quest_id} into KB and RAG index.",
+                                )
                             except Exception:
                                 pass
                             seen = True
@@ -411,8 +477,10 @@ class CuriosityEngine:
                 await asyncio.sleep(5)
             except Exception:
                 await asyncio.sleep(5)
-    
-    async def _integrate_finding_into_rag(self, quest_id: str, workdir: pathlib.Path) -> None:
+
+    async def _integrate_finding_into_rag(
+        self, quest_id: str, workdir: pathlib.Path
+    ) -> None:
         """
         Automatically integrate approved curiosity findings into the RAG system.
         This creates the closed-loop autonomous learning capability!
@@ -422,14 +490,14 @@ class CuriosityEngine:
             finding_file = workdir / "finding.json"
             if not finding_file.exists():
                 return
-            
+
             finding_data = json.loads(finding_file.read_text(encoding="utf-8"))
-            
+
             # Extract key information
             question = finding_data.get("question", "Unknown Question")
             summary = finding_data.get("summary", "No summary available")
             timestamp = finding_data.get("ts", int(time.time()))
-            
+
             # Format as a comprehensive knowledge document
             knowledge_doc = f"""# Autonomous Research Finding: {quest_id}
 
@@ -450,56 +518,62 @@ This document was automatically generated by the LIQUID-HIVE Curiosity Engine th
 
 The findings above extend the AI system's knowledge base through active exploration of conceptual frontiers and knowledge graph analysis.
 """
-            
+
             # Determine RAG ingestion directory
             ingest_dir = self._get_rag_ingest_directory()
             if not ingest_dir:
                 return
-            
+
             # Create filename with timestamp and quest ID
             filename = f"curiosity_finding_{quest_id}_{timestamp}.md"
             ingest_file = ingest_dir / filename
-            
+
             # Write to ingestion directory for automatic processing
             ingest_file.write_text(knowledge_doc, encoding="utf-8")
-            
+
             # Log the integration
             try:
-                self.engine.add_memory("system", f"🧠 Autonomous Learning: Finding {quest_id} integrated into RAG knowledge base at {filename}")
+                self.engine.add_memory(
+                    "system",
+                    f"🧠 Autonomous Learning: Finding {quest_id} integrated into RAG knowledge base at {filename}",
+                )
             except Exception:
                 pass
-                
+
         except Exception as e:
             # Log error but don't crash the process
             try:
-                self.engine.add_memory("system", f"❌ Failed to integrate finding {quest_id} into RAG: {str(e)}")
+                self.engine.add_memory(
+                    "system",
+                    f"❌ Failed to integrate finding {quest_id} into RAG: {str(e)}",
+                )
             except Exception:
                 pass
-    
+
     def _get_rag_ingest_directory(self) -> Optional[pathlib.Path]:
         """Get the RAG ingestion directory path."""
         try:
             # Try to get from settings first
-            if self.settings and hasattr(self.settings, 'ingest_dir'):
+            if self.settings and hasattr(self.settings, "ingest_dir"):
                 ingest_dir = pathlib.Path(self.settings.ingest_dir)
                 if ingest_dir.exists():
                     return ingest_dir
-            
+
             # Try standard locations
             standard_paths = [
                 pathlib.Path("/app/data/ingest"),
                 self.base_dir / "ingest",
-                pathlib.Path(os.getcwd()) / "data" / "ingest"
+                pathlib.Path(os.getcwd()) / "data" / "ingest",
             ]
-            
+
             for path in standard_paths:
                 if path.exists():
                     return path
-                
+
             # Create default ingestion directory
             default_ingest = self.base_dir / "ingest"
             default_ingest.mkdir(parents=True, exist_ok=True)
             return default_ingest
-            
+
         except Exception:
             return None

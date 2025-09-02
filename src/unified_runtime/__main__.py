@@ -8,10 +8,11 @@ environment variables ``HOST`` and ``PORT``.
 """
 
 import os
+
 import uvicorn
 
-from .server import app
 from .logging_config import setup_logging
+from .server import app
 
 
 def main() -> None:

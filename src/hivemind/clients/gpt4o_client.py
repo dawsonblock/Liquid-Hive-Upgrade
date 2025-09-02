@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import random
-import logging
 from typing import Optional
 
 try:
@@ -46,11 +46,15 @@ class GPT4oClient:
 
     def __init__(self, api_key: Optional[str] | None = None) -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.base_url = "https://api.openai.com/v1/chat/completions" # Standard OpenAI endpoint
+        self.base_url = (
+            "https://api.openai.com/v1/chat/completions"  # Standard OpenAI endpoint
+        )
         # A simple backoff strategy for retrying requests.
         self._max_retries = 2
         if not self.api_key:
-            logging.warning("OpenAI API key not found. GPT4oClient will use stub responses.")
+            logging.warning(
+                "OpenAI API key not found. GPT4oClient will use stub responses."
+            )
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Generate a response from GPT-4o.
@@ -69,7 +73,7 @@ class GPT4oClient:
             The raw string response from the model.  In this stub, we
             construct a plausible JSON string from the input.
         """
-        if not self.api_key or httpx is None: # Fallback to stub if no API key or httpx
+        if not self.api_key or httpx is None:  # Fallback to stub if no API key or httpx
             return self._stub_response(user_prompt)
 
         headers = {
@@ -77,29 +81,37 @@ class GPT4oClient:
             "Authorization": f"Bearer {self.api_key}",
         }
         payload = {
-            "model": "gpt-4o", # Confirm model name
+            "model": "gpt-4o",  # Confirm model name
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 1024, # Adjust as needed
-            "temperature": 0.7, # Adjust as needed
+            "max_tokens": 1024,  # Adjust as needed
+            "temperature": 0.7,  # Adjust as needed
         }
-        
+
         async with httpx.AsyncClient(timeout=180) as client:
             for attempt in range(self._max_retries + 1):
                 try:
-                    response = await client.post(self.base_url, headers=headers, json=payload)
+                    response = await client.post(
+                        self.base_url, headers=headers, json=payload
+                    )
                     response.raise_for_status()
                     return response.json()["choices"][0]["message"]["content"]
                 except httpx.RequestError as e:
-                    logging.error(f"GPT-4o API request failed (attempt {attempt+1}/{self._max_retries+1}): {e}", exc_info=True)
+                    logging.error(
+                        f"GPT-4o API request failed (attempt {attempt+1}/{self._max_retries+1}): {e}",
+                        exc_info=True,
+                    )
                     if attempt < self._max_retries:
-                        await asyncio.sleep(0.05 * (attempt + 1)) # Exponential backoff
+                        await asyncio.sleep(0.05 * (attempt + 1))  # Exponential backoff
                         continue
                     return self._stub_response(user_prompt)
                 except KeyError as e:
-                    logging.error(f"GPT-4o API response format error (attempt {attempt+1}/{self._max_retries+1}): {e}, response: {response.text}", exc_info=True)
+                    logging.error(
+                        f"GPT-4o API response format error (attempt {attempt+1}/{self._max_retries+1}): {e}, response: {response.text}",
+                        exc_info=True,
+                    )
                     return self._stub_response(user_prompt)
 
     def _stub_response(self, user_prompt: str) -> str:
@@ -119,8 +131,10 @@ class GPT4oClient:
             return json.dumps(response)
         except Exception:
             # On final failure, return a minimal JSON response
-            return json.dumps({
-                "correction_analysis": "Stubbed GPT-4o fallback; no analysis. Add OPENAI_API_KEY to enable real Arbiter refinement.",
-                "identified_flaws": [],
-                "final_platinum_answer": "",
-            })
+            return json.dumps(
+                {
+                    "correction_analysis": "Stubbed GPT-4o fallback; no analysis. Add OPENAI_API_KEY to enable real Arbiter refinement.",
+                    "identified_flaws": [],
+                    "final_platinum_answer": "",
+                }
+            )

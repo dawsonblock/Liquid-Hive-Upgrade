@@ -14,10 +14,11 @@ trigger a self‑extension workflow when poor performance is detected.
 Here we provide a synchronous implementation that can be invoked
 manually.
 """
+
 from __future__ import annotations
 
-import os
 import json
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -61,7 +62,9 @@ class ToolAuditor:
                     success = bool(entry.get("success"))
                     if tool_name is None:
                         continue
-                    tool_stats = stats.setdefault(tool_name, {"successes": 0.0, "count": 0.0})
+                    tool_stats = stats.setdefault(
+                        tool_name, {"successes": 0.0, "count": 0.0}
+                    )
                     tool_stats["count"] += 1
                     if success:
                         tool_stats["successes"] += 1
@@ -75,4 +78,8 @@ class ToolAuditor:
     def flag_underperforming(self) -> List[str]:
         """Return a list of tool names whose success_rate is below the threshold."""
         stats = self.analyse()
-        return [tool for tool, res in stats.items() if res.get("success_rate", 1.0) < self.threshold]
+        return [
+            tool
+            for tool, res in stats.items()
+            if res.get("success_rate", 1.0) < self.threshold
+        ]
