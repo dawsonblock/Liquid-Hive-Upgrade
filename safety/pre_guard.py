@@ -24,8 +24,7 @@ class PreGuardResult:
     risk_flags: List[str] = field(default_factory=list)
     
     def __post_init__(self):
-        # default_factory handles initialization; nothing else required
-        ...
+        pass
 
 class PreGuard:
     """Pre-processing guard for input sanitization and risk assessment."""
