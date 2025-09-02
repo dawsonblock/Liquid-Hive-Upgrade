@@ -1,0 +1,39 @@
+name: CD Prod
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      # TODO: configure your prod cloud/kube auth with OIDC
+      # - name: Configure AWS auth (prod)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_PROD }}
+      #     aws-region: us-east-1
+
+      - name: Helm upgrade (prod)
+        run: |
+          helm upgrade --install liquid-hive helm/liquid-hive \
+            -n liquid-hive-prod --create-namespace \
+            -f helm/liquid-hive/values.yaml \
+            -f helm/liquid-hive/values-aws-prod.yaml \
+            --set image.repository=ghcr.io/${{ github.repository_owner }}/liquid-hive \
+            --set image.tag=${{ github.ref_name }}

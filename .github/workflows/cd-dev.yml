@@ -1,0 +1,38 @@
+name: CD Dev
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      # TODO: configure your cloud/kube auth here (e.g., EKS, GKE, AKS) using OIDC
+      # - name: Configure AWS auth (example)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN_DEV }}
+      #     aws-region: us-east-1
+
+      - name: Helm upgrade (dev)
+        run: |
+          helm upgrade --install liquid-hive helm/liquid-hive \
+            -n liquid-hive-dev --create-namespace \
+            -f helm/liquid-hive/values.yaml \
+            -f helm/liquid-hive/values-dev.yaml \
+            --set image.repository=ghcr.io/${{ github.repository_owner }}/liquid-hive \
+            --set image.tag=${{ github.sha }}
