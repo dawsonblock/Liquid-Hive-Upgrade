@@ -89,7 +89,27 @@ externalSecrets:
   secretStore:
     name: aws-secrets-manager
     kind: ClusterSecretStore
-  data: {}
+  # Map runtime environment variables from AWS Secrets Manager keys
+  # Update the remoteRef.key paths to match your secrets layout
+  data:
+    MONGO_URL:
+      key: liquid-hive/prod/MONGO_URL
+    REDIS_URL:
+      key: liquid-hive/prod/REDIS_URL
+    NEO4J_URL:
+      key: liquid-hive/prod/NEO4J_URL
+    VLLM_ENDPOINT:
+      key: liquid-hive/prod/VLLM_ENDPOINT
+    VLLM_ENDPOINT_SMALL:
+      key: liquid-hive/prod/VLLM_ENDPOINT_SMALL
+    VLLM_ENDPOINT_LARGE:
+      key: liquid-hive/prod/VLLM_ENDPOINT_LARGE
+    VLLM_API_KEY:
+      key: liquid-hive/prod/VLLM_API_KEY
+    PROMETHEUS_BASE_URL:
+      key: liquid-hive/prod/PROMETHEUS_BASE_URL
+    ADMIN_TOKEN:
+      key: liquid-hive/prod/ADMIN_TOKEN
 
 pdb:
   enabled: true
