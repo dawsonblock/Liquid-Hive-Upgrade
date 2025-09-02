@@ -152,6 +152,12 @@ securityContext:
   runAsUser: 1000
   readOnlyRootFilesystem: false
 
+podSecurityContext: {}
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
 # Storage (for adapters, runs, etc.)
 storage:
   enabled: true

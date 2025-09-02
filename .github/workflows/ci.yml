@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  packages: write
+  id-token: write
 
 jobs:
   build-and-test:
@@ -68,13 +70,35 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
-      - name: Build image (no push on PR)
+      - name: Login to GHCR
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (push on main)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Install cosign
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: sigstore/cosign-installer@v3
+
+      - name: Cosign sign image (keyless)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/liquid-hive"
+          # sign latest sha tag from metadata-action output (first tag line)
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          cosign sign --yes "$TAG"
 
       - name: Trivy filesystem scan (allow failure initially)
         uses: aquasecurity/trivy-action@0.24.0

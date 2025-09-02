@@ -81,6 +81,39 @@ storage:
 # Node affinity for production workloads
 affinity:
   nodeAffinity:
+serviceMonitor:
+  enabled: true
+
+externalSecrets:
+  enabled: true
+  secretStore:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  data: {}
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  # Example: allow ingress from ingress-nginx and same namespace; allow egress to common ports
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector: {}
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 443
+        - port: 80
+        - port: 6379
+        - port: 7687
+        - port: 8000
+        - port: 6333
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
       - matchExpressions:

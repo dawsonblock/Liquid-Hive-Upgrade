@@ -22,7 +22,7 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
-      # TODO: configure your prod cloud/kube auth with OIDC
+  # TODO: configure your prod cloud/kube auth with OIDC. Example for AWS EKS:
       # - name: Configure AWS auth (prod)
       #   uses: aws-actions/configure-aws-credentials@v4
       #   with:
