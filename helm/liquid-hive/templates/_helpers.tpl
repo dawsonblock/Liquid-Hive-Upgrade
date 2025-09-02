@@ -54,7 +54,9 @@ Create the name of the service account to use
 {{- define "liquid-hive.serviceAccountName" -}}
 {{- if .Values.secrets.aws.serviceAccount.create }}
 {{- default (include "liquid-hive.fullname" .) .Values.secrets.aws.serviceAccount.name }}
+{{- else if .Values.serviceAccount.create }}
+{{- default (include "liquid-hive.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.secrets.aws.serviceAccount.name }}
+default
 {{- end }}
 {{- end }}
