@@ -295,7 +295,7 @@ class DSRouter:
         patterns = [
             # Math and logic
             r'\b(prove|derive|optimize|constraints?)\b',
-            r'\b(solve|complex|complex problem)\b',
+            r'\b(solve|complex)\b',
             r'\b(induction|deduction|axiom|theorem)\b',
             r'\b(NP-complete|complexity|Big-O|algorithm)\b',
             
