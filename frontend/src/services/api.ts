@@ -94,3 +94,14 @@ export const setRouterThresholds = (
 
 // Swarm status
 export const getSwarmStatus = () => api.get('/swarm/status').then(r => r.data as any);
+
+// Budget status
+export type BudgetStatus = {
+  exceeded?: boolean;
+  tokens_used?: number;
+  usd_spent?: number;
+  next_reset_utc?: string;
+  limits?: { max_tokens?: number; max_usd?: number; enforcement?: string };
+  error?: string;
+};
+export const getBudgetStatus = () => api.get('/budget/status').then(r => r.data as BudgetStatus);

@@ -854,6 +854,33 @@ async def get_providers_status() -> Dict[str, Any]:
         return {"error": str(exc)}
 
 
+@app.get(f"{API_PREFIX}/budget/status")
+async def get_budget_status() -> Dict[str, Any]:
+    """Public budget status endpoint.
+
+    Returns current token and USD usage along with next UTC reset time and whether
+    the configured daily limits have been exceeded. Safe to expose without an admin token.
+    """
+    try:
+        if ds_router is None or not hasattr(ds_router, "_budget_tracker"):
+            return {"error": "Router or budget tracker not available"}
+        status = await ds_router._budget_tracker.check_budget()  # type: ignore[attr-defined]
+        # status is a dataclass-like object; convert to dict
+        return {
+            "exceeded": bool(getattr(status, "exceeded", False)),
+            "tokens_used": int(getattr(status, "tokens_used", 0)),
+            "usd_spent": float(getattr(status, "usd_spent", 0.0)),
+            "next_reset_utc": str(getattr(status, "next_reset_utc", "unknown")),
+            "limits": {
+                "max_tokens": int(getattr(ds_router.config, "max_oracle_tokens_per_day", 0)) if ds_router else 0,  # type: ignore[attr-defined]
+                "max_usd": float(getattr(ds_router.config, "max_oracle_usd_per_day", 0.0)) if ds_router else 0.0,
+                "enforcement": str(getattr(ds_router.config, "budget_enforcement", "hard")) if ds_router else "hard",
+            },
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.post(f"{API_PREFIX}/admin/budget/reset")
 async def reset_budget() -> Dict[str, Any]:
     """Reset daily budget counters (Admin only)."""
@@ -1539,8 +1566,10 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     confidence = None
     escalated = False
 
-    # Use DS-Router if explicitly enabled, otherwise fallback to legacy routing
-    if ds_router is not None and GenRequest is not None and bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)):
+    # Use DS-Router if enabled (Settings.MODEL_ROUTING_ENABLED or env var default true)
+    routing_flag_env = os.getenv("MODEL_ROUTING_ENABLED", "true").lower() == "true"
+    routing_enabled = bool(getattr(settings, "MODEL_ROUTING_ENABLED", routing_flag_env))
+    if ds_router is not None and GenRequest is not None and routing_enabled:
         try:
             # Create DS-Router request
             GenRequestAny = GenRequest  # type: ignore[assignment]
@@ -1572,7 +1601,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
         roles_obj: Any = text_roles if text_roles is not None else None
         decision: Optional[dict[str, Any]] = None
         try:
-            routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
+            routing = routing_enabled
             chosen_model = None
             ctx: dict[str, Any] = {}
             if resource_estimator is not None:
@@ -1849,7 +1878,9 @@ async def websocket_chat_endpoint(websocket: WebSocket):
                     continue
                 
                 # No cache hit - generate streaming response
-                if stream_mode and ds_router is not None and GenRequest is not None:
+                routing_flag_env = os.getenv("MODEL_ROUTING_ENABLED", "true").lower() == "true"
+                routing_enabled = bool(getattr(settings, "MODEL_ROUTING_ENABLED", routing_flag_env))
+                if stream_mode and routing_enabled and ds_router is not None and GenRequest is not None:
                     await _handle_streaming_generation(websocket, query)
                 else:
                     # Fallback to non-streaming

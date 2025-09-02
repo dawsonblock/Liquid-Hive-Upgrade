@@ -26,6 +26,11 @@ bitsandbytes>=0.41.0
 prometheus_client==0.22.1
 transformers==4.56.0
 
+# Common utilities and IO
+requests==2.32.3
+PyYAML==6.0.2
+Pillow==10.4.0
+
 # Final Apotheosis Dependencies
 scipy>=1.11.0  # Statistical analysis for promotion engine
 beautifulsoup4==4.12.3
@@ -43,6 +48,7 @@ user-agents==2.2.0
 robotexclusionrulesparser>=1.7.0
 simhash==2.1.2
 qdrant-client==1.10.1
+minio==7.2.7
 
 # Enhanced Tools Framework Dependencies
 aiofiles==23.2.1
@@ -52,3 +58,13 @@ neo4j==5.22.0
 
 # Testing
 pytest-asyncio==0.23.7
+pytest==8.3.2
+
+# Optional (install as needed):
+# - OCR support (used conditionally in hivemind/roles_vl.py)
+# rapidocr-onnxruntime>=1.3.20
+# - Training stack (used by hivemind/training/* scripts)
+# datasets>=2.19.0
+# peft>=0.10.0
+# trl>=0.9.0
+# unsloth>=2024.5.1

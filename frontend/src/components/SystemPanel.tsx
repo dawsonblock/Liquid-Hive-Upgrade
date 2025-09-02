@@ -2,7 +2,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { Alert, Box, Button, Chip, Grid, IconButton, List, ListItem, ListItemText, Paper, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
-import { approveProposal, denyProposal, fetchState, getApprovals, getSwarmStatus, previewAutopromote, setRouterThresholds } from '../services/api';
+import { approveProposal, denyProposal, fetchState, getApprovals, getBudgetStatus, getSwarmStatus, previewAutopromote, setRouterThresholds, type BudgetStatus } from '../services/api';
 import { getBackendWsBase } from '../services/env';
 
 const SystemPanel: React.FC = () => {
@@ -16,6 +16,7 @@ const SystemPanel: React.FC = () => {
   const [supportThreshold, setSupportThreshold] = useState<string>('');
   const [maxCot, setMaxCot] = useState<string>('');
   const [adminToken, setAdminToken] = useState<string>('');
+  const [budget, setBudget] = useState<BudgetStatus | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -51,6 +52,7 @@ const SystemPanel: React.FC = () => {
       try {
         // optional: pull current thresholds from stateSummary if exposed later
       } catch { }
+      try { setBudget(await getBudgetStatus()); } catch { }
     };
     run();
   }, []);
@@ -167,6 +169,27 @@ const SystemPanel: React.FC = () => {
               <Button size="small" variant="outlined" onClick={onApplyThresholds}>Apply</Button>
             </Stack>
             <Typography variant="caption" color="text.secondary">Requires ADMIN_TOKEN configured on server.</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between">
+              <Typography variant="h6">Budget Usage</Typography>
+              <Button size="small" variant="outlined" onClick={async () => { try { setBudget(await getBudgetStatus()); } catch { } }}>Refresh</Button>
+            </Stack>
+            {budget?.error ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Budget info unavailable: {budget.error}</Typography>
+            ) : (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                <Chip label={`Tokens used: ${budget?.tokens_used ?? 0}`} color={(budget?.exceeded ? 'warning' : 'default') as any} />
+                <Chip label={`USD spent: $${(budget?.usd_spent ?? 0).toFixed(2)}`} color={(budget?.exceeded ? 'warning' : 'default') as any} />
+                <Chip label={`Next reset: ${budget?.next_reset_utc ?? 'unknown'}`} />
+                {budget?.limits && (
+                  <Chip label={`Limits: ${budget.limits.max_tokens ?? 0} tokens / $${budget.limits.max_usd ?? 0}`} variant="outlined" />
+                )}
+                {budget?.exceeded && <Chip label="Exceeded" color="error" />}
+              </Stack>
+            )}
           </Paper>
         </Grid>
       </Grid>
