@@ -169,8 +169,8 @@ from contextlib import asynccontextmanager
 async def _lifespan(app: FastAPI):
     # Initialize on startup via legacy startup() routine
     try:
-        if 'startup' in globals() and callable(globals().get('startup')):
-            await globals()['startup']()  # type: ignore[misc]
+        if 'startup' in locals() and callable(startup):
+            await startup()
     except Exception as e:
         log.warning(f"Startup initialization encountered an error: {e}")
     yield
