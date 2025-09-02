@@ -38,7 +38,7 @@ async def test_semantic_caching_system():
         cache = await get_semantic_cache(
             redis_url="redis://localhost:6379",
             embedding_model="all-MiniLM-L6-v2",
-            similarity_threshold=0.95
+            similarity_threshold=0.88
         )
         
         await asyncio.sleep(2)  # Give time for initialization

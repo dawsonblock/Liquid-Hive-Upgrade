@@ -25,12 +25,13 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
-import { ProvidersProvider } from './contexts/ProvidersContext';
+import CacheAdminPanel from './components/CacheAdminPanel';
 import ChatPanel from './components/ChatPanel';
 import ForgePanel from './components/ForgePanel';
 import SecretsPanel from './components/SecretsPanel';
 import StreamingChatPanel from './components/StreamingChatPanel';
 import SystemPanel from './components/SystemPanel';
+import { ProvidersProvider, useProviders } from './contexts/ProvidersContext';
 import { health } from './services/api';
 import { store } from './store';
 
@@ -68,110 +69,136 @@ export default function App() {
     shape: { borderRadius: 12 }
   })), [mode]);
 
-  const [panel, setPanel] = useState<'chat' | 'streaming' | 'system' | 'forge' | 'secrets'>('streaming');
+  const [panel, setPanel] = useState<'chat' | 'streaming' | 'system' | 'forge' | 'secrets' | 'cache'>('streaming');
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMdUp = useMediaQuery('(min-width:900px)');
   const online = useBackendHealth();
   return (
     <Provider store={store}>
       <ProvidersProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <AppBar position="fixed" color="transparent" elevation={0} sx={{
-          backdropFilter: 'blur(8px)',
-          bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.6)',
-          borderBottom: (t) => `1px solid ${t.palette.divider}`,
-          zIndex: (t) => t.zIndex.drawer + 1
-        }}>
-          <Toolbar>
-            {!isMdUp && (
-              <IconButton color="inherit" edge="start" onClick={() => setMobileOpen(v => !v)} sx={{ mr: 1 }}>
-                <MenuIcon />
-              </IconButton>
-            )}
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-              LIQUID-HIVE Console
-            </Typography>
-            <Tooltip title={online ? 'Backend online' : 'Backend offline'}>
-              <Chip size="small" label={online ? 'Online' : 'Offline'} color={online ? 'success' : 'error'} sx={{ mr: 1 }} />
-            </Tooltip>
-            <Tooltip title={mode === 'dark' ? 'Switch to light' : 'Switch to dark'}>
-              <IconButton color="inherit" onClick={() => setMode(m => m === 'dark' ? 'light' : 'dark')}>
-                {mode === 'dark' ? <WbSunnyRoundedIcon /> : <DarkModeRoundedIcon />}
-              </IconButton>
-            </Tooltip>
-          </Toolbar>
-        </AppBar>
-        <Drawer
-          variant={isMdUp ? 'permanent' : 'temporary'}
-          open={isMdUp ? true : mobileOpen}
-          onClose={() => setMobileOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: 'block',
-            [`& .MuiDrawer-paper`]: {
-              width: drawerWidth,
-              boxSizing: 'border-box',
-              borderRight: (t) => `1px solid ${t.palette.divider}`,
-              backgroundImage: (t) => t.palette.mode === 'dark'
-                ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
-                : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,248,252,1) 100%)'
-            },
-          }}
-        >
-          <Toolbar />
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton selected={panel === 'streaming'} onClick={() => setPanel('streaming')}>
-                <ListItemIcon><StreamIcon /></ListItemIcon>
-                <ListItemText primary="Streaming Chat" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={panel === 'chat'} onClick={() => setPanel('chat')}>
-                <ListItemIcon><ChatIcon /></ListItemIcon>
-                <ListItemText primary="Classic Chat" />
-              </ListItemButton>
-            </ListItem>
-            <Divider sx={{ my: 1 }} />
-            <ListItem disablePadding>
-              <ListItemButton selected={panel === 'system'} onClick={() => setPanel('system')}>
-                <ListItemIcon><DashboardIcon /></ListItemIcon>
-                <ListItemText primary="System Console" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={panel === 'secrets'} onClick={() => setPanel('secrets')}>
-                <ListItemIcon><VpnKeyIcon /></ListItemIcon>
-                <ListItemText primary="Secrets" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={panel === 'forge'} onClick={() => setPanel('forge')}>
-                <ListItemIcon><SettingsIcon /></ListItemIcon>
-                <ListItemText primary="Cognitive Forge" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </Drawer>
-        <Box component="main" sx={{
-          flexGrow: 1,
-          p: { xs: 2, md: 3 },
-          ml: { xs: 0, md: `${drawerWidth}px` },
-          minHeight: '100vh',
-          background: (t) => t.palette.mode === 'dark'
-            ? 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.12), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.10), transparent)'
-            : 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.06), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.05), transparent)'
-        }}>
-          <Toolbar />
-          {panel === 'streaming' && <StreamingChatPanel />}
-          {panel === 'chat' && <ChatPanel />}
-          {panel === 'system' && <SystemPanel />}
-          {panel === 'secrets' && <SecretsPanel />}
-          {panel === 'forge' && <ForgePanel />}
-        </Box>
-  </ThemeProvider>
-  </ProvidersProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AppBar position="fixed" color="transparent" elevation={0} sx={{
+            backdropFilter: 'blur(8px)',
+            bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.6)',
+            borderBottom: (t) => `1px solid ${t.palette.divider}`,
+            zIndex: (t) => t.zIndex.drawer + 1
+          }}>
+            <Toolbar>
+              {!isMdUp && (
+                <IconButton color="inherit" edge="start" onClick={() => setMobileOpen(v => !v)} sx={{ mr: 1 }}>
+                  <MenuIcon />
+                </IconButton>
+              )}
+              <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+                LIQUID-HIVE Console
+              </Typography>
+              {/* Backend online/offline */}
+              <Tooltip title={online ? 'Backend online' : 'Backend offline'}>
+                <Chip size="small" label={online ? 'Online' : 'Offline'} color={online ? 'success' : 'error'} sx={{ mr: 1 }} />
+              </Tooltip>
+              {/* Providers polling indicator */}
+              <HeaderPollingChip />
+              <Tooltip title={mode === 'dark' ? 'Switch to light' : 'Switch to dark'}>
+                <IconButton color="inherit" onClick={() => setMode(m => m === 'dark' ? 'light' : 'dark')}>
+                  {mode === 'dark' ? <WbSunnyRoundedIcon /> : <DarkModeRoundedIcon />}
+                </IconButton>
+              </Tooltip>
+            </Toolbar>
+          </AppBar>
+          <Drawer
+            variant={isMdUp ? 'permanent' : 'temporary'}
+            open={isMdUp ? true : mobileOpen}
+            onClose={() => setMobileOpen(false)}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: 'block',
+              [`& .MuiDrawer-paper`]: {
+                width: drawerWidth,
+                boxSizing: 'border-box',
+                borderRight: (t) => `1px solid ${t.palette.divider}`,
+                backgroundImage: (t) => t.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,248,252,1) 100%)'
+              },
+            }}
+          >
+            <Toolbar />
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'streaming'} onClick={() => setPanel('streaming')}>
+                  <ListItemIcon><StreamIcon /></ListItemIcon>
+                  <ListItemText primary="Streaming Chat" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'chat'} onClick={() => setPanel('chat')}>
+                  <ListItemIcon><ChatIcon /></ListItemIcon>
+                  <ListItemText primary="Classic Chat" />
+                </ListItemButton>
+              </ListItem>
+              <Divider sx={{ my: 1 }} />
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'system'} onClick={() => setPanel('system')}>
+                  <ListItemIcon><DashboardIcon /></ListItemIcon>
+                  <ListItemText primary="System Console" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'cache'} onClick={() => setPanel('cache')}>
+                  <ListItemIcon><SettingsIcon /></ListItemIcon>
+                  <ListItemText primary="Cache Admin" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'secrets'} onClick={() => setPanel('secrets')}>
+                  <ListItemIcon><VpnKeyIcon /></ListItemIcon>
+                  <ListItemText primary="Secrets" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton selected={panel === 'forge'} onClick={() => setPanel('forge')}>
+                  <ListItemIcon><SettingsIcon /></ListItemIcon>
+                  <ListItemText primary="Cognitive Forge" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Drawer>
+          <Box component="main" sx={{
+            flexGrow: 1,
+            p: { xs: 2, md: 3 },
+            ml: { xs: 0, md: `${drawerWidth}px` },
+            minHeight: '100vh',
+            background: (t) => t.palette.mode === 'dark'
+              ? 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.12), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.10), transparent)'
+              : 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.06), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.05), transparent)'
+          }}>
+            <Toolbar />
+            {panel === 'streaming' && <StreamingChatPanel />}
+            {panel === 'chat' && <ChatPanel />}
+            {panel === 'system' && <SystemPanel />}
+            {panel === 'cache' && <CacheAdminPanel />}
+            {panel === 'secrets' && <SecretsPanel />}
+            {panel === 'forge' && <ForgePanel />}
+          </Box>
+        </ThemeProvider>
+      </ProvidersProvider>
     </Provider>
   );
+}
+
+function HeaderPollingChip() {
+  // Lightweight consumer for header; safe because ProvidersProvider wraps App
+  try {
+    const { autoRefresh, intervalMs } = useProviders();
+    const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
+    const color: any = autoRefresh ? 'info' : 'default';
+    return (
+      <Tooltip title="Providers status polling">
+        <Chip size="small" label={label} color={color} variant="outlined" sx={{ mr: 1 }} />
+      </Tooltip>
+    );
+  } catch {
+    return null;
+  }
 }

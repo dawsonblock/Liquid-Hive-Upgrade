@@ -25,7 +25,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useDispatch, useSelector } from 'react-redux';
 import { useProviders } from '../contexts/ProvidersContext';
-import { getBackendWsBase } from '../services/env';
+import { getBackendHttpBase, getBackendWsBase } from '../services/env';
 import type { RootState } from '../store';
 import { addChat, updateLastMessage } from '../store';
 import ContextSidebar from './ContextSidebar';
@@ -50,6 +50,8 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [streamMetadata, setStreamMetadata] = useState<any>(null);
+  const [cacheAnalytics, setCacheAnalytics] = useState<any>(null);
+  const [cacheLoading, setCacheLoading] = useState<boolean>(false);
   const { providers, loading: providersLoading, refresh: refreshProviders } = useProviders();
 
   // Context and metadata state
@@ -137,7 +139,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
           cached: true,
           metadata: data.metadata
         }));
-        setStreamMetadata(data.metadata);
+        setStreamMetadata({ ...(data.metadata || {}), cached: true });
         break;
 
       case 'stream_complete':
@@ -169,6 +171,23 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
         console.log('📨 Unknown message type:', data.type);
     }
   };
+
+  // Cache analytics fetcher
+  const refreshCacheAnalytics = useCallback(async () => {
+    try {
+      setCacheLoading(true);
+      const base = getBackendHttpBase();
+      if (!base) return;
+      const res = await fetch(`${base}/api/cache/analytics`);
+      if (!res.ok) return;
+      const json = await res.json();
+      setCacheAnalytics(json);
+    } catch (e) {
+      // ignore
+    } finally {
+      setCacheLoading(false);
+    }
+  }, []);
 
   // Send message via WebSocket
   const sendStreamingMessage = async () => {
@@ -221,14 +240,19 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       connectWebSocket();
     }
 
-  // Providers are fetched via context
+    // Providers are fetched via context
+
+    // Light cache analytics poll (30s)
+    refreshCacheAnalytics();
+    const iv = setInterval(() => refreshCacheAnalytics(), 30000);
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
+      clearInterval(iv);
     };
-  }, [streamingEnabled, connectWebSocket, refreshProviders]);
+  }, [streamingEnabled, connectWebSocket, refreshProviders, refreshCacheAnalytics]);
 
   // auto-refresh handled by context
 
@@ -260,8 +284,18 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
               {streamMetadata && (
                 <Chip
                   icon={<CacheIcon />}
-                  label={streamMetadata.cached ? 'Cache Hit' : 'Live Generation'}
+                  label={streamMetadata.cached ? (`Cache Hit${typeof streamMetadata.cache_similarity === 'number' ? ` (${(streamMetadata.cache_similarity * 100).toFixed(0)}%)` : ''}`) : 'Live Generation'}
                   color={streamMetadata.cached ? 'success' : 'primary'}
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+
+              {cacheAnalytics && (
+                <Chip
+                  icon={<CacheIcon />}
+                  label={`Cache: ${Math.round((cacheAnalytics.hit_rate || 0) * 100)}%`}
+                  color={(cacheAnalytics.hit_rate || 0) > 0.5 ? 'success' : 'default'}
                   variant="outlined"
                   size="small"
                 />
@@ -281,6 +315,14 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                 startIcon={providersLoading ? <CircularProgress size={14} /> : <RefreshIcon />}
               >
                 Refresh Providers
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={refreshCacheAnalytics}
+                startIcon={cacheLoading ? <CircularProgress size={14} /> : <CacheIcon />}
+              >
+                Cache Analytics
               </Button>
             </Stack>
           </Paper>

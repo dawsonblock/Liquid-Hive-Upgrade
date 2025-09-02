@@ -26,11 +26,13 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
+import CacheAdminPanel from './components/CacheAdminPanel';
 import ChatPanel from './components/ChatPanel';
 import ForgePanel from './components/ForgePanel';
 import SecretsPanel from './components/SecretsPanel';
 import StreamingChatPanel from './components/StreamingChatPanel';
 import SystemPanel from './components/SystemPanel';
+import { ProvidersProvider, useProviders } from './contexts/ProvidersContext';
 import { health } from './services/api';
 import { store } from './store';
 const drawerWidth = 260;
@@ -69,28 +71,40 @@ export default function App() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const isMdUp = useMediaQuery('(min-width:900px)');
     const online = useBackendHealth();
-    return (_jsx(Provider, { store: store, children: _jsxs(ThemeProvider, { theme: theme, children: [_jsx(CssBaseline, {}), _jsx(AppBar, { position: "fixed", color: "transparent", elevation: 0, sx: {
-                        backdropFilter: 'blur(8px)',
-                        bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.6)',
-                        borderBottom: (t) => `1px solid ${t.palette.divider}`,
-                        zIndex: (t) => t.zIndex.drawer + 1
-                    }, children: _jsxs(Toolbar, { children: [!isMdUp && (_jsx(IconButton, { color: "inherit", edge: "start", onClick: () => setMobileOpen(v => !v), sx: { mr: 1 }, children: _jsx(MenuIcon, {}) })), _jsx(Typography, { variant: "h6", noWrap: true, component: "div", sx: { flexGrow: 1 }, children: "LIQUID-HIVE Console" }), _jsx(Tooltip, { title: online ? 'Backend online' : 'Backend offline', children: _jsx(Chip, { size: "small", label: online ? 'Online' : 'Offline', color: online ? 'success' : 'error', sx: { mr: 1 } }) }), _jsx(Tooltip, { title: mode === 'dark' ? 'Switch to light' : 'Switch to dark', children: _jsx(IconButton, { color: "inherit", onClick: () => setMode(m => m === 'dark' ? 'light' : 'dark'), children: mode === 'dark' ? _jsx(WbSunnyRoundedIcon, {}) : _jsx(DarkModeRoundedIcon, {}) }) })] }) }), _jsxs(Drawer, { variant: isMdUp ? 'permanent' : 'temporary', open: isMdUp ? true : mobileOpen, onClose: () => setMobileOpen(false), ModalProps: { keepMounted: true }, sx: {
-                        display: 'block',
-                        [`& .MuiDrawer-paper`]: {
-                            width: drawerWidth,
-                            boxSizing: 'border-box',
-                            borderRight: (t) => `1px solid ${t.palette.divider}`,
-                            backgroundImage: (t) => t.palette.mode === 'dark'
-                                ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
-                                : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,248,252,1) 100%)'
-                        },
-                    }, children: [_jsx(Toolbar, {}), _jsxs(List, { children: [_jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'streaming', onClick: () => setPanel('streaming'), children: [_jsx(ListItemIcon, { children: _jsx(StreamIcon, {}) }), _jsx(ListItemText, { primary: "Streaming Chat" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'chat', onClick: () => setPanel('chat'), children: [_jsx(ListItemIcon, { children: _jsx(ChatIcon, {}) }), _jsx(ListItemText, { primary: "Classic Chat" })] }) }), _jsx(Divider, { sx: { my: 1 } }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'system', onClick: () => setPanel('system'), children: [_jsx(ListItemIcon, { children: _jsx(DashboardIcon, {}) }), _jsx(ListItemText, { primary: "System Console" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'secrets', onClick: () => setPanel('secrets'), children: [_jsx(ListItemIcon, { children: _jsx(VpnKeyIcon, {}) }), _jsx(ListItemText, { primary: "Secrets" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'forge', onClick: () => setPanel('forge'), children: [_jsx(ListItemIcon, { children: _jsx(SettingsIcon, {}) }), _jsx(ListItemText, { primary: "Cognitive Forge" })] }) })] })] }), _jsxs(Box, { component: "main", sx: {
-                        flexGrow: 1,
-                        p: { xs: 2, md: 3 },
-                        ml: { xs: 0, md: `${drawerWidth}px` },
-                        minHeight: '100vh',
-                        background: (t) => t.palette.mode === 'dark'
-                            ? 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.12), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.10), transparent)'
-                            : 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.06), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.05), transparent)'
-                    }, children: [_jsx(Toolbar, {}), panel === 'streaming' && _jsx(StreamingChatPanel, {}), panel === 'chat' && _jsx(ChatPanel, {}), panel === 'system' && _jsx(SystemPanel, {}), panel === 'secrets' && _jsx(SecretsPanel, {}), panel === 'forge' && _jsx(ForgePanel, {})] })] }) }));
+    return (_jsx(Provider, { store: store, children: _jsx(ProvidersProvider, { children: _jsxs(ThemeProvider, { theme: theme, children: [_jsx(CssBaseline, {}), _jsx(AppBar, { position: "fixed", color: "transparent", elevation: 0, sx: {
+                            backdropFilter: 'blur(8px)',
+                            bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.6)',
+                            borderBottom: (t) => `1px solid ${t.palette.divider}`,
+                            zIndex: (t) => t.zIndex.drawer + 1
+                        }, children: _jsxs(Toolbar, { children: [!isMdUp && (_jsx(IconButton, { color: "inherit", edge: "start", onClick: () => setMobileOpen(v => !v), sx: { mr: 1 }, children: _jsx(MenuIcon, {}) })), _jsx(Typography, { variant: "h6", noWrap: true, component: "div", sx: { flexGrow: 1 }, children: "LIQUID-HIVE Console" }), _jsx(Tooltip, { title: online ? 'Backend online' : 'Backend offline', children: _jsx(Chip, { size: "small", label: online ? 'Online' : 'Offline', color: online ? 'success' : 'error', sx: { mr: 1 } }) }), _jsx(HeaderPollingChip, {}), _jsx(Tooltip, { title: mode === 'dark' ? 'Switch to light' : 'Switch to dark', children: _jsx(IconButton, { color: "inherit", onClick: () => setMode(m => m === 'dark' ? 'light' : 'dark'), children: mode === 'dark' ? _jsx(WbSunnyRoundedIcon, {}) : _jsx(DarkModeRoundedIcon, {}) }) })] }) }), _jsxs(Drawer, { variant: isMdUp ? 'permanent' : 'temporary', open: isMdUp ? true : mobileOpen, onClose: () => setMobileOpen(false), ModalProps: { keepMounted: true }, sx: {
+                            display: 'block',
+                            [`& .MuiDrawer-paper`]: {
+                                width: drawerWidth,
+                                boxSizing: 'border-box',
+                                borderRight: (t) => `1px solid ${t.palette.divider}`,
+                                backgroundImage: (t) => t.palette.mode === 'dark'
+                                    ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
+                                    : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,248,252,1) 100%)'
+                            },
+                        }, children: [_jsx(Toolbar, {}), _jsxs(List, { children: [_jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'streaming', onClick: () => setPanel('streaming'), children: [_jsx(ListItemIcon, { children: _jsx(StreamIcon, {}) }), _jsx(ListItemText, { primary: "Streaming Chat" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'chat', onClick: () => setPanel('chat'), children: [_jsx(ListItemIcon, { children: _jsx(ChatIcon, {}) }), _jsx(ListItemText, { primary: "Classic Chat" })] }) }), _jsx(Divider, { sx: { my: 1 } }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'system', onClick: () => setPanel('system'), children: [_jsx(ListItemIcon, { children: _jsx(DashboardIcon, {}) }), _jsx(ListItemText, { primary: "System Console" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'cache', onClick: () => setPanel('cache'), children: [_jsx(ListItemIcon, { children: _jsx(SettingsIcon, {}) }), _jsx(ListItemText, { primary: "Cache Admin" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'secrets', onClick: () => setPanel('secrets'), children: [_jsx(ListItemIcon, { children: _jsx(VpnKeyIcon, {}) }), _jsx(ListItemText, { primary: "Secrets" })] }) }), _jsx(ListItem, { disablePadding: true, children: _jsxs(ListItemButton, { selected: panel === 'forge', onClick: () => setPanel('forge'), children: [_jsx(ListItemIcon, { children: _jsx(SettingsIcon, {}) }), _jsx(ListItemText, { primary: "Cognitive Forge" })] }) })] })] }), _jsxs(Box, { component: "main", sx: {
+                            flexGrow: 1,
+                            p: { xs: 2, md: 3 },
+                            ml: { xs: 0, md: `${drawerWidth}px` },
+                            minHeight: '100vh',
+                            background: (t) => t.palette.mode === 'dark'
+                                ? 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.12), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.10), transparent)'
+                                : 'radial-gradient(1200px 600px at -200px -200px, rgba(14,165,233,0.06), transparent), radial-gradient(800px 400px at 120% 10%, rgba(225,29,72,0.05), transparent)'
+                        }, children: [_jsx(Toolbar, {}), panel === 'streaming' && _jsx(StreamingChatPanel, {}), panel === 'chat' && _jsx(ChatPanel, {}), panel === 'system' && _jsx(SystemPanel, {}), panel === 'cache' && _jsx(CacheAdminPanel, {}), panel === 'secrets' && _jsx(SecretsPanel, {}), panel === 'forge' && _jsx(ForgePanel, {})] })] }) }) }));
+}
+function HeaderPollingChip() {
+    // Lightweight consumer for header; safe because ProvidersProvider wraps App
+    try {
+        const { autoRefresh, intervalMs } = useProviders();
+        const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
+        const color = autoRefresh ? 'info' : 'default';
+        return (_jsx(Tooltip, { title: "Providers status polling", children: _jsx(Chip, { size: "small", label: label, color: color, variant: "outlined", sx: { mr: 1 } }) }));
+    }
+    catch {
+        return null;
+    }
 }

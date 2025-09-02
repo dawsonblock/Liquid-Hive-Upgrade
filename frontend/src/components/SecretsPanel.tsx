@@ -4,20 +4,20 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
+import Grid from '@mui/material/Grid';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import Divider from '@mui/material/Divider';
-import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 import { useProviders } from '../contexts/ProvidersContext';
-import { getSecretsHealth, reloadRouterSecrets, secretExists, setSecret } from '../services/api';
+import { getSecretsHealth, reloadRouterSecrets, secretExists, setSecret, warmQwenProvider } from '../services/api';
 
 const SECRET_KEYS = [
     { key: 'DEEPSEEK_API_KEY', label: 'DeepSeek API Key', placeholder: 'sk-...' },
@@ -37,6 +37,7 @@ export default function SecretsPanel() {
     const [qwenModel, setQwenModel] = useState<string>('');
     const [qwenPreload, setQwenPreload] = useState<boolean>(false);
     const [qwenAutoload, setQwenAutoload] = useState<boolean>(false);
+    const [warming, setWarming] = useState<boolean>(false);
 
     useEffect(() => {
         // Load health and existence of known secrets
@@ -61,7 +62,7 @@ export default function SecretsPanel() {
             try {
                 const qwen = (await getSecretsHealth());
                 // not strictly available; we fallback to localStorage cache
-            } catch {}
+            } catch { }
             // preload UI defaults from localStorage if present
             try {
                 const qm = localStorage.getItem('LH_QWEN_CPU_MODEL');
@@ -70,7 +71,7 @@ export default function SecretsPanel() {
                 if (qm) setQwenModel(qm);
                 if (qpl) setQwenPreload(qpl === '1');
                 if (qal) setQwenAutoload(qal === '1');
-            } catch {}
+            } catch { }
         })();
     }, []);
 
@@ -118,14 +119,14 @@ export default function SecretsPanel() {
             localStorage.setItem('LH_QWEN_CPU_MODEL', qwenModel || '');
             localStorage.setItem('LH_QWEN_CPU_PRELOAD', qwenPreload ? '1' : '0');
             localStorage.setItem('LH_QWEN_CPU_AUTOLOAD', qwenAutoload ? '1' : '0');
-        } catch {}
+        } catch { }
     };
 
     const applyQwenSettings = async () => {
         setError(''); setMessage('');
         try {
             // Apply env-style secrets for Qwen provider
-            const results: Array<{key: string; ok: boolean}> = [];
+            const results: Array<{ key: string; ok: boolean }> = [];
             if (qwenModel) {
                 const r = await setSecret('QWEN_CPU_MODEL', qwenModel, adminToken || undefined);
                 results.push({ key: 'QWEN_CPU_MODEL', ok: !r.error });
@@ -144,6 +145,25 @@ export default function SecretsPanel() {
             persistQwenUi();
         } catch (e: any) {
             setError(e?.message || 'Failed to apply Qwen settings');
+        }
+    };
+
+    const warmQwenNow = async () => {
+        setError(''); setMessage('');
+        setWarming(true);
+        try {
+            const r = await warmQwenProvider(adminToken || undefined);
+            if (r.error) {
+                setError(r.error);
+            } else {
+                setMessage(r.status === 'already_loaded' ? 'Qwen already loaded' : (r.status === 'warmed' ? 'Qwen warmed' : 'Qwen warm failed'));
+                // Refresh providers shortly after
+                setTimeout(async () => { try { await refreshProviders(); } catch { } }, 800);
+            }
+        } catch (e: any) {
+            setError(e?.message || 'Failed to warm Qwen');
+        } finally {
+            setWarming(false);
         }
     };
     // polling controlled by context
@@ -247,6 +267,9 @@ export default function SecretsPanel() {
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 2 }}>
                     <Button variant="outlined" onClick={applyQwenSettings}>Save Qwen Settings</Button>
                     <Button variant="outlined" color="secondary" onClick={onReload}>Reload Router</Button>
+                    <Button variant="contained" color="primary" onClick={warmQwenNow} disabled={warming}>
+                        {warming ? 'Warming…' : 'Warm Qwen Now'}
+                    </Button>
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                     Preload loads the model at startup (may be slow). Autoload loads on first use. Leave both off to keep provider in "initializing" until you manually load.

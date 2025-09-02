@@ -27,5 +27,5 @@ export function getBackendWsBase() {
     if (typeof window !== 'undefined' && window.location) {
         return (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
     }
-    return 'ws://localhost:8001';
+    return 'ws://localhost:8000';
 }

@@ -58,10 +58,10 @@ export const ProvidersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Persist preferences
     useEffect(() => {
-        try { localStorage.setItem('LH_PROVIDERS_AUTO_REFRESH', autoRefresh ? '1' : '0'); } catch {}
+        try { localStorage.setItem('LH_PROVIDERS_AUTO_REFRESH', autoRefresh ? '1' : '0'); } catch { }
     }, [autoRefresh]);
     useEffect(() => {
-        try { localStorage.setItem('LH_PROVIDERS_INTERVAL_MS', String(intervalMs)); } catch {}
+        try { localStorage.setItem('LH_PROVIDERS_INTERVAL_MS', String(intervalMs)); } catch { }
     }, [intervalMs]);
 
     const value = useMemo<ProvidersContextValue>(() => ({
