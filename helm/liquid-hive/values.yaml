@@ -8,6 +8,8 @@ image:
   pullPolicy: IfNotPresent
   tag: "latest"
 
+imagePullSecrets: []
+
 nameOverride: ""
 fullnameOverride: ""
 
@@ -100,6 +102,44 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
+
+pdb:
+  enabled: false
+  # one of minAvailable or maxUnavailable
+  minAvailable: 1
+  # maxUnavailable: 1
+
+networkPolicy:
+  enabled: false
+  # Provide explicit ingress/egress rules to avoid full deny
+  # ingress:
+  #   - from:
+  #       - namespaceSelector: {}
+  #     ports:
+  #       - port: 80
+  # egress:
+  #   - to:
+  #       - namespaceSelector: {}
+  #     ports:
+  #       - port: 443
+
+serviceMonitor:
+  enabled: false
+  interval: 15s
+  additionalLabels: {}
+
+externalSecrets:
+  enabled: false
+  secretStore:
+    name: ""
+    kind: ClusterSecretStore
+  refreshInterval: 1h
+  data: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
 
 # Node selection
 nodeSelector: {}
