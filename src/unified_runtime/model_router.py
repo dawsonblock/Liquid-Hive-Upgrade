@@ -52,6 +52,11 @@ class DSRouter:
 +                    "max_tokens": float(cfg.get("max_tokens", 2048)),
 +                    "max_cost_usd_per_req": float(cfg.get("max_cost_usd_per_req", 0.01)),
 +                }
++            # demote/promote policies
++            dem = (pm.policies or {}).get("demote_on", []) or []
++            pro = (pm.policies or {}).get("promote_on", []) or []
++            self._demote_policies = list(dem)
++            self._promote_policies = list(pro)
 +        except Exception as e:
 +            self.logger.debug(f"Routing/policies not loaded from providers.yaml: {e}")
 +
