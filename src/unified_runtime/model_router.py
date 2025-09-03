@@ -19,7 +19,7 @@ class DSRouter:
         # Load routing and policy profiles from providers.yaml if available
         self._routing_default: Optional[str] = None
         self._routing_fallback: list[str] = []
-+        self._profiles: Dict[str, Dict[str, float]] = {}
+        self._profiles: Dict[str, Dict[str, float]] = {}
 +        self.routing_profile = os.getenv("ROUTING_PROFILE", "balanced")
 +        self._load_routing_policies()
         self._demote_policies: list[dict] = []
