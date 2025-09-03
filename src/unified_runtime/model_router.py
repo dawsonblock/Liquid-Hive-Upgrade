@@ -118,6 +118,12 @@ class DSRouter:
 +        try:
 +            # If decision provider is 'default', resolve from routing config
 +            prov_name = decision.provider
+            # Arena bias: prefer highest win-rate among candidates when available
+            try:
+                prov_name = await self._arena_bias(prov_name)
+            except Exception:
+                pass
+
 +            if decision.provider == "default" and self._routing_default:
 +                prov_name = self._routing_default
 +            response = await self._call_provider_with_circuit_breaker(prov_name, request)
