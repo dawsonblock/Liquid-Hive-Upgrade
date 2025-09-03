@@ -17,7 +17,7 @@ class DSRouter:
          self._start_health_monitoring()
  
         # Load routing and policy profiles from providers.yaml if available
-+        self._routing_default: Optional[str] = None
+        self._routing_default: Optional[str] = None
 +        self._routing_fallback: list[str] = []
 +        self._profiles: Dict[str, Dict[str, float]] = {}
 +        self.routing_profile = os.getenv("ROUTING_PROFILE", "balanced")
