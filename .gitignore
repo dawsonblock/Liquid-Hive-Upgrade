@@ -142,4 +142,7 @@ pnpm-debug.log*
 # Compressed files
 *.zip
 *.tar.gz
-*.rar
+*.rar-e 
+# Environment files
+*.env
+*.env.*
