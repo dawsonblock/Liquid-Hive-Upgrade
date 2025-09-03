@@ -201,6 +201,29 @@ class DSRouter:
 -        # In production, send to audit log service
 -        self.logger.info("Audit log", extra={"audit": audit_entry})
 +        # Sign audit entry if AUDIT_HMAC_KEY set and optionally write to file
+    async def _arena_bias(self, base_provider: str) -> str:
+        try:
+            if not self._redis:
+                return base_provider
+            candidates = [base_provider] + list(self._routing_fallback or [])
+            best = base_provider
+            best_rate = -1.0
+            for m in candidates:
+                key = f"arena:score:{m}"
+                sc = self._redis.hgetall(key)
+                if not sc:
+                    continue
+                wins = int(sc.get("wins", 0))
+                losses = int(sc.get("losses", 0))
+                denom = max(1, wins + losses)
+                rate = wins / float(denom)
+                if rate > best_rate:
+                    best_rate = rate
+                    best = m
+            return best
+        except Exception:
+            return base_provider
+
 +        try:
 +            import hmac, hashlib, os, json
 +            key = os.getenv("AUDIT_HMAC_KEY")
