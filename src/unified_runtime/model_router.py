@@ -95,7 +95,7 @@ class DSRouter:
 +        except Exception:
 +            pass
 +        return req
-@@
+
 -        try:
 -            response = await self._call_provider_with_circuit_breaker(decision.provider, request)
 +        try:
