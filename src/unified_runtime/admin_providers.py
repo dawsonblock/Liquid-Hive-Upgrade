@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import signal
 from typing import Any, Dict
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 
 from oracle.manager import ProviderManager
 
