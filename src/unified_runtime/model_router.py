@@ -22,6 +22,8 @@ class DSRouter:
 +        self._profiles: Dict[str, Dict[str, float]] = {}
 +        self.routing_profile = os.getenv("ROUTING_PROFILE", "balanced")
 +        self._load_routing_policies()
+        self._demote_policies: list[dict] = []
+        self._promote_policies: list[dict] = []
 +
      def _initialize_circuit_breakers(self):
 
