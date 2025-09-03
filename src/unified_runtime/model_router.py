@@ -450,7 +450,7 @@ class DSRouter:
             post_guard_result = None
         
         # Step 7: Budget tracking and audit logging
-        await self._budget_tracker.record_usage(final_response)
+        await self._budget_tracker.record_usage(final_response, tenant)
         await self._audit_log(sanitized_request, final_response, routing_decision, pre_guard_result, post_guard_result)
         
         return final_response
