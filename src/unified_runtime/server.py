@@ -243,6 +243,16 @@ async def startup() -> None:
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
     global semantic_cache, cache_manager
+    # Mount Arena router dynamically based on env (useful for tests)
+    try:
+        from .arena import router as arena_router  # type: ignore
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
+        if enabled and not already:
+            app.include_router(arena_router)
+    except Exception:
+        pass
+
     
     # Initialize settings
     if Settings is not None:
