@@ -13,6 +13,13 @@ router = APIRouter(prefix=f"{API_PREFIX}/admin", tags=["admin"])
 
 # Global singleton for simplicity
 _pm = ProviderManager()
+# Optional security deps
+try:
+    from .security import auth_optional
+except Exception:
+    async def auth_optional(*args, **kwargs):
+        return None
+
 _providers_cache: Dict[str, Any] = {}
 _routing: Dict[str, Any] = {}
 
