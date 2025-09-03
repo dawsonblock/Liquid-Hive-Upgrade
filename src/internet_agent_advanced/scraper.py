@@ -10,11 +10,6 @@ try:
 except Exception:
     def redis_acquire(url: str):
         return None
-try:
-    from .rate_limit_redis import acquire as redis_acquire
-except Exception:  # optional in tests
-    def redis_acquire(url: str):
-        return None
 
 from .scraper_http import fetch_httpx
 from .scraper_playwright import fetch_playwright
