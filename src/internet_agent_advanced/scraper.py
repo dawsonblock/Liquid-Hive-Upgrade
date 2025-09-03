@@ -1,4 +1,6 @@
 from __future__ import annotations
+# Note: redis dependency is optional for tests; we guard its import.
+
 import urllib.parse
 from .robots import is_allowed
 from .rate_limit_local import limiter_for_host
