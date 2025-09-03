@@ -56,9 +56,10 @@ except Exception:
 
 try:
     from .model_router import DSRouter, RouterConfig
-except Exception:
+except Exception as e:
     DSRouter = None  # type: ignore
     RouterConfig = None  # type: ignore
+    log.warning(f"model_router import failed: {e}")
 
 try:
     from .providers import (
