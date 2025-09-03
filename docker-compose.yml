@@ -47,12 +47,13 @@ services:
       - GRAFANA_SLACK_WARNING_WEBHOOK=${GRAFANA_SLACK_WARNING_WEBHOOK}
       - GRAFANA_SLACK_WARNING_CHANNEL=${GRAFANA_SLACK_WARNING_CHANNEL}
       - GRAFANA_WEBHOOK_URL=${GRAFANA_WEBHOOK_URL}
+      - GRAFANA_PAGER_WEBHOOK=${GRAFANA_PAGER_WEBHOOK}
       - GRAFANA_ALERT_EMAILS=${GRAFANA_ALERT_EMAILS}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/your/webhook/url}
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
+      # - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus

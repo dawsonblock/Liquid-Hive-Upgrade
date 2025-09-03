@@ -13,13 +13,14 @@ RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # 2) Build the Cerebral GUI
 FROM node:20-alpine as guibuilder
-WORKDIR /app/gui
+WORKDIR /app/frontend
 # Use npm to leverage the committed package-lock.json and avoid relying on yarn availability
 COPY frontend/package.json ./package.json
 COPY frontend/package-lock.json ./package-lock.json
 COPY frontend/tsconfig.json ./tsconfig.json
 COPY frontend/vite.config.ts ./vite.config.ts
 COPY frontend/index.html ./index.html
+COPY frontend/public ./public
 COPY frontend/src ./src
 RUN npm ci && npm run build
 
@@ -34,9 +35,11 @@ WORKDIR /app
 COPY --from=pybuilder /install /usr/local
 # Copy repository
 COPY . /app
+# Copy src directory to the expected location
+COPY src/ /app/src/
 # Copy built GUI from guibuilder stage
 # Place built assets where server.py looks for them: /app/src/frontend/dist
-COPY --from=guibuilder /app/gui/dist /app/src/frontend/dist
+COPY --from=guibuilder /app/frontend/dist /app/src/frontend/dist
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000

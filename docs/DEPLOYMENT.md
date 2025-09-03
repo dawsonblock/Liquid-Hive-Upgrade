@@ -1,12 +1,49 @@
-# Deployment Guide (Helm + GitHub Actions)
+# Liquid-Hive Deployment Guide
 
 ## Overview
-This repo ships a Helm chart and CI/CD workflows to build the image, lint the chart, and deploy per environment. Secrets can be synced via external-secrets.
 
-## Prereqs
-- Kubernetes cluster with Ingress controller (e.g., nginx) and optionally Prometheus Operator.
-- External Secrets Operator (optional, recommended for prod).
-- OIDC-enabled CI runner permissions to your cloud.
+Liquid-Hive is a comprehensive AI platform with multiple deployment options ranging from local development to production Kubernetes clusters. This guide covers all deployment scenarios including Docker, Docker Compose, and Kubernetes with Helm.
+
+## Quick Start
+
+### Automated Deployment
+```bash
+# Use the interactive deployment script
+./deploy.sh
+
+# Or deploy with Docker Compose directly
+docker-compose up -d
+```
+
+### Manual Deployment
+```bash
+# 1. Setup environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# 2. Deploy
+docker-compose up -d
+
+# 3. Access services
+# - API: http://localhost:8000
+# - Frontend: http://localhost:8000
+# - Grafana: http://localhost:3000
+```
+
+## Prerequisites
+
+### System Requirements
+- Docker 20.10+
+- Docker Compose 2.0+
+- Node.js 20+ (for local development)
+- Python 3.11+ (for local development)
+- 8GB+ RAM recommended
+- GPU recommended for AI workloads
+
+### For Kubernetes Deployment
+- kubectl configured for your cluster
+- Helm 3.0+
+- Kubernetes 1.19+
 
 ### AWS EKS (IRSA + OIDC)
 - Create an IAM role for service account (IRSA) used by the app when pulling secrets.
@@ -46,8 +83,93 @@ This repo ships a Helm chart and CI/CD workflows to build the image, lint the ch
 }
 ```
 
-## CI/CD
-- CI workflow: builds frontend, runs tests, builds backend, lints Helm, scans with Trivy, emits SBOM.
+## Deployment Options
+
+### Option 1: Automated Deployment Script
+
+The `deploy.sh` script provides an interactive menu for all deployment scenarios:
+
+```bash
+./deploy.sh
+```
+
+Available options:
+1. **Setup Environment** - Configure directories and environment files
+2. **Build Docker Image** - Build the Liquid-Hive Docker image
+3. **Deploy with Docker Compose** - Local deployment with all services
+4. **Deploy to Kubernetes** - Production deployment with Helm
+5. **Run Tests** - Execute backend and frontend test suites
+6. **Show Status** - Check deployment status
+7. **Cleanup** - Remove all deployed resources
+
+### Option 2: Docker Compose (Recommended for Development)
+
+#### Basic Deployment
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+#### GPU-Enabled Deployment
+```bash
+# With GPU support for vLLM
+docker-compose --profile gpu up -d
+```
+
+#### Development with Live Reload
+```bash
+# Backend development
+docker-compose up -d redis neo4j qdrant
+# Then run backend locally for hot reload
+
+# Frontend development
+cd frontend
+npm run dev
+```
+
+### Option 3: Docker Standalone
+
+#### Build and Run
+```bash
+# Build the image
+docker build -t liquid-hive:latest .
+
+# Run with environment file
+docker run -p 8000:8000 \
+  --env-file .env \
+  -v $(pwd)/data:/app/data \
+  liquid-hive:latest
+```
+
+### Option 4: Local Development
+
+#### Manual Setup
+```bash
+# Backend
+pip install -r requirements.txt
+python -m unified_runtime
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+#### With External Services
+```bash
+# Start only infrastructure services
+docker-compose up -d redis neo4j qdrant prometheus grafana
+
+# Run app locally
+pip install -r requirements.txt
+python -m unified_runtime
+```
 - Dev CD: deploys to `liquid-hive-dev` namespace on main.
 - Prod CD: deploys on tag (vX.Y.Z) or manual dispatch to `liquid-hive-prod`.
 
@@ -80,12 +202,37 @@ helm lint helm/liquid-hive
 helm template demo helm/liquid-hive -f helm/liquid-hive/values.yaml | less
 ```
 
-## Local runs (Docker Compose)
-- CPU only:
-	- `docker-compose up --build`
-- With local NVIDIA GPU for vLLM:
-	- `docker-compose --profile gpu up --build`
-	- Requires NVIDIA Container Toolkit and a GPU.
+## Local Development
+
+### Docker Compose (Recommended)
+- **CPU only**: `docker-compose up --build`
+- **With GPU**: `docker-compose --profile gpu up --build`
+- **Requires**: NVIDIA Container Toolkit and GPU for vLLM
+
+### Manual Development
+```bash
+# Start infrastructure
+docker-compose up -d redis neo4j qdrant
+
+# Backend development
+pip install -r requirements.txt
+python -m unified_runtime
+
+# Frontend development (separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+### Testing
+```bash
+# Run all tests
+./deploy.sh  # Select option 5
+
+# Manual testing
+pytest tests/
+cd frontend && npm test
+```
 
 ## AWS GPU model server
 - Ensure a GPU node group exists (p4d, g5, etc.).
