@@ -243,6 +243,13 @@ async def startup() -> None:
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
     global semantic_cache, cache_manager
+    # Initialize OTEL tracer (if enabled)
+    try:
+        from .observability import setup_tracing_if_enabled  # type: ignore
+        setup_tracing_if_enabled()
+    except Exception:
+        pass
+
     # Mount Arena router dynamically based on env (useful for tests)
     try:
         from .arena import router as arena_router  # type: ignore
