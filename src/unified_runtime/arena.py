@@ -8,6 +8,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+# Prometheus metrics (optional)
+try:
+    from prometheus_client import Gauge  # type: ignore
+except Exception:  # pragma: no cover
+    Gauge = None  # type: ignore
+
 # Local constant to avoid circular import
 API_PREFIX = "/api"
 
@@ -51,6 +57,15 @@ class LeaderboardEntry(BaseModel):
 
 class LeaderboardResponse(BaseModel):
     leaderboard: List[LeaderboardEntry]
+
+
+# -------------------
+# Metrics
+# -------------------
+if Gauge is not None:
+    ARENA_WIN_RATE = Gauge("cb_arena_win_rate", "Arena model win rate", labelnames=("model",))
+else:  # pragma: no cover
+    ARENA_WIN_RATE = None  # type: ignore
 
 
 # -------------------
@@ -138,6 +153,18 @@ class ArenaStore:
         else:
             self._score[a]["ties"] += 1
             self._score[b]["ties"] += 1
+
+        # Update win-rate gauge
+        try:
+            if ARENA_WIN_RATE is not None:
+                for m in (a, b):
+                    wins = self._score[m]["wins"]
+                    losses = self._score[m]["losses"]
+                    denom = max(1, wins + losses)
+                    rate = wins / float(denom)
+                    ARENA_WIN_RATE.labels(model=m).set(rate)
+        except Exception:
+            pass
 
         # Persist to Redis if available
         if self.redis:
