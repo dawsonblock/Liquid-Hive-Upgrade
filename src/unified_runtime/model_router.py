@@ -278,19 +278,22 @@ class DSRouter:
     def _initialize_providers(self):
         """Initialize all available providers."""
         try:
-            # DeepSeek providers
+            # First try to install from oracle providers.yaml
+            self._install_oracle_providers()
+            if self.providers:
+                self.logger.info("Router providers from oracle config: %s", list(self.providers.keys()))
+                return
+
+            # Fallback to built-in providers
             deepseek_config = {"api_key": self.config.deepseek_api_key}
-            
             self.providers["deepseek_chat"] = DeepSeekChatProvider(deepseek_config)
             self.providers["deepseek_thinking"] = DeepSeekThinkingProvider(deepseek_config)
             self.providers["deepseek_r1"] = DeepSeekR1Provider(deepseek_config)
-            
-            # Local fallback
+
             qwen_config = {"hf_token": self.config.hf_token}
             self.providers["qwen_cpu"] = QwenCPUProvider(qwen_config)
-            
-            self.logger.info("Initialized DS-Router with providers: %s", list(self.providers.keys()))
-            
+
+            self.logger.info("Initialized DS-Router with built-in providers: %s", list(self.providers.keys()))
         except Exception as e:
             self.logger.error(f"Failed to initialize providers: {e}")
 
