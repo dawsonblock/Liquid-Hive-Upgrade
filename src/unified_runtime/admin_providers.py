@@ -79,7 +79,7 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
 
 
 @router.post("/reload-providers")
-async def reload_providers(request: Request) -> Dict[str, Any]:
+async def reload_providers(request: Request, dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
     # Optional simple admin token check
     admin_token = os.getenv("ADMIN_TOKEN")
     if admin_token:
