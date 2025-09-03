@@ -111,6 +111,16 @@ services:
       - QDRANT__SERVICE__GRPC_PORT=6334
     networks: [fusionnet]
 
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    networks: [fusionnet]
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+
   # RAG watcher daemon.  Monitors the ingest directory and automatically
   # indexes new documents into the vector store.  Uses the same image as
   # the API since the script resides in this repository.
