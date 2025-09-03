@@ -252,6 +252,13 @@ async def startup() -> None:
             app.include_router(arena_router)
     except Exception:
         pass
+    # Mount Providers admin endpoints if present (keys redacted)
+    try:
+        from .providers_admin_mount import mount_admin_providers  # type: ignore
+        mount_admin_providers(app)
+    except Exception:
+        pass
+
 
     
     # Initialize settings
