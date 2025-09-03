@@ -169,6 +169,15 @@ if MetricsMiddleware is not None:
 if metrics_router is not None:
     app.include_router(metrics_router)
 
+# Conditionally mount Arena service if enabled
+try:
+    from .arena import router as arena_router
+except Exception:
+    arena_router = None  # type: ignore
+
+if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true" and arena_router is not None:
+    app.include_router(arena_router)
+
 # Include internet agent advanced routers and metrics if available
 if "internet_tools_router" in globals() and internet_tools_router is not None:
     app.include_router(internet_tools_router)
