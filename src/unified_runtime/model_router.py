@@ -234,6 +234,47 @@ class DSRouter:
             self.logger.warning(f"Provider {provider_name} call failed, circuit state: {circuit_breaker.state}, error: {e}")
             raise
         
+        except Exception as e:
+            # Record failure
+            circuit_breaker.record_failure()
+            self.logger.warning(f"Provider {provider_name} call failed, circuit state: {circuit_breaker.state}, error: {e}")
+            raise
+
+    def _install_oracle_providers(self) -> None:
+        """Replace built-in providers with those loaded from config/providers.yaml via ProviderManager.
+        Falls back to existing providers on error.
+        """
+        try:
+            from oracle.manager import ProviderManager
+            from .oracle_adapter import OracleToBaseAdapter
+            pm = ProviderManager()
+            provs, routing = pm.load()
+            new_providers: Dict[str, BaseProvider] = {}
+            # Build instances
+            for name, pcfg in provs.items():
+                key = pm.resolve_api_key(pcfg)
+                prov_impl = None
+                if pcfg.kind == "deepseek":
+                    from oracle.deepseek import DeepSeekProvider
+                    prov_impl = DeepSeekProvider(pcfg, key)
+                elif pcfg.kind == "openai":
+                    from oracle.openai import OpenAIProvider
+                    prov_impl = OpenAIProvider(pcfg, key)
+                elif pcfg.kind == "anthropic":
+                    from oracle.anthropic import AnthropicProvider
+                    prov_impl = AnthropicProvider(pcfg, key)
+                elif pcfg.kind == "qwen":
+                    from oracle.qwen import QwenProvider
+                    prov_impl = QwenProvider(pcfg, key)
+                if prov_impl is not None:
+                    new_providers[name] = OracleToBaseAdapter(name, prov_impl)
+            if new_providers:
+                self.providers = new_providers
+                self._initialize_circuit_breakers()
+                self.logger.info("Installed oracle providers: %s", list(self.providers.keys()))
+        except Exception as e:
+            self.logger.warning(f"Oracle provider install failed; using built-ins: {e}")
+
     def _initialize_providers(self):
         """Initialize all available providers."""
         try:
