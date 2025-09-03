@@ -158,6 +158,16 @@ class DSRouter:
                      response.metadata.update({
                          "routing_decision": fallback_provider,
                          "routing_reasoning": f"fallback_from_{decision.provider}",
+            # Bias fallback order as well
+            try:
+                best = await self._arena_bias(decision.provider)
+                if best in fallback_order:
+                    # put best at front
+                    fallback_order.remove(best)
+                    fallback_order.insert(0, best)
+            except Exception:
+                pass
+
                          "original_provider_failed": decision.provider,
                          "fallback_reason": str(e)
                      })
