@@ -43,4 +43,13 @@ COPY --from=guibuilder /app/frontend/dist /app/src/frontend/dist
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python - <<'PY' || exit 1
+import urllib.request
+import sys
+try:
+    with urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=3) as r:
+        sys.exit(0 if r.status == 200 else 1)
+except Exception:
+    sys.exit(1)
+PY
 CMD ["python", "-m", "unified_runtime.__main__"]
