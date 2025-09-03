@@ -1,0 +1,31 @@
+{{- if .Values.rbac.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: liquid-hive-sa
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: liquid-hive-role
+  namespace: {{ .Values.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps","pods","endpoints","services"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: liquid-hive-rb
+  namespace: {{ .Values.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: liquid-hive-sa
+    namespace: {{ .Values.namespace }}
+roleRef:
+  kind: Role
+  name: liquid-hive-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
