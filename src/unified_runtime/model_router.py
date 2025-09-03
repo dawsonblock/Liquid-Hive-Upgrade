@@ -782,26 +782,27 @@ class BudgetTracker:
             self.logger.warning(f"Redis unavailable, using fallback tracking: {e}")
             self.redis_client = None
     
-    def _get_daily_key(self) -> str:
-        """Get Redis key for today's budget tracking."""
+    def _get_daily_key(self, tenant: Optional[str] = None) -> str:
+        """Get Redis key for today's budget tracking, optionally per-tenant."""
         from datetime import datetime
         today = datetime.utcnow().strftime("%Y-%m-%d")
-        return f"liquid_hive:budget:daily:{today}"
+        t = (tenant or "global").replace(":", "_")
+        return f"liquid_hive:budget:daily:{t}:{today}"
     
-    async def check_budget(self) -> BudgetStatus:
+    async def check_budget(self, tenant: Optional[str] = None) -> BudgetStatus:
         """Check current budget status from Redis or fallback."""
         if self.redis_client:
             try:
-                return await self._check_redis_budget()
+                return await self._check_redis_budget(tenant)
             except Exception as e:
                 self.logger.error(f"Redis budget check failed: {e}")
                 return await self._check_fallback_budget()
         else:
             return await self._check_fallback_budget()
     
-    async def _check_redis_budget(self) -> BudgetStatus:
+    async def _check_redis_budget(self, tenant: Optional[str] = None) -> BudgetStatus:
         """Check budget using Redis distributed state."""
-        daily_key = self._get_daily_key()
+        daily_key = self._get_daily_key(tenant)
         
         # Get current usage atomically
         pipe = self.redis_client.pipeline()
@@ -849,23 +850,23 @@ class BudgetTracker:
             next_reset_utc=next_reset
         )
     
-    async def record_usage(self, response: GenResponse):
+    async def record_usage(self, response: GenResponse, tenant: Optional[str] = None):
         """Record token and cost usage atomically."""
         tokens = response.prompt_tokens + response.output_tokens
         cost = response.cost_usd
         
         if self.redis_client:
             try:
-                await self._record_redis_usage(tokens, cost)
+                await self._record_redis_usage(tokens, cost, tenant)
             except Exception as e:
                 self.logger.error(f"Redis usage recording failed: {e}")
                 await self._record_fallback_usage(tokens, cost)
         else:
             await self._record_fallback_usage(tokens, cost)
     
-    async def _record_redis_usage(self, tokens: int, cost: float):
+    async def _record_redis_usage(self, tokens: int, cost: float, tenant: Optional[str] = None):
         """Record usage in Redis with atomic increments."""
-        daily_key = self._get_daily_key()
+        daily_key = self._get_daily_key(tenant)
         
         # Atomic increment operations
         pipe = self.redis_client.pipeline()
@@ -882,11 +883,11 @@ class BudgetTracker:
         
         self.logger.debug(f"Fallback recorded usage: {tokens} tokens, ${cost:.4f}")
     
-    async def reset_daily_budget(self) -> Dict[str, Any]:
+    async def reset_daily_budget(self, tenant: Optional[str] = None) -> Dict[str, Any]:
         """Reset daily budget (admin operation)."""
         if self.redis_client:
             try:
-                daily_key = self._get_daily_key()
+                daily_key = self._get_daily_key(tenant)
                 self.redis_client.delete(daily_key)
                 return {"status": "redis_reset", "key": daily_key}
             except Exception as e:
