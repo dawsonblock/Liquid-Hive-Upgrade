@@ -1468,7 +1468,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
 
     planner_hints = None
     reasoning_steps = None
-    if plan_once is not None:
+    # Use planner only when explicitly enabled
+    use_planner = str(os.getenv("ENABLE_PLANNER", "false")).lower() == "true"
+    if use_planner and plan_once is not None:
         try:
             plan_result = await plan_once(q)
             planner_hints = plan_result.get("tool_hints")
