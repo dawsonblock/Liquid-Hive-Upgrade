@@ -4,7 +4,12 @@ from __future__ import annotations
 import urllib.parse
 from .robots import is_allowed
 from .rate_limit_local import limiter_for_host
-from .rate_limit_redis import acquire as redis_acquire
+# optional redis-based rate limiting (may be unavailable in tests)
+try:
+    from .rate_limit_redis import acquire as redis_acquire
+except Exception:
+    def redis_acquire(url: str):
+        return None
 try:
     from .rate_limit_redis import acquire as redis_acquire
 except Exception:  # optional in tests
