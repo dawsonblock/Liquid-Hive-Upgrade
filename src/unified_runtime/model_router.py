@@ -25,6 +25,16 @@ class DSRouter:
         self._demote_policies: list[dict] = []
         self._promote_policies: list[dict] = []
 
+        # Optional Arena metrics reader (Redis)
+        self._redis = None
+        try:
+            import redis  # type: ignore
+            redis_url = os.getenv("REDIS_URL")
+            if redis_url:
+                self._redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        except Exception:
+            self._redis = None
+
     def _initialize_circuit_breakers(self):
 
         try:
