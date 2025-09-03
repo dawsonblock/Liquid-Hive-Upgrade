@@ -183,7 +183,20 @@ class DSRouter:
         """Periodically check provider health and update circuit breakers."""
         while True:
             try:
-                await asyncio.sleep(60)  # Check every minute
+                await asyncio.sleep(60)
+                # Emit breaker state metric (prometheus) if available
+                try:
+                    from prometheus_client import Gauge  # type: ignore
+                    # lazily create a module-level gauge
+                    global _CB_STATE
+                    try:
+                        _CB_STATE
+                    except NameError:
+                        _CB_STATE = Gauge("cb_circuit_open", "Circuit breaker open state (1=open)", labelnames=("provider",))
+                    for pname, cb in self.circuit_breakers.items():
+                        _CB_STATE.labels(provider=pname).set(1.0 if cb.state.name == "OPEN" else 0.0)
+                except Exception:
+                    pass  # Check every minute
                 
                 for provider_name, provider in self.providers.items():
                     circuit_breaker = self.circuit_breakers.get(provider_name)
