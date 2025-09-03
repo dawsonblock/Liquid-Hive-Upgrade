@@ -1,6 +1,5 @@
-@@
- class DSRouter:
-@@
+class DSRouter:
+
      def __init__(self, config: RouterConfig = None):
          self.config = config or RouterConfig.from_env()
          self.logger = logging.getLogger(__name__)
