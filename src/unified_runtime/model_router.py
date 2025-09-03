@@ -395,8 +395,14 @@ class DSRouter:
             sanitized_request = request
             pre_guard_result = None
         
-        # Step 2: Budget check
-        budget_status = await self._budget_tracker.check_budget()
+        # Step 2: Budget check (per-tenant if available)
+        tenant = None
+        try:
+            from .security import _tenant_id_from_request  # type: ignore
+            tenant = _tenant_id_from_request(request)
+        except Exception:
+            tenant = None
+        budget_status = await self._budget_tracker.check_budget(tenant)
         if budget_status.exceeded and self.config.budget_enforcement == "hard":
             return self._create_budget_exceeded_response(budget_status, start_time)
         
