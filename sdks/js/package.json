@@ -1,0 +1,32 @@
+{
+  "name": "liquid-hive-client",
+  "version": "0.0.0",
+  "description": "JavaScript client SDK for Liquid Hive Upgrade APIs (Arena, Chat, Health)",
+  "type": "module",
+  "main": "client.js",
+  "module": "client.js",
+  "exports": {
+    ".": {
+      "import": "./client.js",
+      "default": "./client.js"
+    }
+  },
+  "files": [
+    "client.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "liquid-hive",
+    "sdk",
+    "arena",
+    "fastapi",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/REPO.git"
+  },
+  "author": "",
+  "license": "MIT"
+}

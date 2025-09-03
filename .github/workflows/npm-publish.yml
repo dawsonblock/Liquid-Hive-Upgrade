@@ -1,0 +1,26 @@
+name: Publish JS SDK
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Set version from tag
+        working-directory: sdks/js
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          CLEAN=${TAG#v}
+          npm version "$CLEAN" --no-git-tag-version
+      - name: Publish to npm
+        working-directory: sdks/js
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish --access public
