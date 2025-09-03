@@ -3,7 +3,7 @@ class DSRouter:
      def __init__(self, config: RouterConfig = None):
          self.config = config or RouterConfig.from_env()
          self.logger = logging.getLogger(__name__)
-@@
+
          # Initialize providers
          self.providers: Dict[str, BaseProvider] = {}
          self._initialize_providers()
@@ -11,7 +11,7 @@ class DSRouter:
          # Initialize circuit breakers for each provider
          self.circuit_breakers: Dict[str, CircuitBreaker] = {}
          self._initialize_circuit_breakers()
-@@
+
          # Start background health check task
          self._health_check_task = None
          self._start_health_monitoring()
@@ -24,14 +24,14 @@ class DSRouter:
 +        self._load_routing_policies()
 +
      def _initialize_circuit_breakers(self):
-@@
+
          try:
              import asyncio
              loop = asyncio.get_event_loop()
              self._health_check_task = loop.create_task(self._periodic_health_check())
          except Exception as e:
              self.logger.warning(f"Could not start health monitoring: {e}")
-@@
+
          except Exception as e:
              self.logger.warning(f"Oracle provider install failed; using built-ins: {e}")
  
@@ -78,7 +78,7 @@ class DSRouter:
                      provider.generate(request),
                      timeout=circuit_breaker.config.timeout_seconds
                  )
-@@
+
              raise
 +
 +    def _apply_profile_limits(self, req: GenRequest) -> GenRequest:
@@ -134,7 +134,7 @@ class DSRouter:
                          "fallback_reason": str(e)
                      })
                      return response
-@@
+
      async def _audit_log(self, request: GenRequest, response: GenResponse, routing: 'RoutingDecision', 
                          pre_guard=None, post_guard=None):
          """Log audit information for compliance and monitoring."""
