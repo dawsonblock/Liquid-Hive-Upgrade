@@ -209,7 +209,7 @@ try:
 except Exception:
     AutonomyOrchestrator = None  # type: ignore
     # Conditionally mount Arena at runtime (env may be mutated in tests)
-        try:
+    try:
         from .arena import router as arena_router  # type: ignore
     except Exception:
         arena_router = None  # type: ignore
