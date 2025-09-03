@@ -111,7 +111,7 @@ jobs:
         continue-on-error: true
 
       - name: Generate SBOM (Syft)
-        uses: anchore/sbom-action@v0.16.0
+        uses: anchore/sbom-action@v0.20.5
         with:
           format: spdx-json
           output-file: sbom.spdx.json
