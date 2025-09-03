@@ -3,6 +3,12 @@ import urllib.parse
 from .robots import is_allowed
 from .rate_limit_local import limiter_for_host
 from .rate_limit_redis import acquire as redis_acquire
+try:
+    from .rate_limit_redis import acquire as redis_acquire
+except Exception:  # optional in tests
+    def redis_acquire(url: str):
+        return None
+
 from .scraper_http import fetch_httpx
 from .scraper_playwright import fetch_playwright
 from .schemas import PageContent
