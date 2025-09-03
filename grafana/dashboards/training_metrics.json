@@ -1,0 +1,7 @@
+{
+  "title": "Training Metrics",
+  "panels": [
+    {"type": "graph", "title": "Tokens Processed", "targets": [{"expr": "sum(rate(cb_training_tokens_total[1m]))"}]},
+    {"type": "graph", "title": "Loss", "targets": [{"expr": "avg(cb_training_loss)"}]}
+  ]
+}
