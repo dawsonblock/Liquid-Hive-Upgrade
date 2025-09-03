@@ -57,7 +57,7 @@ class DSRouter:
          """Call provider with circuit breaker protection."""
          circuit_breaker = self.circuit_breakers.get(provider_name)
          provider = self.providers.get(provider_name)
-@@
+
 -        try:
 +        try:
              # Make the actual provider call with timeout, wrapped in OTEL span if available
