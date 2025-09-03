@@ -24,8 +24,8 @@ class DSRouter:
         self._load_routing_policies()
         self._demote_policies: list[dict] = []
         self._promote_policies: list[dict] = []
-+
-     def _initialize_circuit_breakers(self):
+        
+    def _initialize_circuit_breakers(self):
 
          try:
              import asyncio
