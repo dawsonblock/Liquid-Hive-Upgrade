@@ -175,8 +175,9 @@ try:
 except Exception:
     arena_router = None  # type: ignore
 
-if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true" and arena_router is not None:
-    app.include_router(arena_router)
+if False and arena_router is not None:
+    # legacy static include disabled; we include dynamically in startup
+    pass
 
 # Include internet agent advanced routers and metrics if available
 if "internet_tools_router" in globals() and internet_tools_router is not None:
