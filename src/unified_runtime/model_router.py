@@ -676,6 +676,25 @@ class BudgetTracker:
         self._fallback_tokens = 0
         self._fallback_usd = 0.0
     
+
+        # Expose testing-friendly properties mapping to fallback counters
+        # These are used by unit tests to manipulate state without Redis
+        @property
+        def tokens_used(self) -> int:
+            return int(getattr(self, "_fallback_tokens", 0))
+        
+        @tokens_used.setter
+        def tokens_used(self, v: int) -> None:
+            self._fallback_tokens = int(v)
+        
+        @property
+        def usd_spent(self) -> float:
+            return float(getattr(self, "_fallback_usd", 0.0))
+        
+        @usd_spent.setter
+        def usd_spent(self, v: float) -> None:
+            self._fallback_usd = float(v)
+
     def _initialize_redis(self):
         """Initialize Redis client for distributed budget tracking."""
         try:
