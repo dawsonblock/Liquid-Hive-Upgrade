@@ -70,7 +70,7 @@ class DSRouter:
         except Exception as e:
             self.logger.debug(f"Routing/policies not loaded from providers.yaml: {e}")
 
-     async def _call_provider_with_circuit_breaker(self, provider_name: str, request: GenRequest) -> GenResponse:
+    async def _call_provider_with_circuit_breaker(self, provider_name: str, request: GenRequest) -> GenResponse:
          """Call provider with circuit breaker protection."""
          circuit_breaker = self.circuit_breakers.get(provider_name)
          provider = self.providers.get(provider_name)
