@@ -111,6 +111,11 @@ class DSRouter:
 +            if decision.provider == "default" and self._routing_default:
 +                prov_name = self._routing_default
 +            response = await self._call_provider_with_circuit_breaker(prov_name, request)
++            # Apply promotion/demotion flags into response metadata for analytics
++            if getattr(self, "_promote_policies", None):
++                response.metadata["promote_policies"] = self._promote_policies
++            if getattr(self, "_demote_policies", None):
++                response.metadata["demote_policies"] = self._demote_policies
              response.metadata.update({
 -                "routing_decision": decision.provider,
 +                "routing_decision": prov_name,
