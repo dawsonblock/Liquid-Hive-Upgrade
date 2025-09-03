@@ -1,21 +1,21 @@
 class DSRouter:
 
-     def __init__(self, config: RouterConfig = None):
-         self.config = config or RouterConfig.from_env()
-         self.logger = logging.getLogger(__name__)
+    def __init__(self, config: RouterConfig = None):
+        self.config = config or RouterConfig.from_env()
+        self.logger = logging.getLogger(__name__)
 
-         # Initialize providers
-         self.providers: Dict[str, BaseProvider] = {}
-         self._initialize_providers()
- 
-         # Initialize circuit breakers for each provider
-         self.circuit_breakers: Dict[str, CircuitBreaker] = {}
-         self._initialize_circuit_breakers()
+        # Initialize providers
+        self.providers: Dict[str, BaseProvider] = {}
+        self._initialize_providers()
 
-         # Start background health check task
-         self._health_check_task = None
-         self._start_health_monitoring()
- 
+        # Initialize circuit breakers for each provider
+        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._initialize_circuit_breakers()
+
+        # Start background health check task
+        self._health_check_task = None
+        self._start_health_monitoring()
+
         # Load routing and policy profiles from providers.yaml if available
         self._routing_default: Optional[str] = None
         self._routing_fallback: list[str] = []
@@ -24,42 +24,42 @@ class DSRouter:
         self._load_routing_policies()
         self._demote_policies: list[dict] = []
         self._promote_policies: list[dict] = []
-        
+
     def _initialize_circuit_breakers(self):
 
-         try:
-             import asyncio
-             loop = asyncio.get_event_loop()
-             self._health_check_task = loop.create_task(self._periodic_health_check())
-         except Exception as e:
-             self.logger.warning(f"Could not start health monitoring: {e}")
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            self._health_check_task = loop.create_task(self._periodic_health_check())
+        except Exception as e:
+            self.logger.warning(f"Could not start health monitoring: {e}")
 
-         except Exception as e:
-             self.logger.warning(f"Oracle provider install failed; using built-ins: {e}")
- 
-+    def _load_routing_policies(self) -> None:
-+        """Load routing default/fallback and cost profiles from providers.yaml if available."""
-+        try:
-+            from oracle.manager import ProviderManager
-+            pm = ProviderManager()
-+            providers, routing = pm.load()
-+            self._routing_default = routing.get("default_provider")
-+            self._routing_fallback = list(routing.get("fallback_chain", []) or [])
-+            pol = (pm.policies or {}).get("profiles", {})
-+            # Normalize profile values
-+            for name, cfg in (pol or {}).items():
-+                self._profiles[name] = {
-+                    "max_tokens": float(cfg.get("max_tokens", 2048)),
-+                    "max_cost_usd_per_req": float(cfg.get("max_cost_usd_per_req", 0.01)),
-+                }
-+            # demote/promote policies
-+            dem = (pm.policies or {}).get("demote_on", []) or []
-+            pro = (pm.policies or {}).get("promote_on", []) or []
-+            self._demote_policies = list(dem)
-+            self._promote_policies = list(pro)
-+        except Exception as e:
-+            self.logger.debug(f"Routing/policies not loaded from providers.yaml: {e}")
-+
+        except Exception as e:
+            self.logger.warning(f"Oracle provider install failed; using built-ins: {e}")
+
+    def _load_routing_policies(self) -> None:
+        """Load routing default/fallback and cost profiles from providers.yaml if available."""
+        try:
+            from oracle.manager import ProviderManager
+            pm = ProviderManager()
+            providers, routing = pm.load()
+            self._routing_default = routing.get("default_provider")
+            self._routing_fallback = list(routing.get("fallback_chain", []) or [])
+            pol = (pm.policies or {}).get("profiles", {})
+            # Normalize profile values
+            for name, cfg in (pol or {}).items():
+                self._profiles[name] = {
+                    "max_tokens": float(cfg.get("max_tokens", 2048)),
+                    "max_cost_usd_per_req": float(cfg.get("max_cost_usd_per_req", 0.01)),
+                }
+            # demote/promote policies
+            dem = (pm.policies or {}).get("demote_on", []) or []
+            pro = (pm.policies or {}).get("promote_on", []) or []
+            self._demote_policies = list(dem)
+            self._promote_policies = list(pro)
+        except Exception as e:
+            self.logger.debug(f"Routing/policies not loaded from providers.yaml: {e}")
+
      async def _call_provider_with_circuit_breaker(self, provider_name: str, request: GenRequest) -> GenResponse:
          """Call provider with circuit breaker protection."""
          circuit_breaker = self.circuit_breakers.get(provider_name)
