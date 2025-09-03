@@ -12,6 +12,13 @@ try:
 except Exception:  # PyJWT may not be installed; make this optional
     jwt = None  # type: ignore
 
+# Optional metrics
+try:
+    from .metrics import bump_rate_limit  # type: ignore
+except Exception:
+    def bump_rate_limit(*args, **kwargs):
+        return None
+
 # Simple in-memory rate limits map as fallback (tenant -> (tokens, refill_ts))
 _rate_state: dict[str, dict[str, float]] = {}
 
@@ -99,12 +106,13 @@ async def rate_limit_dependency(request: Request) -> None:
             # refill
             tokens = min(rps, tokens + (now - last) * rps)
             if tokens < 1.0:
-                # not enough tokens
                 r.hset(key, mapping={"tokens": tokens, "ts": now})
+                bump_rate_limit(tenant, False)
                 raise HTTPException(status_code=429, detail="Rate limit exceeded")
             tokens -= 1.0
             r.hset(key, mapping={"tokens": tokens, "ts": now})
             r.expire(key, 60)
+            bump_rate_limit(tenant, True)
             return
         except HTTPException:
             raise
@@ -119,6 +127,8 @@ async def rate_limit_dependency(request: Request) -> None:
     if tokens < 1.0:
         st["tokens"], st["ts"] = tokens, now
         _rate_state[tenant] = st
+        bump_rate_limit(tenant, False)
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
     st["tokens"], st["ts"] = tokens - 1.0, now
     _rate_state[tenant] = st
+    bump_rate_limit(tenant, True)
