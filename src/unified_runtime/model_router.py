@@ -158,6 +158,13 @@ class DSRouter:
             timeout_seconds=int(os.getenv("PROVIDER_TIMEOUT_SECONDS", "30"))
         )
         
+        # OTEL tracer (optional)
+        try:
+            from .observability import get_tracer
+            self._tracer = get_tracer()
+        except Exception:
+            self._tracer = None
+
         for provider_name in self.providers.keys():
             self.circuit_breakers[provider_name] = CircuitBreaker(breaker_config)
         
