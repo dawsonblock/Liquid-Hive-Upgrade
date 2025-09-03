@@ -54,7 +54,7 @@ def _load_providers() -> None:
 
 
 @router.get("/providers")
-async def list_providers() -> Dict[str, Any]:
+async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
     if not _providers_cache:
         try:
             _load_providers()
