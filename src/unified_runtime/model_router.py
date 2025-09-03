@@ -223,11 +223,21 @@ class DSRouter:
             raise Exception(f"Provider {provider_name} circuit breaker is OPEN (too many failures)")
         
         try:
-            # Make the actual provider call with timeout
-            response = await asyncio.wait_for(
-                provider.generate(request),
-                timeout=circuit_breaker.config.timeout_seconds
-            )
+            # Make the actual provider call with timeout, wrapped in OTEL span if available
+            if getattr(self, "_tracer", None):
+                with self._tracer.start_as_current_span("provider.generate", attributes={
+                    "provider.name": provider_name,
+                    "timeout": circuit_breaker.config.timeout_seconds,
+                }):
+                    response = await asyncio.wait_for(
+                        provider.generate(request),
+                        timeout=circuit_breaker.config.timeout_seconds
+                    )
+            else:
+                response = await asyncio.wait_for(
+                    provider.generate(request),
+                    timeout=circuit_breaker.config.timeout_seconds
+                )
             
             # Record success
             circuit_breaker.record_success()
