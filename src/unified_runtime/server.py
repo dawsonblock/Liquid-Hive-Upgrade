@@ -208,6 +208,21 @@ try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
 except Exception:
     AutonomyOrchestrator = None  # type: ignore
+    # Conditionally mount Arena at runtime (env may be mutated in tests)
+    try:
+        from .arena import router as arena_router  # type: ignore
+    except Exception:
+        arena_router = None  # type: ignore
+    if arena_router is not None:
+        try:
+            enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+            # Only mount if not already mounted
+            already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
+            if enabled and not already:
+                app.include_router(arena_router)
+        except Exception:
+            pass
+
 
 autonomy_orchestrator: Optional[Any] = None
 _autonomy_lock: Any = None
