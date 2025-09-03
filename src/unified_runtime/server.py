@@ -209,29 +209,19 @@ try:
 except Exception:
     AutonomyOrchestrator = None  # type: ignore
     # Conditionally mount Arena at runtime (env may be mutated in tests)
-    try:
+        try:
         from .arena import router as arena_router  # type: ignore
     except Exception:
-    # If not mounted earlier (due to import failure path), try mount again
+        arena_router = None  # type: ignore
+
+    # Try to mount if enabled
     try:
-        from .arena import router as arena_router2  # type: ignore
-        if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true":
-            already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
-            if not already:
-                app.include_router(arena_router2)
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
+        if enabled and not already and arena_router is not None:
+            app.include_router(arena_router)
     except Exception:
         pass
-
-        arena_router = None  # type: ignore
-    if arena_router is not None:
-        try:
-            enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
-            # Only mount if not already mounted
-            already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
-            if enabled and not already:
-                app.include_router(arena_router)
-        except Exception:
-            pass
 
 
 autonomy_orchestrator: Optional[Any] = None
