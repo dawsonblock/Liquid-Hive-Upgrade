@@ -94,7 +94,112 @@ docker build -t liquid-hive:latest .
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-Health check:
+## 🔧 Development
+
+### **Makefile Commands**
+
+```bash
+# Development
+make dev-setup      # Full development environment setup
+make install        # Install all dependencies
+make test           # Run all tests (Python + Node.js)
+make lint           # Run all linters
+make format         # Auto-format all code
+
+# Quality & Security
+make security-scan  # Run security analysis (bandit)
+make type-check     # Run type checking (mypy)
+make clean          # Clean build artifacts
+make docs           # Build documentation
+
+# Docker
+make docker-build   # Build production Docker image
+make docker-run     # Run in Docker
+make docker-clean   # Clean Docker resources
+```
+
+### **Project Structure**
+
+```
+liquid-hive/
+├── 🚀 CI/CD & Config
+│   ├── .github/workflows/     # GitHub Actions (CI/CD)
+│   ├── .gitignore            # Git ignore rules
+│   ├── Makefile              # Development commands
+│   ├── docker-compose.yml    # Development services
+│   └── Dockerfile            # Production container
+│
+├── 🧠 Core System
+│   ├── src/                  # Python source code
+│   │   ├── unified_runtime/  # FastAPI server
+│   │   ├── capsule_brain/    # Memory & knowledge graph
+│   │   ├── hivemind/         # Multi-agent reasoning
+│   │   ├── oracle/           # Quality assurance
+│   │   └── safety/           # Security & validation
+│   │
+│   ├── frontend/             # React TypeScript UI
+│   │   ├── src/components/   # React components
+│   │   ├── src/services/     # API clients
+│   │   └── public/           # Static assets
+│   │
+├── 🗄️ Data & Config
+│   ├── data/                 # RAG indices & storage
+│   ├── config/               # Service configurations
+│   ├── k8s/                  # Kubernetes manifests
+│   └── helm/                 # Helm charts
+│
+├── 📊 Observability
+│   ├── prometheus/           # Metrics collection
+│   ├── grafana/             # Dashboards
+│   └── docs/                # Documentation
+│
+└── 🧪 Testing
+    ├── tests/               # Python tests
+    └── scripts/             # Utility scripts
+```
+
+## 🔗 API Reference
+
+### **Chat Endpoint**
+
+```http
+POST /api/chat
+Content-Type: application/json
+
+{
+  "query": "What is quantum computing?",
+  "strategy": "comprehensive",  # optional: "fast", "comprehensive", "creative"
+  "context": "technical",       # optional context hint
+  "max_tokens": 1000           # optional token limit
+}
+```
+
+**Response:**
+```json
+{
+  "response": "Quantum computing is...",
+  "strategy_used": "comprehensive",
+  "thinking_process": "...",
+  "sources": ["doc1.pdf", "doc2.txt"],
+  "confidence": 0.92,
+  "processing_time_ms": 1500
+}
+```
+
+### **Vision Analysis**
+
+```http
+POST /api/vision
+Content-Type: multipart/form-data
+
+question: "Describe this image"
+file: [image.png]
+grounding_required: false
+```
+
+### **Health Check**
+
+```bash
 
 ```bash
 curl http://localhost:8000/api/healthz
