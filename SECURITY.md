@@ -25,13 +25,13 @@ You should receive a response within 48 hours. If for some reason you do not, pl
 
 Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
 
-* Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
-* Full paths of source file(s) related to the manifestation of the issue
-* The location of the affected source code (tag/branch/commit or direct URL)
-* Any special configuration required to reproduce the issue
-* Step-by-step instructions to reproduce the issue
-* Proof-of-concept or exploit code (if possible)
-* Impact of the issue, including how an attacker might exploit the issue
+- Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
+- Full paths of source file(s) related to the manifestation of the issue
+- The location of the affected source code (tag/branch/commit or direct URL)
+- Any special configuration required to reproduce the issue
+- Step-by-step instructions to reproduce the issue
+- Proof-of-concept or exploit code (if possible)
+- Impact of the issue, including how an attacker might exploit the issue
 
 ### Our Response Process
 
@@ -46,24 +46,28 @@ Please include the requested information listed below (as much as you can provid
 This project implements several security measures:
 
 ### Authentication & Authorization
+
 - JWT token-based authentication
 - API key authentication for service-to-service communication
 - Role-based access control for admin endpoints
 - Rate limiting per tenant
 
 ### Data Protection
+
 - Input sanitization and validation
 - PII detection and redaction
 - Prompt injection detection
 - Output safety filtering
 
 ### Infrastructure Security
+
 - Container security with non-root user execution
 - Secret management via environment variables or external secret stores
 - HTTPS enforcement in production
 - Security scanning via Trivy in CI/CD
 
 ### Monitoring & Auditing
+
 - Comprehensive logging with structured format
 - Security event monitoring via Prometheus metrics
 - Audit trails for sensitive operations
@@ -72,18 +76,21 @@ This project implements several security measures:
 ## Security Best Practices for Contributors
 
 ### Code Security
+
 - All dependencies are regularly updated via Dependabot
 - Security linting is enforced via pre-commit hooks
 - Code is scanned for vulnerabilities in CI/CD pipeline
 - Secrets are never committed to the repository
 
 ### Access Control
+
 - All admin endpoints require authentication
 - Sensitive operations are logged and monitored
 - API keys are rotated regularly
 - Environment-specific configurations are isolated
 
 ### Testing
+
 - Security test cases are included in the test suite
 - Penetration testing is performed periodically
 - Dependency vulnerabilities are tracked and addressed
@@ -102,13 +109,13 @@ When we receive a security bug report, we will:
 
 We would like to thank the following individuals for responsibly disclosing security vulnerabilities:
 
-* *No reports yet - be the first!*
+- _No reports yet - be the first!_
 
 ## Additional Resources
 
-* [OWASP Top Ten](https://owasp.org/www-project-top-ten/)
-* [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
-* [CIS Controls](https://www.cisecurity.org/controls/)
+- [OWASP Top Ten](https://owasp.org/www-project-top-ten/)
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+- [CIS Controls](https://www.cisecurity.org/controls/)
 
 ---
 

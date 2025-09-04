@@ -4,11 +4,13 @@ import os
 
 import httpx
 
-from .main_tool import internet_fetch
 from .schemas import FetchResult
 
 
 async def internet_search(query: str, max_results: int = 5) -> FetchResult:
+    # Import here to avoid circular import
+    from .main_tool import internet_fetch
+
     provider = os.getenv("SEARCH_PROVIDER")
     api_key = os.getenv("SEARCH_API_KEY")
     if provider == "serpapi" and api_key:

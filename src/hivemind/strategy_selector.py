@@ -156,13 +156,13 @@ class StrategySelector:
 
         return {
             "has_dilemma": has_dilemma,
-            "dilemma_type": detected_dilemmas[0]
-            if detected_dilemmas
-            else conflicts[0]
-            if conflicts
-            else None,
+            "dilemma_type": (
+                detected_dilemmas[0] if detected_dilemmas else conflicts[0] if conflicts else None
+            ),
             "all_detected": detected_dilemmas + conflicts,
-            "severity": "high"
-            if "harm" in detected_dilemmas or "illegal" in detected_dilemmas
-            else "medium",
+            "severity": (
+                "high"
+                if "harm" in detected_dilemmas or "illegal" in detected_dilemmas
+                else "medium"
+            ),
         }

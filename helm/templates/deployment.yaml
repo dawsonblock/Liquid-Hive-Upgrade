@@ -56,13 +56,13 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            
+
             # Database Configuration
             {{- if .Values.databases.mongodb.enabled }}
             - name: MONGO_URL
               value: {{ .Values.databases.mongodb.connectionString | quote }}
             {{- end }}
-            
+
             {{- if .Values.databases.redis.enabled }}
             - name: REDIS_URL
               value: {{ .Values.databases.redis.url | quote }}
@@ -74,7 +74,7 @@ spec:
                   key: password
             {{- end }}
             {{- end }}
-            
+
             {{- if .Values.databases.neo4j.enabled }}
             - name: NEO4J_URI
               value: {{ .Values.databases.neo4j.uri | quote }}
@@ -86,7 +86,7 @@ spec:
                   name: {{ .Values.databases.neo4j.passwordSecretName }}
                   key: password
             {{- end }}
-            
+
             {{- if .Values.databases.qdrant.enabled }}
             - name: QDRANT_URL
               value: {{ .Values.databases.qdrant.url | quote }}
@@ -98,7 +98,7 @@ spec:
                   key: api-key
             {{- end }}
             {{- end }}
-            
+
             # External Secrets
             {{- range .Values.secrets.externalSecrets }}
             {{- range .keys }}
@@ -109,36 +109,36 @@ spec:
                   key: {{ . }}
             {{- end }}
             {{- end }}
-          
+
           # Health Checks
           {{- with .Values.healthChecks.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          
+
           {{- with .Values.healthChecks.readinessProbe }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          
+
           {{- with .Values.healthChecks.startupProbe }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          
+
           # Resource Limits
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          
+
           # Volume Mounts
           volumeMounts:
             # JWT Public Key
             - name: jwt-public-key
               mountPath: /run/secrets
               readOnly: true
-            
+
             # Application Data
             {{- if .Values.persistence.enabled }}
             - name: app-data
@@ -146,25 +146,25 @@ spec:
             - name: logs
               mountPath: /app/logs
             {{- end }}
-            
+
             # Configuration Files
             - name: config
               mountPath: /app/config/app-config.yaml
               subPath: app-config.yaml
               readOnly: true
-      
+
       # Volumes
       volumes:
         # JWT Public Key Secret
         - name: jwt-public-key
           secret:
             secretName: api-jwt-pub
-        
+
         # Configuration ConfigMap
         - name: config
           configMap:
             name: {{ include "liquid-hive-upgrade.fullname" . }}-config
-        
+
         # Persistent Volumes
         {{- if .Values.persistence.enabled }}
         - name: app-data
@@ -174,22 +174,22 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "liquid-hive-upgrade.fullname" . }}-logs
         {{- end }}
-      
+
       # Node Selection and Scheduling
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      
+
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      
+
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      
+
       # Termination Grace Period
       terminationGracePeriodSeconds: 30

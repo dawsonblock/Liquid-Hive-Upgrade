@@ -31,28 +31,31 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ### Development Setup
 
 1. **Fork and Clone the Repository**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/liquid-hive-upgrade.git
    cd liquid-hive-upgrade
    ```
 
 2. **Set Up Development Environment**
+
    ```bash
    # Install all dependencies and set up pre-commit hooks
    make install
-   
+
    # Create environment file from template
    make env-create
-   
+
    # Start development services
    make up-dev
    ```
 
 3. **Verify Installation**
+
    ```bash
    # Run health checks
    make health
-   
+
    # Run basic tests
    make test-unit
    ```
@@ -65,7 +68,7 @@ We welcome various types of contributions:
 
 - **🐛 Bug Reports**: Help us identify and fix issues
 - **💡 Feature Requests**: Suggest new functionality
-- **📝 Documentation**: Improve our docs and examples  
+- **📝 Documentation**: Improve our docs and examples
 - **🔧 Code Contributions**: Submit bug fixes and new features
 - **🧪 Testing**: Add test cases and improve coverage
 - **🎨 UI/UX**: Enhance the frontend experience
@@ -102,6 +105,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -114,6 +118,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 - `security`: Security-related changes
 
 **Examples:**
+
 ```
 feat(arena): add model comparison endpoint
 fix(auth): resolve JWT validation issue
@@ -132,18 +137,19 @@ test(planner): add integration tests for DAG execution
 - **Docstrings**: Google style
 
 **Key Rules:**
+
 ```python
 # Good
 def process_task(task_id: str, options: TaskOptions) -> TaskResult:
     """Process a task with the given options.
-    
+
     Args:
         task_id: Unique identifier for the task
         options: Configuration options for processing
-        
+
     Returns:
         Result of the task processing
-        
+
     Raises:
         TaskError: If task processing fails
     """
@@ -162,6 +168,7 @@ def process_task(task_id, options):
 - **Component Style**: Functional components with hooks
 
 **Key Rules:**
+
 ```typescript
 // Good
 interface Props {
@@ -182,6 +189,7 @@ const UserComponent = (props: any) => {
 ### Code Quality Checks
 
 All contributions must pass:
+
 ```bash
 # Run all quality checks
 make check
@@ -217,10 +225,10 @@ def test_task_execution_with_valid_input():
     # Arrange
     task = TaskNode(id="test", operation="add", params={"a": 1, "b": 2})
     executor = PlanExecutor()
-    
+
     # Act
     result = executor.execute_task(task)
-    
+
     # Assert
     assert result.success is True
     assert result.output == 3
@@ -230,7 +238,7 @@ describe('UserComponent', () => {
   it('should display user information correctly', () => {
     const mockUser = { id: '1', name: 'Test User' };
     render(<UserComponent user={mockUser} />);
-    
+
     expect(screen.getByText('Test User')).toBeInTheDocument();
   });
 });
@@ -256,22 +264,26 @@ pytest --cov=src --cov-report=html tests/
 ### Pull Request Process
 
 1. **Create Feature Branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 2. **Make Changes**
+
    - Write code following our standards
    - Add/update tests
    - Update documentation if needed
 
 3. **Run Quality Checks Locally**
+
    ```bash
    make pre-commit
    make check
    ```
 
 4. **Commit Changes**
+
    ```bash
    git add .
    git commit -m "feat(scope): add new feature"
@@ -286,6 +298,7 @@ pytest --cov=src --cov-report=html tests/
 ### Pull Request Requirements
 
 **Required:**
+
 - [ ] All tests pass
 - [ ] Code coverage maintained/improved
 - [ ] Documentation updated
@@ -294,22 +307,27 @@ pytest --cov=src --cov-report=html tests/
 - [ ] Performance impact assessed
 
 **PR Description Template:**
+
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -340,6 +358,7 @@ Brief description of changes
 Instead, report security issues via email to: **security@liquid-hive.dev**
 
 Include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -348,6 +367,7 @@ Include:
 ### Security Tools
 
 We use several security tools:
+
 ```bash
 # Security analysis
 make security
@@ -438,6 +458,7 @@ make profile
 ### Versioning
 
 We follow [Semantic Versioning](https://semver.org/):
+
 - **MAJOR**: Breaking changes
 - **MINOR**: New features (backward compatible)
 - **PATCH**: Bug fixes (backward compatible)
@@ -470,6 +491,7 @@ We follow [Semantic Versioning](https://semver.org/):
 ### Recognition
 
 Contributors are recognized in:
+
 - GitHub contributors list
 - CHANGELOG.md for significant contributions
 - Project documentation
@@ -503,6 +525,7 @@ make docs-serve      # Serve docs locally
 ### IDE Setup
 
 **VS Code Extensions:**
+
 - Python
 - Pylance
 - Ruff
@@ -512,6 +535,7 @@ make docs-serve      # Serve docs locally
 - Prettier
 
 **PyCharm/IntelliJ:**
+
 - Configure interpreters for Python 3.11
 - Enable type checking
 - Configure code style to match our standards
@@ -519,12 +543,14 @@ make docs-serve      # Serve docs locally
 ### Troubleshooting
 
 **Common Issues:**
+
 - **Import Errors**: Check PYTHONPATH configuration
 - **Test Failures**: Ensure services are running (`make up-dev`)
 - **Linting Errors**: Run `make format` to auto-fix
 - **Type Errors**: Check type annotations and imports
 
 **Getting Unstuck:**
+
 1. Check existing issues on GitHub
 2. Review documentation
 3. Ask in discussions

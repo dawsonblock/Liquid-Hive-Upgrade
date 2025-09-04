@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install pip-audit
         run: |
           python -m pip install --upgrade pip
@@ -40,5 +40,5 @@ jobs:
           scan-type: image
           image-ref: ${{ github.event.inputs.image_repository }}:${{ github.event.inputs.image_tag }}
           format: table
-          exit-code: '0'
+          exit-code: "0"
           ignore-unfixed: true

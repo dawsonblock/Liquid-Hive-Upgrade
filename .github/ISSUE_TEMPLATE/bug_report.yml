@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for taking the time to report a bug! Please fill out this form as completely as possible.
-        
+
   - type: checkboxes
     attributes:
       label: Prerequisites

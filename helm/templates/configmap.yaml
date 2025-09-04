@@ -11,28 +11,28 @@ data:
       name: {{ .Chart.Name }}
       version: {{ .Chart.AppVersion }}
       environment: {{ .Values.env.ENVIRONMENT }}
-    
+
     # Server Configuration
     server:
       host: {{ .Values.env.HOST }}
       port: {{ .Values.env.PORT }}
       workers: {{ .Values.env.WORKERS }}
-      
+
     # Features
     features:
       planner: {{ .Values.env.ENABLE_PLANNER }}
       arena: {{ .Values.env.ENABLE_ARENA }}
       internet_agent: {{ .Values.env.ENABLE_INTERNET_AGENT }}
-    
+
     # Rate Limiting
     rate_limiting:
       rps: {{ .Values.env.RATE_LIMIT_RPS }}
       burst: {{ .Values.env.RATE_LIMIT_BURST }}
-    
+
     # Routing
     routing:
       profile: {{ .Values.env.ROUTING_PROFILE }}
-    
+
     # Observability
     observability:
       otel:
@@ -45,7 +45,7 @@ data:
       logging:
         level: {{ .Values.env.LOG_LEVEL }}
         format: {{ .Values.env.LOG_FORMAT }}
-    
+
     # Tenancy
     tenancy:
       mode: {{ .Values.env.TENANCY_MODE }}

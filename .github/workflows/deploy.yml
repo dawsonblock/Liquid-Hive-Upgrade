@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       host:
-        description: 'SSH host (user@host)'
+        description: "SSH host (user@host)"
         required: true
       path:
-        description: 'Deploy path on host'
+        description: "Deploy path on host"
         required: true
 
 jobs:

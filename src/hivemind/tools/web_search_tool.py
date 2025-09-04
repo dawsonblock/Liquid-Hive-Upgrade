@@ -155,9 +155,11 @@ class WebSearchTool(BaseTool):
                     if isinstance(topic, dict) and "Text" in topic:
                         results.append(
                             {
-                                "title": topic.get("Text", "").split(" - ")[0]
-                                if " - " in topic.get("Text", "")
-                                else "Related Topic",
+                                "title": (
+                                    topic.get("Text", "").split(" - ")[0]
+                                    if " - " in topic.get("Text", "")
+                                    else "Related Topic"
+                                ),
                                 "snippet": topic.get("Text", ""),
                                 "url": topic.get("FirstURL", ""),
                                 "source": "DuckDuckGo",

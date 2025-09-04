@@ -16,10 +16,10 @@ defaults:
     require_consent: false
   robots_override:
     require_consent: true
-    allowed: false  # NEVER allowed
+    allowed: false # NEVER allowed
   captcha_bypass:
     require_consent: true
-    allowed: false  # NEVER allowed
+    allowed: false # NEVER allowed
 
 domains:
   # Example: always ask before scraping social media or login walls

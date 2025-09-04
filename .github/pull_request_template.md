@@ -4,8 +4,8 @@
 
 **Brief description of changes:**
 
-
 **Related Issue(s):**
+
 - Fixes #(issue_number)
 - Closes #(issue_number)
 - Related to #(issue_number)
@@ -38,11 +38,12 @@ Please delete options that are not relevant:
 - [ ] Documentation
 - [ ] Tests
 - [ ] CI/CD
-- [ ] Other: _______________
+- [ ] Other: **\*\***\_\_\_**\*\***
 
 ## Testing
 
 **Test Coverage:**
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Frontend tests added/updated
@@ -51,11 +52,13 @@ Please delete options that are not relevant:
 - [ ] Performance testing completed (if applicable)
 
 **Testing Steps:**
-1. 
-2. 
-3. 
+
+1.
+2.
+3.
 
 **Test Results:**
+
 - [ ] All existing tests pass
 - [ ] New tests pass
 - [ ] Coverage maintained/improved
@@ -112,11 +115,9 @@ Please delete options that are not relevant:
 
 <!-- If applicable, add screenshots or demo videos to help explain your changes -->
 
-
 ## Additional Notes
 
 <!-- Add any additional notes, concerns, or context about the changes -->
-
 
 ## Checklist
 

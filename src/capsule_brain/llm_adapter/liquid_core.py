@@ -62,9 +62,11 @@ class LiquidReasoningCore:
         return (
             "[Liquid Thought] High-intensity cognitive processing detected."
             if norm > 5
-            else "[Liquid Thought] Moderate cognitive activity."
-            if norm > 2
-            else "[Liquid Thought] Low-level background processing."
+            else (
+                "[Liquid Thought] Moderate cognitive activity."
+                if norm > 2
+                else "[Liquid Thought] Low-level background processing."
+            )
         )
 
     async def process_stream(self, context_snippets: list[str]) -> dict[str, Any]:

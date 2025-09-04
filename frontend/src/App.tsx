@@ -49,7 +49,10 @@ function useBackendHealth(pollMs = 5000) {
     };
     run();
     const id = setInterval(run, pollMs);
-    return () => { active = false; clearInterval(id); };
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
   }, [pollMs]);
   return online;
 }
@@ -57,50 +60,58 @@ function useBackendHealth(pollMs = 5000) {
 export default function App() {
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const [mode, setMode] = useState<'dark' | 'light'>(prefersDark ? 'dark' : 'light');
-  const theme = useMemo(() => responsiveFontSizes(createTheme({
-    palette: {
-      mode,
-      primary: { main: '#1a73e8' },
-      secondary: { main: '#10b981' },
-      background: {
-        default: mode === 'dark' ? '#0b1220' : '#f7f9fc',
-        paper: mode === 'dark' ? '#0f172a' : '#ffffff'
-      }
-    },
-    shape: { borderRadius: 14 },
-    typography: {
-      fontFamily: [
-        'Inter',
-        'ui-sans-serif',
-        'system-ui',
-        '-apple-system',
-        'Segoe UI',
-        'Roboto',
-        'Helvetica Neue',
-        'Arial',
-        'Noto Sans',
-        'Apple Color Emoji',
-        'Segoe UI Emoji',
-        'Segoe UI Symbol'
-      ].join(','),
-      h6: { fontWeight: 600 }
-    },
-    components: {
-      MuiPaper: {
-        styleOverrides: {
-          root: ({ theme }) => ({
-            transition: 'box-shadow .2s ease',
-            boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.06)'
-          })
-        }
-      },
-      MuiButton: {
-        defaultProps: { disableElevation: true }
-      }
-    }
-  })), [mode]);
+  const theme = useMemo(
+    () =>
+      responsiveFontSizes(
+        createTheme({
+          palette: {
+            mode,
+            primary: { main: '#1a73e8' },
+            secondary: { main: '#10b981' },
+            background: {
+              default: mode === 'dark' ? '#0b1220' : '#f7f9fc',
+              paper: mode === 'dark' ? '#0f172a' : '#ffffff',
+            },
+          },
+          shape: { borderRadius: 14 },
+          typography: {
+            fontFamily: [
+              'Inter',
+              'ui-sans-serif',
+              'system-ui',
+              '-apple-system',
+              'Segoe UI',
+              'Roboto',
+              'Helvetica Neue',
+              'Arial',
+              'Noto Sans',
+              'Apple Color Emoji',
+              'Segoe UI Emoji',
+              'Segoe UI Symbol',
+            ].join(','),
+            h6: { fontWeight: 600 },
+          },
+          components: {
+            MuiPaper: {
+              styleOverrides: {
+                root: ({ theme }) => ({
+                  transition: 'box-shadow .2s ease',
+                  boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.06)',
+                }),
+              },
+            },
+            MuiButton: {
+              defaultProps: { disableElevation: true },
+            },
+          },
+        })
+      ),
+    [mode]
+  );
 
-  const [panel, setPanel] = useState<'chat' | 'streaming' | 'system' | 'forge' | 'secrets' | 'cache'>('streaming');
+  const [panel, setPanel] = useState<
+    'chat' | 'streaming' | 'system' | 'forge' | 'secrets' | 'cache'
+  >('streaming');
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMdUp = useMediaQuery('(min-width:900px)');
   const online = useBackendHealth();
@@ -109,39 +120,80 @@ export default function App() {
       <ProvidersProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AppBar position="fixed" color="transparent" elevation={0} sx={{
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.7)',
-            borderBottom: (t) => `1px solid ${t.palette.divider}`,
-            zIndex: (t) => t.zIndex.drawer + 1
-          }}>
+          <AppBar
+            position='fixed'
+            color='transparent'
+            elevation={0}
+            sx={{
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              bgcolor: t =>
+                t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.7)',
+              borderBottom: t => `1px solid ${t.palette.divider}`,
+              zIndex: t => t.zIndex.drawer + 1,
+            }}
+          >
             <Toolbar>
               {!isMdUp && (
-                <IconButton color="inherit" edge="start" onClick={() => setMobileOpen(v => !v)} sx={{ mr: 1 }}>
+                <IconButton
+                  color='inherit'
+                  edge='start'
+                  onClick={() => setMobileOpen(v => !v)}
+                  sx={{ mr: 1 }}
+                >
                   <MenuIcon />
                 </IconButton>
               )}
-              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexGrow: 1, minWidth: 0 }}>
-                <Box component="img" src="/logo.svg" alt="Liquid Hive" sx={{ width: 28, height: 28, borderRadius: 1 }} />
-                <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: 0.2 }}>
-                  <Box component="span" sx={{
-                    background: (t) => t.palette.mode === 'dark'
-                      ? 'linear-gradient(90deg,#60a5fa 0%,#34d399 50%,#22d3ee 100%)'
-                      : 'linear-gradient(90deg,#1a73e8 0%,#10b981 50%,#06b6d4 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                  }}>LIQUID‑HIVE</Box> Console
+              <Stack
+                direction='row'
+                spacing={1.25}
+                alignItems='center'
+                sx={{ flexGrow: 1, minWidth: 0 }}
+              >
+                <Box
+                  component='img'
+                  src='/logo.svg'
+                  alt='Liquid Hive'
+                  sx={{ width: 28, height: 28, borderRadius: 1 }}
+                />
+                <Typography
+                  variant='h6'
+                  noWrap
+                  component='div'
+                  sx={{ fontWeight: 700, letterSpacing: 0.2 }}
+                >
+                  <Box
+                    component='span'
+                    sx={{
+                      background: t =>
+                        t.palette.mode === 'dark'
+                          ? 'linear-gradient(90deg,#60a5fa 0%,#34d399 50%,#22d3ee 100%)'
+                          : 'linear-gradient(90deg,#1a73e8 0%,#10b981 50%,#06b6d4 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    LIQUID‑HIVE
+                  </Box>{' '}
+                  Console
                 </Typography>
               </Stack>
               {/* Backend online/offline */}
               <Tooltip title={online ? 'Backend online' : 'Backend offline'}>
-                <Chip size="small" label={online ? 'Online' : 'Offline'} color={online ? 'success' : 'error'} sx={{ mr: 1 }} />
+                <Chip
+                  size='small'
+                  label={online ? 'Online' : 'Offline'}
+                  color={online ? 'success' : 'error'}
+                  sx={{ mr: 1 }}
+                />
               </Tooltip>
               {/* Providers polling indicator */}
               <HeaderPollingChip />
               <Tooltip title={mode === 'dark' ? 'Switch to light' : 'Switch to dark'}>
-                <IconButton color="inherit" onClick={() => setMode(m => m === 'dark' ? 'light' : 'dark')}>
+                <IconButton
+                  color='inherit'
+                  onClick={() => setMode(m => (m === 'dark' ? 'light' : 'dark'))}
+                >
                   {mode === 'dark' ? <WbSunnyRoundedIcon /> : <DarkModeRoundedIcon />}
                 </IconButton>
               </Tooltip>
@@ -157,63 +209,83 @@ export default function App() {
               [`& .MuiDrawer-paper`]: {
                 width: drawerWidth,
                 boxSizing: 'border-box',
-                borderRight: (t) => `1px solid ${t.palette.divider}`,
-                backgroundImage: (t) => t.palette.mode === 'dark'
-                  ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
-                  : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(247,249,252,1) 100%)'
+                borderRight: t => `1px solid ${t.palette.divider}`,
+                backgroundImage: t =>
+                  t.palette.mode === 'dark'
+                    ? 'linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%)'
+                    : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(247,249,252,1) 100%)',
               },
             }}
           >
             <Toolbar />
             <List>
               <ListItem disablePadding>
-                <ListItemButton selected={panel === 'streaming'} onClick={() => setPanel('streaming')}>
-                  <ListItemIcon><StreamIcon /></ListItemIcon>
-                  <ListItemText primary="Streaming Chat" />
+                <ListItemButton
+                  selected={panel === 'streaming'}
+                  onClick={() => setPanel('streaming')}
+                >
+                  <ListItemIcon>
+                    <StreamIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='Streaming Chat' />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton selected={panel === 'chat'} onClick={() => setPanel('chat')}>
-                  <ListItemIcon><ChatIcon /></ListItemIcon>
-                  <ListItemText primary="Classic Chat" />
+                  <ListItemIcon>
+                    <ChatIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='Classic Chat' />
                 </ListItemButton>
               </ListItem>
               <Divider sx={{ my: 1 }} />
               <ListItem disablePadding>
                 <ListItemButton selected={panel === 'system'} onClick={() => setPanel('system')}>
-                  <ListItemIcon><DashboardIcon /></ListItemIcon>
-                  <ListItemText primary="System Console" />
+                  <ListItemIcon>
+                    <DashboardIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='System Console' />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton selected={panel === 'cache'} onClick={() => setPanel('cache')}>
-                  <ListItemIcon><SettingsIcon /></ListItemIcon>
-                  <ListItemText primary="Cache Admin" />
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='Cache Admin' />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton selected={panel === 'secrets'} onClick={() => setPanel('secrets')}>
-                  <ListItemIcon><VpnKeyIcon /></ListItemIcon>
-                  <ListItemText primary="Secrets" />
+                  <ListItemIcon>
+                    <VpnKeyIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='Secrets' />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton selected={panel === 'forge'} onClick={() => setPanel('forge')}>
-                  <ListItemIcon><SettingsIcon /></ListItemIcon>
-                  <ListItemText primary="Cognitive Forge" />
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary='Cognitive Forge' />
                 </ListItemButton>
               </ListItem>
             </List>
           </Drawer>
-          <Box component="main" sx={{
-            flexGrow: 1,
-            p: { xs: 2, md: 3 },
-            ml: { xs: 0, md: `${drawerWidth}px` },
-            minHeight: '100vh',
-            background: (t) => t.palette.mode === 'dark'
-              ? 'radial-gradient(1200px 600px at -200px -200px, rgba(29,78,216,0.20), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.16), transparent)'
-              : 'radial-gradient(1200px 600px at -200px -200px, rgba(26,115,232,0.08), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.06), transparent)'
-          }}>
+          <Box
+            component='main'
+            sx={{
+              flexGrow: 1,
+              p: { xs: 2, md: 3 },
+              ml: { xs: 0, md: `${drawerWidth}px` },
+              minHeight: '100vh',
+              background: t =>
+                t.palette.mode === 'dark'
+                  ? 'radial-gradient(1200px 600px at -200px -200px, rgba(29,78,216,0.20), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.16), transparent)'
+                  : 'radial-gradient(1200px 600px at -200px -200px, rgba(26,115,232,0.08), transparent), radial-gradient(800px 400px at 120% 10%, rgba(16,185,129,0.06), transparent)',
+            }}
+          >
             <Toolbar />
             <Box sx={{ mx: 'auto', width: '100%', maxWidth: 1200 }}>
               {panel === 'streaming' && <StreamingChatPanel />}
@@ -237,8 +309,8 @@ function HeaderPollingChip() {
     const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
     const color: any = autoRefresh ? 'info' : 'default';
     return (
-      <Tooltip title="Providers status polling">
-        <Chip size="small" label={label} color={color} variant="outlined" sx={{ mr: 1 }} />
+      <Tooltip title='Providers status polling'>
+        <Chip size='small' label={label} color={color} variant='outlined' sx={{ mr: 1 }} />
       </Tooltip>
     );
   } catch {

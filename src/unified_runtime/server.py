@@ -26,15 +26,9 @@ from fastapi import FastAPI, File, Request, UploadFile
 
 # Integrate internet agent advanced routes and metrics
 try:
-    from internet_agent_advanced.fastapi_plugin import (
-        metrics_app as internet_metrics_app,
-    )
-    from internet_agent_advanced.fastapi_plugin import (
-        router as internet_tools_router,
-    )
-    from internet_agent_advanced.fastapi_plugin import (
-        test_router as internet_test_router,
-    )
+    from internet_agent_advanced.fastapi_plugin import metrics_app as internet_metrics_app
+    from internet_agent_advanced.fastapi_plugin import router as internet_tools_router
+    from internet_agent_advanced.fastapi_plugin import test_router as internet_test_router
 except Exception:
     internet_tools_router = None  # type: ignore
     internet_metrics_app = None  # type: ignore
@@ -193,12 +187,8 @@ except Exception:
 
 # Secrets manager (optional import, endpoints guard against absence)
 try:
-    from hivemind.secrets_manager import (
-        SecretProvider as _SecretProvider,
-    )
-    from hivemind.secrets_manager import (
-        secrets_manager as _secrets_manager,
-    )  # type: ignore
+    from hivemind.secrets_manager import SecretProvider as _SecretProvider
+    from hivemind.secrets_manager import secrets_manager as _secrets_manager  # type: ignore
 except Exception:
     _secrets_manager = None  # type: ignore
     _SecretProvider = None  # type: ignore
@@ -290,14 +280,7 @@ websockets: list[WebSocket] = []
 async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global \
-        resource_estimator, \
-        adapter_manager, \
-        tool_auditor, \
-        intent_modeler, \
-        confidence_modeler, \
-        ds_router, \
-        tool_registry
+    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
     global semantic_cache, cache_manager
     # Initialize OTEL tracer (if enabled)
     try:
@@ -1575,9 +1558,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                             os.getenv("DEEPSEEK_API_KEY")
                         ),  # R1 for reasoning
                         "unified_ecosystem": True,  # All DeepSeek, no mixed APIs
-                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)
-                        if settings
-                        else False,
+                        "refinement_enabled": (
+                            getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)
+                            if settings
+                            else False
+                        ),
                         "cost_advantage": "70% cheaper than GPT-4o",
                     }
                     await websocket.send_json({"type": "oracle_status", "payload": oracle_status})
@@ -2183,9 +2168,7 @@ async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
         await websocket.send_json({"type": "stream_complete"})
 
     except Exception as e:
-        await websocket.send_json(
-            {"type": "error", "error": f"Fallback generation failed: {e!s}"}
-        )
+        await websocket.send_json({"type": "error", "error": f"Fallback generation failed: {e!s}"})
 
 
 # Mount GUI SPA (prefer frontend/dist, then frontend/build, fallback to legacy gui paths)

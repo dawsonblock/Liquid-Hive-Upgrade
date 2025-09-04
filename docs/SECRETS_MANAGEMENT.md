@@ -15,13 +15,15 @@ The secrets management system follows a priority-based approach:
 ### 1. HashiCorp Vault
 
 **Use Case**: Local development, on-premises deployments
-**Features**: 
+**Features**:
+
 - KV v1 and v2 secret engines
 - Token-based authentication
 - Development mode for local testing
 - Production-ready clustering support
 
 **Configuration**:
+
 ```yaml
 secrets:
   provider: "vault"
@@ -36,12 +38,14 @@ secrets:
 
 **Use Case**: Production deployments on AWS
 **Features**:
+
 - Native AWS integration
 - Automatic rotation support
 - IAM-based access control
 - JSON and string secret formats
 
 **Configuration**:
+
 ```yaml
 secrets:
   provider: "aws-secrets-manager"
@@ -59,6 +63,7 @@ secrets:
 
 **Use Case**: Fallback, simple deployments
 **Features**:
+
 - Direct environment variable access
 - Compatible with existing configurations
 - No external dependencies
@@ -68,11 +73,13 @@ secrets:
 ### Local Development with Vault
 
 1. **Deploy with development Vault**:
+
 ```bash
 helm install liquid-hive ./helm/liquid-hive -f ./helm/liquid-hive/values-dev.yaml
 ```
 
 2. **Store secrets in Vault**:
+
 ```bash
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=dev-token
@@ -80,7 +87,7 @@ export VAULT_TOKEN=dev-token
 # Store database connection
 vault kv put secret/database/mongo_url value="mongodb://mongo:27017/liquid-hive"
 
-# Store AI endpoints  
+# Store AI endpoints
 vault kv put secret/ai/vllm_endpoint value="http://vllm:8000"
 vault kv put secret/ai/vllm_api_key value="your-api-key"
 
@@ -91,6 +98,7 @@ vault kv put secret/monitoring/prometheus_base_url value="http://prometheus:9090
 ### AWS Production Deployment
 
 1. **Create IAM Role for Service Account**:
+
 ```bash
 # Create IAM policy
 cat > liquid-hive-secrets-policy.json << EOF
@@ -123,6 +131,7 @@ eksctl create iamserviceaccount \
 ```
 
 2. **Store secrets in AWS Secrets Manager**:
+
 ```bash
 # Database connection
 aws secretsmanager create-secret \
@@ -145,6 +154,7 @@ aws secretsmanager create-secret \
 ```
 
 3. **Deploy to production**:
+
 ```bash
 helm install liquid-hive ./helm/liquid-hive -f ./helm/liquid-hive/values-aws-prod.yaml
 ```
@@ -152,6 +162,7 @@ helm install liquid-hive ./helm/liquid-hive -f ./helm/liquid-hive/values-aws-pro
 ## Secret Naming Conventions
 
 ### Vault Paths
+
 ```
 secret/
 ├── database/
@@ -168,6 +179,7 @@ secret/
 ```
 
 ### AWS Secrets Manager Names
+
 ```
 liquid-hive/prod/
 ├── database/mongo_url
@@ -181,6 +193,7 @@ liquid-hive/prod/
 ```
 
 ### Environment Variables (Fallback)
+
 ```
 MONGO_URL
 REDIS_URL
@@ -195,11 +208,13 @@ PROMETHEUS_BASE_URL
 ## API Endpoints
 
 ### Health Check
+
 ```bash
 curl http://localhost:8080/secrets/health
 ```
 
 **Response**:
+
 ```json
 {
   "active_provider": "vault",
@@ -219,17 +234,20 @@ curl http://localhost:8080/secrets/health
 ```
 
 ### Application Configuration
+
 The secrets manager automatically loads configuration during application startup. No manual intervention required for standard operations.
 
 ## Security Best Practices
 
 ### Development Environment
+
 - Use development Vault with in-memory storage
 - Rotate development tokens regularly
 - Never commit secrets to version control
 - Use separate secret paths for each environment
 
 ### Production Environment
+
 - Use IAM roles for service accounts (no hardcoded credentials)
 - Enable secret rotation where supported
 - Implement least privilege access policies
@@ -237,6 +255,7 @@ The secrets manager automatically loads configuration during application startup
 - Use separate AWS accounts for different environments
 
 ### Network Security
+
 - Restrict Vault access to authorized networks
 - Use TLS encryption for all communications
 - Implement proper firewall rules
@@ -247,6 +266,7 @@ The secrets manager automatically loads configuration during application startup
 ### Common Issues
 
 1. **Vault Connection Failed**
+
 ```bash
 # Check Vault status
 kubectl exec -it vault-pod -- vault status
@@ -256,6 +276,7 @@ kubectl logs deployment/liquid-hive | grep vault
 ```
 
 2. **AWS Secrets Manager Access Denied**
+
 ```bash
 # Check service account annotations
 kubectl describe sa liquid-hive-secrets
@@ -266,6 +287,7 @@ aws secretsmanager list-secrets --max-items 1
 ```
 
 3. **Fallback to Environment Variables**
+
 ```bash
 # Check configuration loading
 kubectl logs deployment/liquid-hive | grep "secrets provider"
@@ -275,22 +297,26 @@ kubectl exec -it liquid-hive-pod -- printenv | grep -E "(MONGO_URL|REDIS_URL|VLL
 ```
 
 ### Debug Mode
+
 Enable debug logging for secrets manager:
+
 ```yaml
 env:
-- name: LOG_LEVEL
-  value: "DEBUG"
+  - name: LOG_LEVEL
+    value: "DEBUG"
 ```
 
 ## Migration Guide
 
 ### From Environment Variables to Vault
+
 1. Export current environment variables
 2. Store them in Vault using the naming conventions above
 3. Update deployment configuration to use Vault provider
 4. Verify health endpoint shows Vault as active provider
 
 ### From Vault to AWS Secrets Manager
+
 1. Extract secrets from Vault
 2. Create equivalent secrets in AWS Secrets Manager
 3. Update deployment configuration for AWS provider
@@ -306,12 +332,14 @@ env:
 ## Monitoring and Alerting
 
 ### Key Metrics to Monitor
+
 - Secret retrieval success/failure rates
-- Authentication status for each provider  
+- Authentication status for each provider
 - Cache hit rates
 - Network latency to secret stores
 
 ### Recommended Alerts
+
 - Secrets manager authentication failures
 - High secret retrieval error rates
 - Vault seal status changes
@@ -320,12 +348,14 @@ env:
 ## Backup and Recovery
 
 ### Vault Backup
+
 ```bash
 # Export secrets for backup
 vault kv export secret/ > vault-backup.json
 ```
 
 ### AWS Secrets Manager Recovery
+
 AWS Secrets Manager provides automatic backup and point-in-time recovery. Configure retention policies based on compliance requirements.
 
 ## Compliance and Auditing
@@ -339,6 +369,7 @@ AWS Secrets Manager provides automatic backup and point-in-time recovery. Config
 ## Support and Contributing
 
 For issues related to secrets management:
+
 1. Check the health endpoint first
 2. Review application logs for secret loading errors
 3. Verify network connectivity to secret stores

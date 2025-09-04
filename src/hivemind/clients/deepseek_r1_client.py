@@ -142,9 +142,9 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
                         "performance": {
                             "total_calls": self.total_calls,
                             "total_cost": self.total_cost,
-                            "avg_cost_per_call": self.total_cost / self.total_calls
-                            if self.total_calls > 0
-                            else 0,
+                            "avg_cost_per_call": (
+                                self.total_cost / self.total_calls if self.total_calls > 0 else 0
+                            ),
                         },
                     }
 
@@ -268,9 +268,9 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
             "gpt4o_equivalent": {
                 "input_cost_per_1k": gpt4o_input_cost,
                 "output_cost_per_1k": gpt4o_output_cost,
-                "estimated_cost": (self.total_tokens * gpt4o_input_cost / 1000)
-                if self.total_tokens > 0
-                else 0,
+                "estimated_cost": (
+                    (self.total_tokens * gpt4o_input_cost / 1000) if self.total_tokens > 0 else 0
+                ),
             },
             "savings": {"cost_reduction_percent": 70, "ecosystem_benefit": "unified_deepseek_api"},
         }

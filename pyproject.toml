@@ -3,7 +3,7 @@ target-version = "py310"
 line-length = 100
 exclude = [
     ".bzr",
-    ".direnv", 
+    ".direnv",
     ".eggs",
     ".git",
     ".git-rewrite",
@@ -134,7 +134,7 @@ pythonpath = "src"
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--strict-markers", 
+    "--strict-markers",
     "--strict-config",
     "--cov=src",
     "--cov-report=term-missing",

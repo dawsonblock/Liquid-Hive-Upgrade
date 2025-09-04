@@ -13,7 +13,7 @@ storage:
   storage_path: /qdrant/storage
   snapshots_path: /qdrant/snapshots
   temp_path: /qdrant/storage/tmp
-  
+
   # Performance settings
   write_consistency_factor: 0.9
   optimizers:
@@ -30,11 +30,11 @@ storage:
 # Resource limits and performance
 cluster:
   enabled: false  # Single node deployment
-  
+
 telemetry:
   disabled: false
 
-# Logging configuration  
+# Logging configuration
 log_level: INFO
 
 # API and security settings
@@ -42,13 +42,13 @@ service:
   # CORS settings for web clients
   enable_cors: true
   cors_allow_credentials: false
-  
+
 # Collection defaults
 collections:
   # Default settings for new collections
   default_segment_number: 2
   on_disk_payload: true
-  
+
 # Quantization settings for better performance
 quantization:
   # Enable scalar quantization by default

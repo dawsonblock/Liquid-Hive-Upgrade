@@ -1,6 +1,6 @@
 ##
 # Multi-stage Production-Ready Dockerfile for Liquid-Hive-Upgrade
-# 
+#
 # This builds a secure, hardened container with:
 # - Multi-stage builds for minimal attack surface
 # - Non-root user execution

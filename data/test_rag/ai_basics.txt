@@ -1,16 +1,15 @@
 
         Artificial Intelligence Fundamentals
-        
+
         Artificial Intelligence (AI) is the simulation of human intelligence in machines
         that are programmed to think and learn. Machine learning is a subset of AI that
         uses statistical techniques to enable machines to improve with experience.
-        
+
         Key concepts include:
         - Neural networks: Computing systems inspired by biological neural networks
         - Deep learning: Machine learning with multi-layered neural networks
         - Natural language processing: AI's ability to understand human language
         - Computer vision: AI's ability to interpret visual information
-        
+
         Applications of AI include autonomous vehicles, recommendation systems,
         medical diagnosis, and intelligent assistants.
-        

@@ -7,11 +7,11 @@ body:
     attributes:
       value: |
         ⚠️ **IMPORTANT SECURITY NOTICE** ⚠️
-        
+
         **DO NOT** use this form for reporting security vulnerabilities that could be exploited.
-        
+
         For sensitive security issues, please email: **security@liquid-hive.dev**
-        
+
         This form should only be used for:
         - Security hardening suggestions
         - Non-exploitable security improvements
@@ -73,7 +73,7 @@ body:
       description: Which component does this security issue affect?
       options:
         - Authentication/Authorization
-        - API Security 
+        - API Security
         - Database Security
         - Frontend Security
         - Container/Deployment Security

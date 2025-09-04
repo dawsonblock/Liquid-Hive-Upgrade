@@ -15,7 +15,7 @@ export default function Markdown({ children }: Props) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(key);
-      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+      setTimeout(() => setCopied(c => (c === key ? null : c)), 1500);
     } catch {
       // ignore
     }
@@ -28,7 +28,7 @@ export default function Markdown({ children }: Props) {
       try {
         const [{ Prism }, prismStyles] = await Promise.all([
           import('react-syntax-highlighter'),
-          import('react-syntax-highlighter/dist/esm/styles/prism')
+          import('react-syntax-highlighter/dist/esm/styles/prism'),
         ] as any);
         if (!mounted) return;
         setHighlighter(() => Prism);
@@ -37,7 +37,9 @@ export default function Markdown({ children }: Props) {
         // fallback silently
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -58,35 +60,73 @@ export default function Markdown({ children }: Props) {
           // If highlighter not yet loaded, render a simple pre/code fallback
           if (!Highlighter || !styles) {
             return (
-              <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', border: (t) => `1px solid ${t.palette.divider}` }}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: t => `1px solid ${t.palette.divider}`,
+                }}
+              >
                 <Box sx={{ position: 'absolute', right: 6, top: 6, zIndex: 1 }}>
                   <Tooltip title={copied === key ? 'Copied' : 'Copy'}>
-                    <IconButton size="small" onClick={() => onCopy(code, key)} aria-label="Copy code block">
-                      {copied === key ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+                    <IconButton
+                      size='small'
+                      onClick={() => onCopy(code, key)}
+                      aria-label='Copy code block'
+                    >
+                      {copied === key ? (
+                        <CheckIcon fontSize='small' />
+                      ) : (
+                        <ContentCopyIcon fontSize='small' />
+                      )}
                     </IconButton>
                   </Tooltip>
                 </Box>
-                <pre style={{ margin: 0, padding: '14px 16px', fontSize: '0.875rem', overflow: 'auto' }}>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: '14px 16px',
+                    fontSize: '0.875rem',
+                    overflow: 'auto',
+                  }}
+                >
                   <code>{code}</code>
                 </pre>
               </Box>
             );
           }
-          const style = theme.palette.mode === 'dark' ? (styles.oneDark as any) : (styles.oneLight as any);
+          const style =
+            theme.palette.mode === 'dark' ? (styles.oneDark as any) : (styles.oneLight as any);
           const SyntaxHighlighter: any = Highlighter;
           return (
-            <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', border: (t) => `1px solid ${t.palette.divider}` }}>
+            <Box
+              sx={{
+                position: 'relative',
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: t => `1px solid ${t.palette.divider}`,
+              }}
+            >
               <Box sx={{ position: 'absolute', right: 6, top: 6, zIndex: 1 }}>
                 <Tooltip title={copied === key ? 'Copied' : 'Copy'}>
-                  <IconButton size="small" onClick={() => onCopy(code, key)} aria-label="Copy code block">
-                    {copied === key ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+                  <IconButton
+                    size='small'
+                    onClick={() => onCopy(code, key)}
+                    aria-label='Copy code block'
+                  >
+                    {copied === key ? (
+                      <CheckIcon fontSize='small' />
+                    ) : (
+                      <ContentCopyIcon fontSize='small' />
+                    )}
                   </IconButton>
                 </Tooltip>
               </Box>
               <SyntaxHighlighter
                 style={style}
                 language={match?.[1] || 'text'}
-                PreTag="div"
+                PreTag='div'
                 customStyle={{ margin: 0, padding: '14px 16px', background: 'transparent' }}
                 codeTagProps={{ style: { fontSize: '0.875rem' } }}
                 {...props}

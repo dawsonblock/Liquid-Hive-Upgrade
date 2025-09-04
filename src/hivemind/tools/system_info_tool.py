@@ -192,9 +192,11 @@ class SystemInfoTool(BaseTool):
                         "total": disk_usage.total,
                         "used": disk_usage.used,
                         "free": disk_usage.free,
-                        "percent": (disk_usage.used / disk_usage.total) * 100
-                        if disk_usage.total > 0
-                        else 0,
+                        "percent": (
+                            (disk_usage.used / disk_usage.total) * 100
+                            if disk_usage.total > 0
+                            else 0
+                        ),
                     }
                 )
             except PermissionError:

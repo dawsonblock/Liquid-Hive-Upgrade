@@ -18,7 +18,7 @@ services:
   # Main Application
   # =============================================================================
   api:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
       target: runtime
@@ -58,7 +58,7 @@ services:
   # =============================================================================
   # Database Services
   # =============================================================================
-  
+
   # MongoDB - Primary database
   mongodb:
     image: mongo:7.0
@@ -119,7 +119,16 @@ services:
       - neo4j_plugins:/plugins
     networks: [liquid-hive-net]
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER:-neo4j}", "-p", "${NEO4J_PASSWORD:-change_this_password}", "RETURN 1"]
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "${NEO4J_USER:-neo4j}",
+          "-p",
+          "${NEO4J_PASSWORD:-change_this_password}",
+          "RETURN 1",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -151,7 +160,7 @@ services:
   # =============================================================================
   # Monitoring and Observability
   # =============================================================================
-  
+
   # Prometheus - Metrics collection
   prometheus:
     image: prom/prometheus:latest
@@ -162,16 +171,24 @@ services:
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-      - '--web.external-url=http://localhost:9090'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+      - "--web.external-url=http://localhost:9090"
     networks: [liquid-hive-net]
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/-/healthy",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -227,12 +244,20 @@ services:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:9093"
     networks: [liquid-hive-net]
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9093/-/healthy",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -349,7 +374,7 @@ volumes:
     name: liquid_hive_neo4j_plugins
   qdrant_data:
     name: liquid_hive_qdrant_data
-  
+
   # Monitoring volumes
   prometheus_data:
     name: liquid_hive_prometheus_data

@@ -3,10 +3,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Provider } from 'react-redux';
 jest.mock('../services/env', () => ({
   getBackendHttpBase: () => '',
-  getBackendWsBase: () => 'ws://localhost:1234'
+  getBackendWsBase: () => 'ws://localhost:1234',
 }));
 jest.mock('../contexts/ProvidersContext', () => ({
-  useProviders: () => ({ providers: {}, loading: false, refresh: jest.fn() })
+  useProviders: () => ({ providers: {}, loading: false, refresh: jest.fn() }),
 }));
 import StreamingChatPanel from './StreamingChatPanel';
 import { makeStore } from '../store';
@@ -20,8 +20,12 @@ class WS {
   onclose: any;
   onerror: any;
   sent: any[] = [];
-  constructor(url: string) { wsInstances.push(this); }
-  send(msg: string) { this.sent.push(msg); }
+  constructor(url: string) {
+    wsInstances.push(this);
+  }
+  send(msg: string) {
+    this.sent.push(msg);
+  }
   close() {}
 }
 (global as any).WebSocket = WS as any;

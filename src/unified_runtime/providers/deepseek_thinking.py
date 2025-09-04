@@ -133,7 +133,7 @@ Original question: {original_prompt}
 
 Instructions:
 - Use <think>...</think> tags to show your reasoning process
-- Consider multiple approaches if applicable  
+- Consider multiple approaches if applicable
 - Check your work before providing the final answer
 - Keep your reasoning within approximately {cot_budget} tokens
 - After thinking, provide a clear final answer

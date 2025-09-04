@@ -7,7 +7,8 @@ import os
 
 import httpx
 
-BASE_URL = (os.getenv('BASE_URL') or 'http://localhost:8000').rstrip('/')
+BASE_URL = (os.getenv("BASE_URL") or "http://localhost:8000").rstrip("/")
+
 
 async def submit_seed(task):
     async with httpx.AsyncClient() as client:
@@ -15,13 +16,14 @@ async def submit_seed(task):
         r.raise_for_status()
         return r.json()
 
+
 async def main():
-    seeds_path = os.getenv('GOLDEN_SEEDS', 'golden/seeds.jsonl')
+    seeds_path = os.getenv("GOLDEN_SEEDS", "golden/seeds.jsonl")
     if not os.path.exists(seeds_path):
         print(f"No seeds at {seeds_path}")
         return
     ok = 0
-    with open(seeds_path, encoding='utf-8') as f:
+    with open(seeds_path, encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
@@ -29,10 +31,11 @@ async def main():
             try:
                 resp = await submit_seed(task)
                 ok += 1
-                print('submitted', resp)
+                print("submitted", resp)
             except Exception as e:
-                print('error', e)
-    print('done, submitted', ok)
+                print("error", e)
+    print("done, submitted", ok)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())

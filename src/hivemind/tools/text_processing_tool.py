@@ -178,12 +178,12 @@ class TextProcessingTool(BaseTool):
                 "unique_words": len(set(word.lower().strip('.,!?;:"()[]') for word in words)),
             },
             "readability": {
-                "avg_sentence_length": len(words) / len([s for s in sentences if s.strip()])
-                if sentences
-                else 0,
-                "avg_paragraph_length": len(words) / len([p for p in paragraphs if p.strip()])
-                if paragraphs
-                else 0,
+                "avg_sentence_length": (
+                    len(words) / len([s for s in sentences if s.strip()]) if sentences else 0
+                ),
+                "avg_paragraph_length": (
+                    len(words) / len([p for p in paragraphs if p.strip()]) if paragraphs else 0
+                ),
             },
             "character_frequency": dict(char_counts.most_common(10)),
             "complexity_score": self._calculate_complexity(text),

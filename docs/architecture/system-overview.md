@@ -25,7 +25,7 @@ graph TB
             AUTH[Authentication]
             CACHE[Cache Layer]
         end
-        
+
         subgraph "Core Services"
             PLANNER[Planner Service]
             ARENA[Arena Service]
@@ -57,26 +57,26 @@ graph TB
     WEB --> LB
     API --> LB
     SDK --> LB
-    
+
     LB --> SERVER
     SERVER --> ROUTER
     SERVER --> AUTH
     SERVER --> CACHE
-    
+
     ROUTER --> PLANNER
     ROUTER --> ARENA
     ROUTER --> ORACLE
-    
+
     ORACLE --> OPENAI
     ORACLE --> ANTHROPIC
     ORACLE --> DEEPSEEK
     ORACLE --> GEMINI
-    
+
     PLANNER --> MONGO
     ARENA --> REDIS
     ARENA --> NEO4J
     ORACLE --> QDRANT
-    
+
     SERVER --> PROMETHEUS
     PROMETHEUS --> GRAFANA
     PROMETHEUS --> ALERTS
@@ -90,6 +90,7 @@ graph TB
 The central FastAPI application that orchestrates all system components:
 
 - **Responsibilities**:
+
   - HTTP request handling and routing
   - Authentication and authorization
   - Rate limiting and quota management
@@ -107,6 +108,7 @@ The central FastAPI application that orchestrates all system components:
 Manages multiple LLM providers with hot-swappable configurations:
 
 - **Capabilities**:
+
   - Dynamic provider loading from configuration
   - API key management and rotation
   - Circuit breaker patterns for reliability
@@ -123,6 +125,7 @@ Manages multiple LLM providers with hot-swappable configurations:
 Intelligent routing engine for LLM requests:
 
 - **Routing Strategies**:
+
   - Cost-optimized routing
   - Performance-based routing
   - Arena-driven routing (win-rate bias)
@@ -138,6 +141,7 @@ Intelligent routing engine for LLM requests:
 DAG-based task execution engine:
 
 - **Features**:
+
   - Directed Acyclic Graph (DAG) task planning
   - Parallel execution capabilities
   - Retry mechanisms with exponential backoff
@@ -154,6 +158,7 @@ DAG-based task execution engine:
 Model evaluation and comparison platform:
 
 - **Evaluation Methods**:
+
   - A/B testing between models
   - Elo rating system
   - Performance analytics
@@ -170,24 +175,28 @@ Model evaluation and comparison platform:
 ### Primary Data Stores
 
 #### MongoDB (Primary Database)
+
 - **Usage**: User data, sessions, task definitions
 - **Schema**: Document-based with validation
 - **Indexes**: Optimized for common query patterns
 - **Scaling**: Replica sets for high availability
 
 #### Redis (Cache & Sessions)
+
 - **Usage**: Session storage, rate limiting, caching
 - **Configuration**: Persistence enabled, memory optimization
 - **Patterns**: Cache-aside, write-through
 - **Scaling**: Redis Cluster for horizontal scaling
 
 #### Neo4j (Graph Database)
+
 - **Usage**: Complex relationships, knowledge graphs
 - **Query Language**: Cypher
 - **Plugins**: APOC, Graph Data Science
 - **Scaling**: Causal clustering
 
 #### Qdrant (Vector Database)
+
 - **Usage**: Embeddings storage, similarity search
 - **Features**: HNSW indexing, quantization
 - **API**: REST and gRPC interfaces
@@ -205,7 +214,7 @@ graph LR
     JWT --> RBAC[Role-Based Access Control]
     APIKEY --> RBAC
     RBAC --> ENDPOINT[Protected Endpoint]
-    
+
     JWT --> VAULT[Secrets Manager]
     APIKEY --> VAULT
 ```
@@ -213,16 +222,19 @@ graph LR
 ### Security Layers
 
 1. **Transport Security**:
+
    - TLS 1.3 for all communications
    - Certificate management
    - HSTS headers
 
 2. **Authentication**:
+
    - JWT tokens with RS256 signing
    - API key authentication
    - Multi-factor authentication (planned)
 
 3. **Authorization**:
+
    - Role-based access control (RBAC)
    - Resource-level permissions
    - Rate limiting per tenant
@@ -241,13 +253,13 @@ graph TB
     subgraph "External Traffic"
         INTERNET[Internet] --> INGRESS[Ingress Controller]
     end
-    
+
     subgraph "Service Mesh"
         INGRESS --> API[API Gateway]
         API --> APP[Application Services]
         APP --> DATA[Data Services]
     end
-    
+
     subgraph "Network Policies"
         NETPOL[Network Policies]
         NETPOL --> API
@@ -322,7 +334,7 @@ graph LR
     APP[Application] --> PROMETHEUS[Prometheus]
     PROMETHEUS --> GRAFANA[Grafana]
     PROMETHEUS --> ALERTMANAGER[Alertmanager]
-    
+
     APP --> OTEL[OpenTelemetry]
     OTEL --> JAEGER[Jaeger]
     OTEL --> PROMETHEUS

@@ -18,22 +18,29 @@ class ComprehensiveBackendTester:
         self.tests_passed = 0
         self.test_results = {}
 
-    def run_test(self, name: str, method: str, endpoint: str, expected_status: int,
-                 data: Optional[dict] = None, headers: Optional[dict] = None,
-                 form_data: Optional[dict] = None) -> tuple[bool, dict]:
+    def run_test(
+        self,
+        name: str,
+        method: str,
+        endpoint: str,
+        expected_status: int,
+        data: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        form_data: Optional[dict] = None,
+    ) -> tuple[bool, dict]:
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         if headers is None:
-            headers = {'Content-Type': 'application/json'}
+            headers = {"Content-Type": "application/json"}
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {method} {url}")
 
         try:
-            if method == 'GET':
+            if method == "GET":
                 response = requests.get(url, headers=headers, timeout=10)
-            elif method == 'POST':
+            elif method == "POST":
                 if form_data:
                     response = requests.post(url, data=form_data, timeout=10)
                 else:
@@ -56,10 +63,12 @@ class ComprehensiveBackendTester:
 
             # Store result for reporting
             self.test_results[name] = {
-                'success': success,
-                'status_code': response.status_code,
-                'expected_status': expected_status,
-                'response_time': response.elapsed.total_seconds() if hasattr(response, 'elapsed') else 0
+                "success": success,
+                "status_code": response.status_code,
+                "expected_status": expected_status,
+                "response_time": (
+                    response.elapsed.total_seconds() if hasattr(response, "elapsed") else 0
+                ),
             }
 
             return success, response.json() if success and response.content else {}
@@ -67,10 +76,10 @@ class ComprehensiveBackendTester:
         except Exception as e:
             print(f"❌ Failed - Error: {e!s}")
             self.test_results[name] = {
-                'success': False,
-                'error': str(e),
-                'status_code': None,
-                'expected_status': expected_status
+                "success": False,
+                "error": str(e),
+                "status_code": None,
+                "expected_status": expected_status,
             }
             return False, {}
 
@@ -91,7 +100,7 @@ class ComprehensiveBackendTester:
     def test_configuration_loading(self):
         """Test that system loads with comprehensive environment configuration"""
         success, response = self.run_test("Configuration Health", "GET", "api/healthz", 200)
-        if success and response.get('ok'):
+        if success and response.get("ok"):
             print("✅ Enhanced configuration loaded successfully")
             return True, response
         return False, {}
@@ -104,18 +113,23 @@ class ComprehensiveBackendTester:
     def test_planner_service(self):
         """Test Planner (DAG execution) service"""
         # Test if planner is available through chat endpoint with planner enabled
-        os.environ['ENABLE_PLANNER'] = 'true'
-        return self.run_test("Planner Service", "POST", "api/chat?q=Create%20a%20simple%20plan%20to%20analyze%20data", 200)
+        os.environ["ENABLE_PLANNER"] = "true"
+        return self.run_test(
+            "Planner Service",
+            "POST",
+            "api/chat?q=Create%20a%20simple%20plan%20to%20analyze%20data",
+            200,
+        )
 
     # ===== ARENA SERVICE =====
     def test_arena_submit(self):
         """Test arena task submission"""
-        os.environ['ENABLE_ARENA'] = 'true'
+        os.environ["ENABLE_ARENA"] = "true"
         data = {"input": "Compare AI model performance on translation tasks"}
         success, response = self.run_test(
             "Arena Submit Task", "POST", "api/arena/submit", 200, data
         )
-        return success, response.get('task_id') if success else None
+        return success, response.get("task_id") if success else None
 
     def test_arena_compare(self, task_id):
         """Test arena model comparison"""
@@ -126,17 +140,13 @@ class ComprehensiveBackendTester:
             "model_a": "deepseek_r1",
             "model_b": "qwen_2_5",
             "output_a": "Comprehensive analysis with detailed reasoning and citations.",
-            "output_b": "Basic analysis with limited context."
+            "output_b": "Basic analysis with limited context.",
         }
-        return self.run_test(
-            "Arena Compare Models", "POST", "api/arena/compare", 200, data
-        )
+        return self.run_test("Arena Compare Models", "POST", "api/arena/compare", 200, data)
 
     def test_arena_leaderboard(self):
         """Test arena leaderboard"""
-        return self.run_test(
-            "Arena Leaderboard", "GET", "api/arena/leaderboard", 200
-        )
+        return self.run_test("Arena Leaderboard", "GET", "api/arena/leaderboard", 200)
 
     # ===== SECURITY FEATURES =====
     def test_admin_endpoints(self):
@@ -197,7 +207,10 @@ class ComprehensiveBackendTester:
 
     def test_chat_endpoint(self):
         """Test core chat endpoint"""
-        return self.run_test("Chat Endpoint", "POST", "api/chat?q=What%20is%20artificial%20intelligence", 200)
+        return self.run_test(
+            "Chat Endpoint", "POST", "api/chat?q=What%20is%20artificial%20intelligence", 200
+        )
+
 
 def main():
     """Main comprehensive test runner"""
@@ -206,8 +219,8 @@ def main():
     print("=" * 80)
 
     # Set environment variables for services
-    os.environ['ENABLE_ARENA'] = 'true'
-    os.environ['ENABLE_PLANNER'] = 'true'
+    os.environ["ENABLE_ARENA"] = "true"
+    os.environ["ENABLE_PLANNER"] = "true"
 
     tester = ComprehensiveBackendTester()
 
@@ -334,8 +347,11 @@ def main():
         print("✅ Security and observability operational")
         return 0
     else:
-        print(f"\n⚠️ System needs attention - only {tester.tests_passed}/{tester.tests_run} tests passed")
+        print(
+            f"\n⚠️ System needs attention - only {tester.tests_passed}/{tester.tests_run} tests passed"
+        )
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

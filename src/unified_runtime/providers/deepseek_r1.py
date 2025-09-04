@@ -50,7 +50,7 @@ class DeepSeekR1Provider(BaseProvider):
 
 You are operating in deep reasoning mode. Take time to think through this problem carefully:
 1. Break down the problem into components
-2. Consider multiple solution approaches 
+2. Consider multiple solution approaches
 3. Analyze potential issues or edge cases
 4. Verify your reasoning before concluding
 5. Provide detailed justification for your final answer"""

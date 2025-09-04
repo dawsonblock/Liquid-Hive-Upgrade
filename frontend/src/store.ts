@@ -28,8 +28,8 @@ const initialState: AppState = {
   streamingStatus: {
     isStreaming: false,
     connectionStatus: 'disconnected',
-    currentProvider: null
-  }
+    currentProvider: null,
+  },
 };
 
 const appSlice = createSlice({
@@ -39,7 +39,7 @@ const appSlice = createSlice({
     addChat(state, action: PayloadAction<ChatMessage>) {
       state.chatHistory.push({
         ...action.payload,
-        timestamp: action.payload.timestamp || new Date()
+        timestamp: action.payload.timestamp || new Date(),
       });
     },
     updateLastMessage(state, action: PayloadAction<string>) {
@@ -50,7 +50,10 @@ const appSlice = createSlice({
         }
       }
     },
-    updateStreamingStatus(state, action: PayloadAction<Partial<typeof initialState.streamingStatus>>) {
+    updateStreamingStatus(
+      state,
+      action: PayloadAction<Partial<typeof initialState.streamingStatus>>
+    ) {
       state.streamingStatus = { ...state.streamingStatus, ...action.payload };
     },
     finalizeStreamingMessage(state, action: PayloadAction<{ content: string; metadata?: any }>) {
@@ -73,13 +76,13 @@ const appSlice = createSlice({
   },
 });
 
-export const { 
-  addChat, 
+export const {
+  addChat,
   updateLastMessage,
   updateStreamingStatus,
   finalizeStreamingMessage,
-  setApprovals, 
-  setStateSummary 
+  setApprovals,
+  setStateSummary,
 } = appSlice.actions;
 
 export const store = configureStore({ reducer: appSlice.reducer });

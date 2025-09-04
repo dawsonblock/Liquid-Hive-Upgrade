@@ -52,7 +52,7 @@ Your LIQUID-HIVE deployment is configured to use: {{ .Values.secrets.provider }}
 
 4. API Endpoints:
   - Chat: POST /api/chat
-  - Vision: POST /api/vision  
+  - Vision: POST /api/vision
   - Approvals: GET /api/approvals
   - Adapters: GET /api/adapters
   - System State: GET /api/state

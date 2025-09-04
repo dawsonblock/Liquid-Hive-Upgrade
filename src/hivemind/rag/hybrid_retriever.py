@@ -339,9 +339,9 @@ class HybridRetriever:
         if self.faiss_retriever:
             status["faiss"] = {
                 "ready": self.faiss_retriever.is_ready,
-                "doc_count": len(self.faiss_retriever.doc_store)
-                if self.faiss_retriever.doc_store
-                else 0,
+                "doc_count": (
+                    len(self.faiss_retriever.doc_store) if self.faiss_retriever.doc_store else 0
+                ),
             }
 
         if self.qdrant_retriever:

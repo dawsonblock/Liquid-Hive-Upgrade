@@ -423,9 +423,11 @@ class ToolRegistry:
             {
                 "tool_name": name,
                 "total_executions": stats["total_executions"],
-                "success_rate": (stats["successful_executions"] / stats["total_executions"]) * 100
-                if stats["total_executions"] > 0
-                else 0,
+                "success_rate": (
+                    (stats["successful_executions"] / stats["total_executions"]) * 100
+                    if stats["total_executions"] > 0
+                    else 0
+                ),
                 "average_execution_time": stats["average_execution_time"],
             }
             for name, stats in self.execution_stats.items()
@@ -467,9 +469,9 @@ class ToolRegistry:
 
         return {
             "total_executions": total_executions,
-            "average_execution_time": sum(execution_times) / len(execution_times)
-            if execution_times
-            else 0,
+            "average_execution_time": (
+                sum(execution_times) / len(execution_times) if execution_times else 0
+            ),
             "fastest_tool": min(execution_times) if execution_times else 0,
             "slowest_tool": max(execution_times) if execution_times else 0,
         }

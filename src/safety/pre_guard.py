@@ -139,9 +139,9 @@ class PreGuard:
         result = PreGuardResult(
             blocked=should_block,
             reason=f"risk_assessment: {', '.join(risk_flags)}" if should_block else "",
-            status="blocked"
-            if should_block
-            else ("sanitized" if pii_info["redacted"] else "passed"),
+            status=(
+                "blocked" if should_block else ("sanitized" if pii_info["redacted"] else "passed")
+            ),
             pii_redacted=pii_info["redacted"],
             pii_types=pii_info["types"],
             risk_flags=risk_flags,

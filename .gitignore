@@ -142,31 +142,31 @@ pnpm-debug.log*
 # Compressed files
 *.zip
 *.tar.gz
-*.rar-e 
+*.rar-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
--e 
+-e
 # Environment files
 *.env
 *.env.*
@@ -205,3 +205,7 @@ Thumbs.db
 *.tar
 *.tar.gz
 *.tgz
+-e
+# Environment files
+*.env
+*.env.*

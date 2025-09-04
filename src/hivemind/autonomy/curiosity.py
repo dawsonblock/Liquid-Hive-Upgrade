@@ -173,13 +173,15 @@ class CuriosityEngine:
                     driver = GraphDatabase.driver(uri, auth=(user, pwd))
                     with driver.session() as session:
                         # Orphans: nodes with degree <= 1
-                        orphan = session.run("""
+                        orphan = session.run(
+                            """
                             MATCH (n)
                             WITH n, size((n)--()) as deg
                             WHERE deg <= 1
                             RETURN n.id as id
                             LIMIT 50
-                        """)
+                        """
+                        )
                         orphan_ids = [r["id"] for r in orphan if r.get("id")]
                         if orphan_ids:
                             results.append(

@@ -4,7 +4,7 @@ This guide covers deploying Liquid-Hive-Upgrade using Docker and Docker Compose 
 
 ## Prerequisites
 
-- Docker 24.0+ 
+- Docker 24.0+
 - Docker Compose 2.20+
 - Minimum 4GB RAM
 - Minimum 2 CPU cores
@@ -103,9 +103,10 @@ TENANCY_MODE=multi
 Docker Compose supports multiple profiles for different deployment scenarios:
 
 ### Default Profile (Core Services)
+
 - API server
 - MongoDB
-- Redis  
+- Redis
 - Neo4j
 - Qdrant
 - Prometheus
@@ -117,7 +118,9 @@ docker compose up -d
 ```
 
 ### Development Profile
+
 Includes development tools:
+
 - All core services
 - Adminer (database admin)
 - Redis Commander
@@ -127,7 +130,9 @@ docker compose --profile dev up -d
 ```
 
 ### GPU Profile
+
 For LLM serving with GPU support:
+
 - Includes vLLM service with GPU acceleration
 
 ```bash
@@ -135,6 +140,7 @@ docker compose --profile gpu up -d
 ```
 
 ### Full Profile
+
 All services including RAG document processing:
 
 ```bash
@@ -190,10 +196,10 @@ services:
       replicas: 3
       resources:
         limits:
-          cpus: '2.0'
+          cpus: "2.0"
           memory: 4G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 1G
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
@@ -215,7 +221,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 2G
     networks:
       - production-net
@@ -230,7 +236,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     networks:
       - production-net
@@ -431,7 +437,7 @@ services:
   api:
     deploy:
       replicas: 5
-    
+
   # Add load balancer
   nginx:
     image: nginx:alpine
@@ -452,10 +458,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4.0'
+          cpus: "4.0"
           memory: 8G
         reservations:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 2G
 ```
 

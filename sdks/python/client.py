@@ -25,15 +25,31 @@ class LiquidHiveClient:
             r.raise_for_status()
             return r.json()
 
-    async def arena_submit(self, task_input: str, reference: str | None = None, metadata: dict | None = None) -> dict:
+    async def arena_submit(
+        self, task_input: str, reference: str | None = None, metadata: dict | None = None
+    ) -> dict:
         payload = {"input": task_input, "reference": reference, "metadata": metadata or {}}
         async with httpx.AsyncClient(headers=self._headers) as client:
             r = await client.post(f"{self.base_url}/api/arena/submit", json=payload)
             r.raise_for_status()
             return r.json()
 
-    async def arena_compare(self, task_id: str, model_a: str, model_b: str, output_a: str, output_b: str, winner: str | None = None) -> dict:
-        payload = {"task_id": task_id, "model_a": model_a, "model_b": model_b, "output_a": output_a, "output_b": output_b}
+    async def arena_compare(
+        self,
+        task_id: str,
+        model_a: str,
+        model_b: str,
+        output_a: str,
+        output_b: str,
+        winner: str | None = None,
+    ) -> dict:
+        payload = {
+            "task_id": task_id,
+            "model_a": model_a,
+            "model_b": model_b,
+            "output_a": output_a,
+            "output_b": output_b,
+        }
         if winner:
             payload["winner"] = winner
         async with httpx.AsyncClient(headers=self._headers) as client:
