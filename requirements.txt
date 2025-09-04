@@ -54,9 +54,35 @@ neo4j==5.22.0
 pytest==8.4.1
 pytest-asyncio==0.24.0
 pytest-cov==6.2.0
+pytest-xdist==3.6.0  # Parallel test execution
+pytest-benchmark==4.0.0  # Performance benchmarking
+pytest-mock==3.12.0  # Enhanced mocking
+
+# Code Quality Tools
 ruff==0.6.8
 mypy==1.11.2
 black==24.8.0
 isort==5.13.2
+bandit==1.7.9  # Security vulnerability scanner
+vulture==2.11  # Dead code detection
+pydocstyle==6.3.0  # Documentation style checker
+flake8-bugbear==24.8.19  # Additional bug detection
+safety==3.3.0  # Known security vulnerabilities
+pylint==3.3.4  # Comprehensive code analysis
+
+# Pre-commit and Hooks
 pre-commit==4.0.1
 detect-secrets==1.5.0
+gitlint==0.19.1  # Git commit message linting
+
+# Code Complexity and Quality Analysis
+radon==6.0.1  # Complexity analysis
+xenon==0.9.1  # Code complexity monitoring
+mccabe==0.7.0  # McCabe complexity checker
+
+# Documentation and Type Checking
+sphinx==7.4.7  # Documentation generation
+sphinx-rtd-theme==2.0.0  # ReadTheDocs theme
+mypy-extensions==1.0.0
+types-requests==2.31.0.20240905
+types-PyYAML==6.0.12.20240917
