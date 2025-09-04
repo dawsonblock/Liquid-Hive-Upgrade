@@ -62,6 +62,7 @@ unifiedRuntime:
 
 rbac:
   create: true
+  automountServiceAccountToken: false
 
 externalSecrets:
   enabled: true

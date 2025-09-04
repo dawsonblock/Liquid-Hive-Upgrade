@@ -10,6 +10,6 @@ spec:
       app: unified-runtime
   endpoints:
     - port: metrics
-      interval: {{ .Values.monitoring.serviceMonitor.interval | default "15s" }}
-      path: {{ .Values.monitoring.serviceMonitor.path | default "/metrics" }}
+      interval: "{{ .Values.monitoring.serviceMonitor.interval | default "15s" }}"
+      path: "{{ .Values.monitoring.serviceMonitor.path | default "/metrics" }}"
 {{- end }}

@@ -6,6 +6,10 @@ metadata:
   namespace: {{ .Values.namespace }}
   labels:
     app: unified-runtime
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.unifiedRuntime.service.metricsPort }}"
+    prometheus.io/path: '{{ default "/metrics" .Values.monitoring.serviceMonitor.path }}'
 spec:
   selector:
     app: unified-runtime

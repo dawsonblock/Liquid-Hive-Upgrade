@@ -4,6 +4,7 @@ kind: ServiceAccount
 metadata:
   name: liquid-hive-sa
   namespace: {{ .Values.namespace }}
+automountServiceAccountToken: {{ .Values.rbac.automountServiceAccountToken | default false }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
