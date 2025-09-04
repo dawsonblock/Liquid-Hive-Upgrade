@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Optional, Protocol
 
 
 @dataclass
@@ -20,8 +20,6 @@ class OracleProvider(Protocol):
     name: str
     cfg: ProviderConfig
 
-    async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
-        ...
+    async def generate(self, prompt: str, **kwargs: Any) -> dict[str, Any]: ...
 
-    async def health(self) -> Dict[str, Any]:
-        ...
+    async def health(self) -> dict[str, Any]: ...

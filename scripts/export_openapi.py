@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import os, sys, json, pathlib
+import json
+import pathlib
+import sys
+
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / 'src'))
 from unified_runtime.server import app
 

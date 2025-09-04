@@ -1,34 +1,38 @@
-"""
-Fusion server with Autonomy, Trust, Estimator, and Model Routing
+"""Fusion server with Autonomy, Trust, Estimator, and Model Routing
 ===============================================================
 """
+
 # pyright: reportMissingImports=false, reportDeprecated=false, reportUnusedImport=false, reportUnusedFunction=false
 from __future__ import annotations
 
 import asyncio
-import inspect
-from typing import Optional, List, Any, Dict, cast
-import sys
-import os
-import uuid
 import json
 import json as _json
+import logging
+import os
+import sys
+import time
 import urllib.parse as _u
 import urllib.request as _req
-import httpx
-import time
-import logging
+import uuid
 from datetime import datetime
+from typing import Any, Optional, cast
+
+import httpx
 
 log = logging.getLogger(__name__)
 
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, File, Request, UploadFile
 
 # Integrate internet agent advanced routes and metrics
 try:
     from internet_agent_advanced.fastapi_plugin import (
-        router as internet_tools_router,
         metrics_app as internet_metrics_app,
+    )
+    from internet_agent_advanced.fastapi_plugin import (
+        router as internet_tools_router,
+    )
+    from internet_agent_advanced.fastapi_plugin import (
         test_router as internet_test_router,
     )
 except Exception:
@@ -37,12 +41,14 @@ except Exception:
     internet_test_router = None  # type: ignore
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+
 from capsule_brain.security.input_sanitizer import sanitize_input
 
 try:
-    from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
-    from capsule_brain.planner.plan import plan_once
     from capsule_brain.core.capsule_engine import CapsuleEngine
+    from capsule_brain.observability.metrics import MetricsMiddleware
+    from capsule_brain.observability.metrics import router as metrics_router
+    from capsule_brain.planner.plan import plan_once
 except Exception:
     MetricsMiddleware = None  # type: ignore
     metrics_router = None  # type: ignore
@@ -63,13 +69,18 @@ except Exception as e:
 
 try:
     from .providers import (
-        BaseProvider, GenRequest, GenResponse, StreamChunk,
-        DeepSeekChatProvider, DeepSeekThinkingProvider, 
-        DeepSeekR1Provider, QwenCPUProvider
+        BaseProvider,
+        DeepSeekChatProvider,
+        DeepSeekR1Provider,
+        DeepSeekThinkingProvider,
+        GenRequest,
+        GenResponse,
+        QwenCPUProvider,
+        StreamChunk,
     )
 except Exception:
     BaseProvider = None  # type: ignore
-    GenRequest = None  # type: ignore 
+    GenRequest = None  # type: ignore
     GenResponse = None  # type: ignore
     StreamChunk = None  # type: ignore
     DeepSeekChatProvider = None  # type: ignore
@@ -79,33 +90,50 @@ except Exception:
 
 try:
     import importlib as _importlib
+
     _hm_roles_text = _importlib.import_module("hivemind.roles_text")
     TextRoles = getattr(_hm_roles_text, "TextRoles", None)
     _hm_judge = _importlib.import_module("hivemind.judge")
     Judge = getattr(_hm_judge, "Judge", None)
     _hm_policies = _importlib.import_module("hivemind.policies")
     decide_policy = getattr(_hm_policies, "decide_policy", None)
-    StrategySelector = getattr(_importlib.import_module("hivemind.strategy_selector"), "StrategySelector", None)
+    StrategySelector = getattr(
+        _importlib.import_module("hivemind.strategy_selector"), "StrategySelector", None
+    )
     Retriever = getattr(_importlib.import_module("hivemind.rag.retriever"), "Retriever", None)
-    format_context = getattr(_importlib.import_module("hivemind.rag.citations"), "format_context", None)
-    VLLMClient = getattr(_importlib.import_module("hivemind.clients.vllm_client"), "VLLMClient", None)
+    format_context = getattr(
+        _importlib.import_module("hivemind.rag.citations"), "format_context", None
+    )
+    VLLMClient = getattr(
+        _importlib.import_module("hivemind.clients.vllm_client"), "VLLMClient", None
+    )
     VLClient = getattr(_importlib.import_module("hivemind.clients.vl_client"), "VLClient", None)
     VisionRoles = getattr(_importlib.import_module("hivemind.roles_vl"), "VisionRoles", None)
-    ResourceEstimator = getattr(_importlib.import_module("hivemind.resource_estimator"), "ResourceEstimator", None)
-    AdapterDeploymentManager = getattr(_importlib.import_module("hivemind.adapter_deployment_manager"), "AdapterDeploymentManager", None)
+    ResourceEstimator = getattr(
+        _importlib.import_module("hivemind.resource_estimator"), "ResourceEstimator", None
+    )
+    AdapterDeploymentManager = getattr(
+        _importlib.import_module("hivemind.adapter_deployment_manager"),
+        "AdapterDeploymentManager",
+        None,
+    )
     ToolAuditor = getattr(_importlib.import_module("hivemind.tool_auditor"), "ToolAuditor", None)
-    ConfidenceModeler = getattr(_importlib.import_module("hivemind.confidence_modeler"), "ConfidenceModeler", None)
-    TrustPolicy = getattr(_importlib.import_module("hivemind.confidence_modeler"), "TrustPolicy", None)
+    ConfidenceModeler = getattr(
+        _importlib.import_module("hivemind.confidence_modeler"), "ConfidenceModeler", None
+    )
+    TrustPolicy = getattr(
+        _importlib.import_module("hivemind.confidence_modeler"), "TrustPolicy", None
+    )
 except Exception:
-    TextRoles = None      # type: ignore
-    Judge = None          # type: ignore
+    TextRoles = None  # type: ignore
+    Judge = None  # type: ignore
     decide_policy = None  # type: ignore
     StrategySelector = None  # type: ignore
-    Retriever = None      # type: ignore
+    Retriever = None  # type: ignore
     format_context = None  # type: ignore
-    VLLMClient = None     # type: ignore
-    VLClient = None      # type: ignore
-    VisionRoles = None   # type: ignore
+    VLLMClient = None  # type: ignore
+    VLClient = None  # type: ignore
+    VisionRoles = None  # type: ignore
     ResourceEstimator = None  # type: ignore
     AdapterDeploymentManager = None  # type: ignore
     ToolAuditor = None  # type: ignore
@@ -115,16 +143,31 @@ except Exception:
 
 try:
     import importlib as _importlib
+
     _tools_mod = _importlib.import_module("hivemind.tools")
     ToolRegistry = getattr(_tools_mod, "ToolRegistry", None)
     global_registry = getattr(_tools_mod, "global_registry", None)
-    CalculatorTool = getattr(_importlib.import_module("hivemind.tools.calculator_tool"), "CalculatorTool", None)
-    WebSearchTool = getattr(_importlib.import_module("hivemind.tools.web_search_tool"), "WebSearchTool", None)
-    FileOperationsTool = getattr(_importlib.import_module("hivemind.tools.file_operations_tool"), "FileOperationsTool", None)
-    DatabaseQueryTool = getattr(_importlib.import_module("hivemind.tools.database_query_tool"), "DatabaseQueryTool", None)
-    CodeAnalysisTool = getattr(_importlib.import_module("hivemind.tools.code_analysis_tool"), "CodeAnalysisTool", None)
-    TextProcessingTool = getattr(_importlib.import_module("hivemind.tools.text_processing_tool"), "TextProcessingTool", None)
-    SystemInfoTool = getattr(_importlib.import_module("hivemind.tools.system_info_tool"), "SystemInfoTool", None)
+    CalculatorTool = getattr(
+        _importlib.import_module("hivemind.tools.calculator_tool"), "CalculatorTool", None
+    )
+    WebSearchTool = getattr(
+        _importlib.import_module("hivemind.tools.web_search_tool"), "WebSearchTool", None
+    )
+    FileOperationsTool = getattr(
+        _importlib.import_module("hivemind.tools.file_operations_tool"), "FileOperationsTool", None
+    )
+    DatabaseQueryTool = getattr(
+        _importlib.import_module("hivemind.tools.database_query_tool"), "DatabaseQueryTool", None
+    )
+    CodeAnalysisTool = getattr(
+        _importlib.import_module("hivemind.tools.code_analysis_tool"), "CodeAnalysisTool", None
+    )
+    TextProcessingTool = getattr(
+        _importlib.import_module("hivemind.tools.text_processing_tool"), "TextProcessingTool", None
+    )
+    SystemInfoTool = getattr(
+        _importlib.import_module("hivemind.tools.system_info_tool"), "SystemInfoTool", None
+    )
 except Exception:
     ToolRegistry = None  # type: ignore
     global_registry = None  # type: ignore
@@ -142,7 +185,7 @@ except Exception:
     redis = None  # type: ignore
 
 try:
-    from hivemind.cache import SemanticCache, get_semantic_cache, create_cache_manager
+    from hivemind.cache import SemanticCache, create_cache_manager, get_semantic_cache
 except Exception:
     SemanticCache = None
     get_semantic_cache = None
@@ -150,7 +193,12 @@ except Exception:
 
 # Secrets manager (optional import, endpoints guard against absence)
 try:
-    from hivemind.secrets_manager import secrets_manager as _secrets_manager, SecretProvider as _SecretProvider  # type: ignore
+    from hivemind.secrets_manager import (
+        SecretProvider as _SecretProvider,
+    )
+    from hivemind.secrets_manager import (
+        secrets_manager as _secrets_manager,
+    )  # type: ignore
 except Exception:
     _secrets_manager = None  # type: ignore
     _SecretProvider = None  # type: ignore
@@ -242,11 +290,19 @@ websockets: list[WebSocket] = []
 async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
+    global \
+        resource_estimator, \
+        adapter_manager, \
+        tool_auditor, \
+        intent_modeler, \
+        confidence_modeler, \
+        ds_router, \
+        tool_registry
     global semantic_cache, cache_manager
     # Initialize OTEL tracer (if enabled)
     try:
         from .observability import setup_tracing_if_enabled  # type: ignore
+
         setup_tracing_if_enabled()
     except Exception:
         pass
@@ -254,6 +310,7 @@ async def startup() -> None:
     # Mount Arena router dynamically based on env (useful for tests)
     try:
         from .arena import router as arena_router  # type: ignore
+
         enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
         already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
         if enabled and not already:
@@ -263,26 +320,26 @@ async def startup() -> None:
     # Mount Providers admin endpoints if present (keys redacted)
     try:
         from .providers_admin_mount import mount_admin_providers  # type: ignore
+
         mount_admin_providers(app)
     except Exception:
         pass
 
-
-    
     # Initialize settings
     if Settings is not None:
         settings = Settings()
-    
+
     # Initialize DS-Router
     if DSRouter is not None and RouterConfig is not None:
         router_config = RouterConfig.from_env()
         ds_router = DSRouter(router_config)
-        
+
     # Initialize retriever
     if Retriever is not None and settings is not None:
         # Try to initialize enhanced retriever with Qdrant support
         try:
             from hivemind.rag.hybrid_retriever import create_hybrid_retriever
+
             retriever = create_hybrid_retriever(settings)
             if retriever is not None and getattr(retriever, "is_ready", False):
                 log.info("✅ Enhanced Hybrid RAG Retriever initialized successfully")
@@ -295,16 +352,16 @@ async def startup() -> None:
             log.warning(f"Failed to initialize hybrid retriever: {e}")
             # Fallback to original retriever
             retriever = Retriever(settings.rag_index, settings.embed_model)
-    
+
     # Initialize engine
     if CapsuleEngine is not None:
         engine = CapsuleEngine()
-    
+
     # Initialize text roles
     if TextRoles is not None and settings is not None:
         # runtime import may be optional
         text_roles = TextRoles(settings)  # type: ignore[call-arg]
-    
+
     # Initialize Tool Registry and discover tools
     if ToolRegistry is not None and global_registry is not None:
         tool_registry = global_registry
@@ -336,7 +393,7 @@ async def startup() -> None:
             print(f"🛠️ Enhanced Tool Registry initialized with {tool_count} tools")
             if hasattr(tool_registry, "get_tools_by_category"):
                 try:
-                    cats = getattr(tool_registry, "get_tools_by_category")().keys()
+                    cats = tool_registry.get_tools_by_category().keys()
                     print(f"📊 Tool categories: {', '.join(list(cats))}")
                 except Exception:
                     pass
@@ -347,7 +404,7 @@ async def startup() -> None:
                         print(f"🔒 Tools requiring approval: {', '.join(approval_tools)}")
                 except Exception:
                     pass
-    
+
     # Initialize Semantic Cache
     if get_semantic_cache is not None and settings is not None:
         try:
@@ -356,12 +413,12 @@ async def startup() -> None:
                 redis_url=redis_url,
                 embedding_model=settings.embed_model or "all-MiniLM-L6-v2",
                 # Lower threshold to improve recall for paraphrases
-                similarity_threshold=0.88
+                similarity_threshold=0.88,
             )
-            
+
             if semantic_cache and semantic_cache.is_ready:
                 print("🧠 Semantic Cache initialized successfully")
-                
+
                 # Initialize cache manager
                 if create_cache_manager is not None:
                     cache_manager = await create_cache_manager(redis_url)
@@ -369,13 +426,12 @@ async def startup() -> None:
                         print("📈 Cache Manager initialized successfully")
             else:
                 print("⚠️ Semantic Cache initialization failed")
-                
+
         except Exception as e:
             print(f"❌ Failed to initialize Semantic Cache: {e}")
             semantic_cache = None
             cache_manager = None
-    
-    
+
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
 
@@ -383,12 +439,12 @@ async def startup() -> None:
 def _env_write(key: str, value: str) -> None:
     try:
         env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-        lines: List[str] = []
+        lines: list[str] = []
         if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
+            with open(env_path, encoding="utf-8") as f:
                 lines = f.read().splitlines()
         found = False
-        new_lines: List[str] = []
+        new_lines: list[str] = []
         for line in lines:
             if line.strip().startswith(f"{key}="):
                 new_lines.append(f"{key}={value}")
@@ -403,27 +459,27 @@ def _env_write(key: str, value: str) -> None:
         pass
 
 
-def _prom_q(base_url: Optional[str], promql: str) -> Optional[Dict[str, Any]]:
+def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict[str, Any]]:
     if not base_url:
         return None
     try:
         params = _u.urlencode({"query": promql})
         with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
-            data = cast(Dict[str, Any], _json.loads(r.read().decode()))
+            data = cast(dict[str, Any], _json.loads(r.read().decode()))
             if data.get("status") == "success":
-                return cast(Optional[Dict[str, Any]], data.get("data"))
+                return cast(Optional[dict[str, Any]], data.get("data"))
     except Exception:
         return None
     return None
 
 
-def _scalar(data: Optional[Dict[str, Any]]) -> Optional[float]:
+def _scalar(data: Optional[dict[str, Any]]) -> Optional[float]:
     if not data:
         return None
     try:
         res_any: Any = data.get("result", [])
         if isinstance(res_any, list) and res_any and isinstance(res_any[0], dict):
-            first: Dict[str, Any] = cast(Dict[str, Any], res_any[0])
+            first: dict[str, Any] = cast(dict[str, Any], res_any[0])
             v = first.get("value", [None, None])[1]
             return float(v) if v is not None else None
         return None
@@ -431,8 +487,8 @@ def _scalar(data: Optional[Dict[str, Any]]) -> Optional[float]:
         return None
 
 
-async def _broadcast_autonomy_event(event: Dict[str, Any]) -> None:
-    dead: List[WebSocket] = []
+async def _broadcast_autonomy_event(event: dict[str, Any]) -> None:
+    dead: list[WebSocket] = []
     for ws in list(websockets):
         try:
             await ws.send_json({"type": "autonomy_events", "payload": [event]})
@@ -484,6 +540,7 @@ async def _start_autonomy_with_leader_election() -> None:
                         backoff = min(backoff * 2, 60)
                         continue
                 await asyncio.sleep(60)
+
         asyncio.get_event_loop().create_task(renew_lock())
     except Exception:
         try:
@@ -502,7 +559,7 @@ async def healthz() -> dict[str, bool]:
 
 
 @app.get(f"{API_PREFIX}/vllm/models")
-async def vllm_models() -> Dict[str, Any]:
+async def vllm_models() -> dict[str, Any]:
     """Helper endpoint to query vLLM service for loaded models."""
     try:
         if settings is None or settings.vllm_endpoint is None:
@@ -527,7 +584,7 @@ async def secrets_health() -> dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/secrets/exists")
-async def secret_exists(name: str) -> Dict[str, Any]:
+async def secret_exists(name: str) -> dict[str, Any]:
     """Check whether a secret exists (without returning its value)."""
     try:
         if _secrets_manager is None:
@@ -542,7 +599,7 @@ async def secret_exists(name: str) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/secrets/set")
-async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+async def secret_set(payload: dict[str, Any], request: Request) -> dict[str, Any]:
     """Store a secret via the configured secrets provider.
 
     Expected body: { "name": string, "value": string | object }
@@ -556,7 +613,9 @@ async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any
         # Optional admin token check: if ADMIN_TOKEN is set, require matching header
         admin_token = os.getenv("ADMIN_TOKEN")
         if admin_token:
-            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            header_token = request.headers.get("x-admin-token") or request.headers.get(
+                "X-Admin-Token"
+            )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
 
@@ -603,8 +662,8 @@ async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any
         return {"error": str(exc)}
 
 
-async def _get_approvals() -> List[Dict[str, Any]]:
-    items: List[Dict[str, Any]] = []
+async def _get_approvals() -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
     if engine is None:
         return items
     try:
@@ -617,12 +676,12 @@ async def _get_approvals() -> List[Dict[str, Any]]:
 
 
 @app.get(f"{API_PREFIX}/approvals")
-async def list_approvals() -> List[Dict[str, Any]]:
+async def list_approvals() -> list[dict[str, Any]]:
     return await _get_approvals()
 
 
 @app.post(f"{API_PREFIX}/approvals/{{idx}}/approve")
-async def approve_proposal(idx: int) -> Dict[str, str]:
+async def approve_proposal(idx: int) -> dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
     try:
@@ -637,7 +696,7 @@ async def approve_proposal(idx: int) -> Dict[str, str]:
 
 
 @app.post(f"{API_PREFIX}/approvals/{{idx}}/deny")
-async def deny_proposal(idx: int) -> Dict[str, str]:
+async def deny_proposal(idx: int) -> dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
     try:
@@ -652,24 +711,26 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
 
 
 @app.get(f"{API_PREFIX}/adapters")
-async def list_adapters() -> List[Dict[str, Any]]:
-    table: List[Dict[str, Any]] = []
+async def list_adapters() -> list[dict[str, Any]]:
+    table: list[dict[str, Any]] = []
     if adapter_manager is None:
         return table
     try:
         for role, entry in adapter_manager.state.items():  # type: ignore
-            table.append({
-                "role": role,
-                "champion": entry.get("active") or "",
-                "challenger": entry.get("challenger") or "",
-            })
+            table.append(
+                {
+                    "role": role,
+                    "champion": entry.get("active") or "",
+                    "challenger": entry.get("challenger") or "",
+                }
+            )
     except Exception:
         pass
     return table
 
 
 @app.get(f"{API_PREFIX}/adapters/state")
-async def adapters_state() -> Dict[str, Any]:
+async def adapters_state() -> dict[str, Any]:
     if adapter_manager is None:
         return {"state": {}}
     try:
@@ -679,7 +740,7 @@ async def adapters_state() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/adapters/promote/{{role}}")
-async def promote_adapter(role: str) -> Dict[str, Any]:
+async def promote_adapter(role: str) -> dict[str, Any]:
     if adapter_manager is None:
         return {"error": "Adapter manager unavailable"}
     try:
@@ -690,20 +751,22 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/config/governor")
-async def get_governor() -> Dict[str, Any]:
+async def get_governor() -> dict[str, Any]:
     if settings is None:
         return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_DEEPSEEK_R1_ARBITER": None}
     try:
         return {
             "ENABLE_ORACLE_REFINEMENT": bool(getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)),
-            "FORCE_DEEPSEEK_R1_ARBITER": bool(getattr(settings, "FORCE_DEEPSEEK_R1_ARBITER", False)),
+            "FORCE_DEEPSEEK_R1_ARBITER": bool(
+                getattr(settings, "FORCE_DEEPSEEK_R1_ARBITER", False)
+            ),
         }
     except Exception as exc:
         return {"error": str(exc)}
 
 
 @app.post(f"{API_PREFIX}/config/governor")
-async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
+async def update_governor(cfg: dict[str, Any]) -> dict[str, str]:
     global settings
     if settings is None:
         return {"error": "Settings unavailable"}
@@ -729,7 +792,7 @@ async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
 
 
 @app.get(f"{API_PREFIX}/trust/policy")
-async def get_trust_policy() -> Dict[str, Any]:
+async def get_trust_policy() -> dict[str, Any]:
     if settings is None:
         return {"enabled": False}
     allow = getattr(settings, "TRUST_ALLOWLIST", None) or ""
@@ -742,14 +805,16 @@ async def get_trust_policy() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/trust/policy")
-async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
+async def set_trust_policy(cfg: dict[str, Any]) -> dict[str, Any]:
     global settings, confidence_modeler
     if settings is None or ConfidenceModeler is None or TrustPolicy is None:
         return {"error": "Trust module unavailable"}
     try:
         if "enabled" in cfg:
             settings.TRUSTED_AUTONOMY_ENABLED = bool(cfg["enabled"])  # type: ignore
-            _env_write("TRUSTED_AUTONOMY_ENABLED", "true" if settings.TRUSTED_AUTONOMY_ENABLED else "false")
+            _env_write(
+                "TRUSTED_AUTONOMY_ENABLED", "true" if settings.TRUSTED_AUTONOMY_ENABLED else "false"
+            )
         if "threshold" in cfg:
             settings.TRUST_THRESHOLD = float(cfg["threshold"])  # type: ignore
             _env_write("TRUST_THRESHOLD", str(settings.TRUST_THRESHOLD))
@@ -760,7 +825,9 @@ async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
             allow = ",".join(cfg.get("allowlist") or [])
             settings.TRUST_ALLOWLIST = allow  # type: ignore
             _env_write("TRUST_ALLOWLIST", allow)
-        allow_t = tuple([s.strip() for s in (settings.TRUST_ALLOWLIST or "").split(",") if s.strip()])  # type: ignore
+        allow_t = tuple(
+            [s.strip() for s in (settings.TRUST_ALLOWLIST or "").split(",") if s.strip()]
+        )  # type: ignore
         policy = TrustPolicy(
             enabled=bool(settings.TRUSTED_AUTONOMY_ENABLED),  # type: ignore
             threshold=float(settings.TRUST_THRESHOLD),  # type: ignore
@@ -777,7 +844,7 @@ async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/trust/score")
-async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
+async def trust_score(proposal: dict[str, Any]) -> dict[str, Any]:
     if confidence_modeler is None:
         return {"enabled": False, "score": None, "bypass": False, "reason": "modeler_unavailable"}
     try:
@@ -794,111 +861,110 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/internal/delegate_task")
-async def delegate_task(task_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
+async def delegate_task(task_data: dict[str, Any]) -> dict[str, Any]:
+    """Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
     Internal-only endpoint for swarm coordination.
     """
     try:
         from hivemind.swarm_protocol import get_swarm_coordinator
-        
+
         swarm = await get_swarm_coordinator()
         if not swarm:
             return {"error": "Swarm protocol not available"}
-        
+
         task_type = task_data.get("task_type")
         payload = task_data.get("payload", {})
         priority = task_data.get("priority", 1)
         timeout = task_data.get("timeout", 300)
-        
+
         if not task_type:
             return {"error": "task_type required"}
-        
+
         # Delegate task to swarm
         result = await swarm.delegate_task(task_type, payload, priority, timeout)
-        
+
         if result:
             return {"status": "completed", "result": result}
         else:
             return {"status": "failed", "error": "Task delegation failed"}
-            
+
     except Exception as exc:
         return {"error": str(exc)}
 
 
 @app.get(f"{API_PREFIX}/swarm/status")
-async def swarm_status() -> Dict[str, Any]:
+async def swarm_status() -> dict[str, Any]:
     """Get swarm coordination status and node information."""
     try:
         from hivemind.swarm_protocol import get_swarm_coordinator
-        
+
         swarm = await get_swarm_coordinator()
         if not swarm:
             return {"swarm_enabled": False, "reason": "coordinator_unavailable"}
-        
+
         # Get swarm state
         if swarm.redis_client:
             nodes_data_any: Any = cast(Any, swarm.redis_client).hgetall("swarm:nodes")
-            nodes_data: Dict[str, Any]
+            nodes_data: dict[str, Any]
             if asyncio.iscoroutine(nodes_data_any):  # type: ignore[attr-defined]
                 nodes_data = await nodes_data_any  # type: ignore[assignment]
             else:
-                nodes_data = cast(Dict[str, Any], nodes_data_any)
-            nodes: List[Dict[str, Any]] = []
+                nodes_data = cast(dict[str, Any], nodes_data_any)
+            nodes: list[dict[str, Any]] = []
             for _node_id, node_json in nodes_data.items():
                 try:
                     if isinstance(node_json, str):
                         node_info = json.loads(node_json)
                     elif isinstance(node_json, dict):
-                        node_info = cast(Dict[str, Any], node_json)
+                        node_info = cast(dict[str, Any], node_json)
                     else:
                         continue
                     if isinstance(node_info, dict):
-                        nodes.append(cast(Dict[str, Any], node_info))
+                        nodes.append(cast(dict[str, Any], node_info))
                 except Exception:
                     continue
-            
+
             return {
                 "swarm_enabled": True,
                 "node_id": swarm.node_id,
                 "active_nodes": len(nodes),
                 "nodes": nodes,
                 "active_tasks": len(swarm.active_tasks),
-                "capabilities": swarm.capabilities
+                "capabilities": swarm.capabilities,
             }
         else:
             return {"swarm_enabled": False, "reason": "redis_unavailable"}
-            
+
     except Exception as exc:
         return {"swarm_enabled": False, "error": str(exc)}
 
 
 @app.get(f"{API_PREFIX}/providers")
-async def get_providers_status() -> Dict[str, Any]:
+async def get_providers_status() -> dict[str, Any]:
     """Get status of all DS-Router providers."""
     if ds_router is None:
         return {"error": "DS-Router not available"}
-    
+
     try:
         provider_status = await ds_router.get_provider_status()
         return {
             "providers": provider_status,
             "router_active": True,
-            "timestamp": asyncio.get_event_loop().time()
+            "timestamp": asyncio.get_event_loop().time(),
         }
     except Exception as exc:
         return {"error": str(exc)}
 
 
 @app.post(f"{API_PREFIX}/admin/budget/reset")
-async def reset_budget() -> Dict[str, Any]:
+async def reset_budget() -> dict[str, Any]:
     """Reset daily budget counters (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
     if not admin_token:
         return {"error": "Admin token not configured"}
-    
+
     # Reset using the enhanced distributed budget tracker
-    if ds_router is not None and hasattr(ds_router, '_budget_tracker'):
+    if ds_router is not None and hasattr(ds_router, "_budget_tracker"):
         result = await ds_router._budget_tracker.reset_daily_budget()
         return {"status": "budget_reset", "details": result}
     else:
@@ -906,7 +972,7 @@ async def reset_budget() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/admin/router/reload-secrets")
-async def reload_router_secrets(request: Request) -> Dict[str, Any]:
+async def reload_router_secrets(request: Request) -> dict[str, Any]:
     """Reload DS-Router config from environment after secrets update.
 
     Requires x-admin-token header if ADMIN_TOKEN is configured.
@@ -914,14 +980,16 @@ async def reload_router_secrets(request: Request) -> Dict[str, Any]:
     try:
         admin_token = os.environ.get("ADMIN_TOKEN")
         if admin_token:
-            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            header_token = request.headers.get("x-admin-token") or request.headers.get(
+                "X-Admin-Token"
+            )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
 
         if ds_router is None:
             return {"error": "DS-Router not available"}
         # DSRouter exposes refresh_config_from_env()
-        if hasattr(ds_router, 'refresh_config_from_env'):
+        if hasattr(ds_router, "refresh_config_from_env"):
             ds_router.refresh_config_from_env()  # type: ignore
             return {"status": "reloaded"}
         else:
@@ -929,8 +997,9 @@ async def reload_router_secrets(request: Request) -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
+
 @app.post(f"{API_PREFIX}/admin/providers/qwen/warm")
-async def warm_qwen_provider(request: Request) -> Dict[str, Any]:
+async def warm_qwen_provider(request: Request) -> dict[str, Any]:
     """Warm the Qwen CPU provider by initializing its local model.
 
     Requires x-admin-token header if ADMIN_TOKEN is configured.
@@ -940,7 +1009,9 @@ async def warm_qwen_provider(request: Request) -> Dict[str, Any]:
     try:
         admin_token = os.environ.get("ADMIN_TOKEN")
         if admin_token:
-            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            header_token = request.headers.get("x-admin-token") or request.headers.get(
+                "X-Admin-Token"
+            )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
 
@@ -985,30 +1056,30 @@ async def warm_qwen_provider(request: Request) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools")
-async def list_tools() -> Dict[str, Any]:
+async def list_tools() -> dict[str, Any]:
     """Get list of all available tools."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     return {
         "tools": tool_registry.get_all_schemas(),
         "categories": tool_registry.get_tools_by_category(),
         "high_risk": tool_registry.get_high_risk_tools(),
         "approval_required": tool_registry.get_approval_required_tools(),
-        "total_count": len(tool_registry.tools)
+        "total_count": len(tool_registry.tools),
     }
 
 
 @app.get(f"{API_PREFIX}/tools/{{tool_name}}")
-async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
+async def get_tool_schema(tool_name: str) -> dict[str, Any]:
     """Get schema for a specific tool."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     schema = tool_registry.get_tool_schema(tool_name)
     if schema is None:
         return {"error": f"Tool '{tool_name}' not found"}
-    
+
     return schema
 
 
@@ -1016,8 +1087,9 @@ async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
 # Semantic Cache HTTP Endpoints
 # -----------------------------
 
+
 @app.get(f"{API_PREFIX}/cache/health")
-async def cache_health() -> Dict[str, Any]:
+async def cache_health() -> dict[str, Any]:
     """Health status for the semantic cache."""
     try:
         if semantic_cache is None:
@@ -1028,7 +1100,7 @@ async def cache_health() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/cache/analytics")
-async def cache_analytics() -> Dict[str, Any]:
+async def cache_analytics() -> dict[str, Any]:
     """Analytics snapshot for the semantic cache."""
     try:
         if semantic_cache is None:
@@ -1039,7 +1111,7 @@ async def cache_analytics() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/clear")
-async def cache_clear(request: Request, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def cache_clear(request: Request, payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Clear semantic cache entries. Optional body: { "pattern": "substring" }
 
     If ADMIN_TOKEN is set, requires X-Admin-Token header.
@@ -1050,7 +1122,9 @@ async def cache_clear(request: Request, payload: Optional[Dict[str, Any]] = None
 
         admin_token = os.environ.get("ADMIN_TOKEN")
         if admin_token:
-            header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+            header_token = request.headers.get("x-admin-token") or request.headers.get(
+                "X-Admin-Token"
+            )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
 
@@ -1067,14 +1141,16 @@ async def cache_clear(request: Request, payload: Optional[Dict[str, Any]] = None
 
 
 @app.post(f"{API_PREFIX}/tools/{{tool_name}}/execute")
-async def execute_tool(tool_name: str, parameters: Dict[str, Any], request: Request) -> Dict[str, Any]:
+async def execute_tool(
+    tool_name: str, parameters: dict[str, Any], request: Request
+) -> dict[str, Any]:
     """Execute a tool with given parameters."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     # Get operator ID from request if available
     operator_id = request.headers.get("X-Operator-ID")
-    
+
     # Check if tool requires approval
     tool = tool_registry.get_tool(tool_name)
     if tool and tool.requires_approval:
@@ -1086,65 +1162,66 @@ async def execute_tool(tool_name: str, parameters: Dict[str, Any], request: Requ
                 "approval_required": True,
                 "approval_id": approval_status.get("approval_id"),
                 "risk_level": tool.risk_level,
-                "reason": approval_status.get("reason")
+                "reason": approval_status.get("reason"),
             }
-    
+
     # Execute the tool with enhanced tracking
     result = await tool_registry.execute_tool(tool_name, parameters, operator_id)
     return result.to_dict()
 
 
-async def check_tool_approval(tool_name: str, parameters: Dict[str, Any], 
-                             operator_id: Optional[str]) -> Dict[str, Any]:
+async def check_tool_approval(
+    tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+) -> dict[str, Any]:
     """Check tool approval status."""
     # This would integrate with your approval system
     # For now, return mock approval check
     return {
         "approved": False,
-        "reason": "Tool requires operator approval due to security requirements"
+        "reason": "Tool requires operator approval due to security requirements",
     }
 
 
 @app.get(f"{API_PREFIX}/tools/analytics")
-async def get_tool_analytics() -> Dict[str, Any]:
+async def get_tool_analytics() -> dict[str, Any]:
     """Get comprehensive tool analytics."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     return tool_registry.get_tool_analytics()
 
 
 @app.get(f"{API_PREFIX}/tools/analytics/{{tool_name}}")
-async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> Dict[str, Any]:
+async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> dict[str, Any]:
     """Get analytics for a specific tool."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     return tool_registry.get_tool_analytics(tool_name, days)
 
 
 @app.get(f"{API_PREFIX}/tools/approvals")
-async def get_pending_approvals() -> Dict[str, Any]:
+async def get_pending_approvals() -> dict[str, Any]:
     """Get pending tool execution approvals."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     return {
         "pending_approvals": tool_registry.get_pending_approvals(),
-        "approval_history": tool_registry.approval_history[-20:]  # Last 20 approvals
+        "approval_history": tool_registry.approval_history[-20:],  # Last 20 approvals
     }
 
 
 @app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/approve")
-async def approve_tool_execution(approval_id: str, request: Request) -> Dict[str, Any]:
+async def approve_tool_execution(approval_id: str, request: Request) -> dict[str, Any]:
     """Approve a pending tool execution."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     approver_id = request.headers.get("X-Operator-ID", "unknown")
-    
+
     success = tool_registry.approve_tool_execution(approval_id, approver_id)
-    
+
     if success:
         return {"status": "approved", "approval_id": approval_id, "approved_by": approver_id}
     else:
@@ -1152,15 +1229,17 @@ async def approve_tool_execution(approval_id: str, request: Request) -> Dict[str
 
 
 @app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/deny")
-async def deny_tool_execution(approval_id: str, request: Request, denial_reason: str = "") -> Dict[str, Any]:
+async def deny_tool_execution(
+    approval_id: str, request: Request, denial_reason: str = ""
+) -> dict[str, Any]:
     """Deny a pending tool execution."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     approver_id = request.headers.get("X-Operator-ID", "unknown") if request else "unknown"
-    
+
     success = tool_registry.deny_tool_execution(approval_id, approver_id, denial_reason)
-    
+
     if success:
         return {"status": "denied", "approval_id": approval_id, "denied_by": approver_id}
     else:
@@ -1168,51 +1247,50 @@ async def deny_tool_execution(approval_id: str, request: Request, denial_reason:
 
 
 @app.get(f"{API_PREFIX}/cache/status")
-async def get_cache_status() -> Dict[str, Any]:
+async def get_cache_status() -> dict[str, Any]:
     """Get semantic cache status and analytics."""
     if not semantic_cache:
         return {"status": "disabled", "reason": "Semantic cache not initialized"}
-    
+
     try:
         analytics = await semantic_cache.get_analytics()
         health = await semantic_cache.health_check()
-        
+
         return {
             "status": "enabled" if semantic_cache.is_ready else "error",
             "health": health,
             "analytics": analytics,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 
 @app.get(f"{API_PREFIX}/cache/report")
-async def get_cache_report() -> Dict[str, Any]:
+async def get_cache_report() -> dict[str, Any]:
     """Get comprehensive cache performance report."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
-    
+
     try:
         report = await cache_manager.cache_statistics_report()
         return {"report": report}
     except Exception as e:
         return {"error": str(e)}
 
-
     # Note: POST /cache/clear is defined earlier with admin-token guard
 
 
 @app.post(f"{API_PREFIX}/cache/optimize")
-async def optimize_cache(target_hit_rate: float = 0.5) -> Dict[str, Any]:
+async def optimize_cache(target_hit_rate: float = 0.5) -> dict[str, Any]:
     """Optimize cache settings for better performance."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
-    
+
     try:
         if target_hit_rate < 0.1 or target_hit_rate > 0.9:
             return {"error": "Target hit rate must be between 0.1 and 0.9"}
-        
+
         result = await cache_manager.optimize_cache_settings(target_hit_rate)
         return result
     except Exception as e:
@@ -1220,39 +1298,39 @@ async def optimize_cache(target_hit_rate: float = 0.5) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/warm")
-async def warm_cache() -> Dict[str, Any]:
+async def warm_cache() -> dict[str, Any]:
     """Warm the cache with common queries."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
-    
+
     try:
         # Use some default queries for warming
-        common_queries: List[Dict[str, Any]] = [
+        common_queries: list[dict[str, Any]] = [
             {
                 "query": "What is artificial intelligence?",
                 "response": {
                     "answer": "Artificial Intelligence (AI) is a branch of computer science that focuses on creating systems capable of performing tasks that typically require human intelligence, such as learning, reasoning, problem-solving, and understanding natural language.",
-                    "provider": "cache_warming"
-                }
+                    "provider": "cache_warming",
+                },
             },
             {
                 "query": "How does machine learning work?",
                 "response": {
                     "answer": "Machine learning works by using algorithms to analyze data, identify patterns, and make predictions or decisions without being explicitly programmed for each specific task. It involves training models on data so they can learn and improve their performance over time.",
-                    "provider": "cache_warming"
-                }
+                    "provider": "cache_warming",
+                },
             },
             {
                 "query": "Explain neural networks",
                 "response": {
                     "answer": "Neural networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers that process information by passing signals through weighted connections. They can learn patterns in data through training.",
-                    "provider": "cache_warming"
-                }
-            }
+                    "provider": "cache_warming",
+                },
+            },
         ]
         result = await cache_manager.warm_cache(common_queries)
         return result
-        
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -1260,15 +1338,15 @@ async def warm_cache() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools/health")
-async def get_tools_health() -> Dict[str, Any]:
+async def get_tools_health() -> dict[str, Any]:
     """Get health status of all tools."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
-    
+
     health_status = {}
     total_tools = len(tool_registry.tools)
     healthy_tools = 0
-    
+
     for tool_name, tool in tool_registry.tools.items():
         try:
             # Basic health check - could be enhanced
@@ -1277,61 +1355,58 @@ async def get_tools_health() -> Dict[str, Any]:
                 "category": tool.category,
                 "risk_level": tool.risk_level,
                 "requires_approval": tool.requires_approval,
-                "version": tool.version
+                "version": tool.version,
             }
             healthy_tools += 1
         except Exception as e:
-            health_status[tool_name] = {
-                "status": "unhealthy",
-                "error": str(e)
-            }
-    
+            health_status[tool_name] = {"status": "unhealthy", "error": str(e)}
+
     return {
         "overall_health": "healthy" if healthy_tools == total_tools else "degraded",
         "healthy_tools": healthy_tools,
         "total_tools": total_tools,
-        "tools": health_status
+        "tools": health_status,
     }
 
 
 @app.post(f"{API_PREFIX}/tools/batch_execute")
-async def batch_execute_tools(requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def batch_execute_tools(requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Execute multiple tools in sequence."""
     if tool_registry is None:
         return [{"error": "Tool registry not available"}]
-    
-    results: List[Dict[str, Any]] = []
+
+    results: list[dict[str, Any]] = []
     for request in requests:
         tool_name = request.get("tool")
         parameters = request.get("parameters", {})
-        
+
         if not tool_name:
             results.append({"error": "Missing tool name in request"})
             continue
-        
+
         # Check approval requirement
         tool = tool_registry.get_tool(tool_name)
         if tool and tool.requires_approval:
             results.append({"error": f"Tool '{tool_name}' requires operator approval"})
             continue
-        
+
         # Execute
         result = await tool_registry.execute_tool(tool_name, parameters)
         results.append(result.to_dict())
-    
+
     return results
 
 
 @app.post(f"{API_PREFIX}/admin/router/set-thresholds")
-async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
+async def set_router_thresholds(thresholds: dict[str, float]) -> dict[str, Any]:
     """Set router confidence and support thresholds (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
     if not admin_token:
         return {"error": "Admin token not configured"}
-    
+
     if ds_router is None:
         return {"error": "DS-Router not available"}
-    
+
     try:
         # Update thresholds
         if "conf_threshold" in thresholds:
@@ -1340,14 +1415,14 @@ async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
             ds_router.config.support_threshold = float(thresholds["support_threshold"])
         if "max_cot_tokens" in thresholds:
             ds_router.config.max_cot_tokens = int(thresholds["max_cot_tokens"])
-            
+
         return {
             "status": "updated",
             "current_thresholds": {
                 "conf_threshold": ds_router.config.conf_threshold,
                 "support_threshold": ds_router.config.support_threshold,
-                "max_cot_tokens": ds_router.config.max_cot_tokens
-            }
+                "max_cot_tokens": ds_router.config.max_cot_tokens,
+            },
         }
     except Exception as exc:
         return {"error": str(exc)}
@@ -1360,48 +1435,93 @@ async def autopromote_preview() -> dict[str, Any]:
     base = getattr(settings, "PROMETHEUS_BASE_URL", None)
     window = "5m"
     min_samples = int(getattr(settings, "AUTOPROMOTE_MIN_SAMPLES", 300))
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     # Build a representative prompt from recent user inputs to estimate costs
     representative_prompt = ""
     try:
         if engine is not None:
-            user_msgs = [m.get("content", "") for m in list(engine.memory)[-200:] if m.get("role") == "user"]  # type: ignore
+            user_msgs = [
+                m.get("content", "") for m in list(engine.memory)[-200:] if m.get("role") == "user"
+            ]  # type: ignore
             snippet = "\n".join(user_msgs[-5:])
             representative_prompt = snippet[:2000]
     except Exception:
         representative_prompt = "Evaluate adapter performance under typical conversational load."
 
     for role, entry in getattr(adapter_manager, "state", {}).items():  # type: ignore
-        entry_map: Dict[str, Any] = cast(Dict[str, Any], (entry or {}))
+        entry_map: dict[str, Any] = cast(dict[str, Any], (entry or {}))
         active = cast(Optional[str], entry_map.get("active"))
         challenger = cast(Optional[str], entry_map.get("challenger"))
         if not (active and challenger and active != challenger):
             continue
-        r_active = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{active}"}}[{window}]))')) or 0.0
-        r_chall = _scalar(_prom_q(base, f'sum(rate(cb_requests_total{{adapter_version="{challenger}"}}[{window}]))')) or 0.0
+        r_active = (
+            _scalar(
+                _prom_q(
+                    base, f'sum(rate(cb_requests_total{{adapter_version="{active}"}}[{window}]))'
+                )
+            )
+            or 0.0
+        )
+        r_chall = (
+            _scalar(
+                _prom_q(
+                    base,
+                    f'sum(rate(cb_requests_total{{adapter_version="{challenger}"}}[{window}]))',
+                )
+            )
+            or 0.0
+        )
         if (r_active * 300) < min_samples or (r_chall * 300) < min_samples:
             continue
-        p95_a = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{active}"}}[{window}])) by (le))')) or 9e9
-        p95_c = _scalar(_prom_q(base, f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{challenger}"}}[{window}])) by (le))')) or 9e9
+        p95_a = (
+            _scalar(
+                _prom_q(
+                    base,
+                    f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{active}"}}[{window}])) by (le))',
+                )
+            )
+            or 9e9
+        )
+        p95_c = (
+            _scalar(
+                _prom_q(
+                    base,
+                    f'histogram_quantile(0.95, sum(rate(cb_request_latency_seconds_bucket{{adapter_version="{challenger}"}}[{window}])) by (le))',
+                )
+            )
+            or 9e9
+        )
         try:
-            cost_small = resource_estimator.estimate_cost("implementer", "small", representative_prompt) if resource_estimator else {"predicted_cost_small": 1.0}
-            cost_large = resource_estimator.estimate_cost("implementer", "large", representative_prompt) if resource_estimator else {"predicted_cost_large": 1.0}
+            cost_small = (
+                resource_estimator.estimate_cost("implementer", "small", representative_prompt)
+                if resource_estimator
+                else {"predicted_cost_small": 1.0}
+            )
+            cost_large = (
+                resource_estimator.estimate_cost("implementer", "large", representative_prompt)
+                if resource_estimator
+                else {"predicted_cost_large": 1.0}
+            )
         except Exception:
             cost_small = {"predicted_cost_small": 1.0}
             cost_large = {"predicted_cost_large": 1.0}
         better_latency = p95_c <= (p95_a * 0.9)
-        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (cost_small.get("predicted_cost_small", 1.0))
+        better_cost = (cost_large.get("predicted_cost_large", 1.0)) <= (
+            cost_small.get("predicted_cost_small", 1.0)
+        )
         if better_latency or better_cost:
-            out.append({
-                "role": role,
-                "active": active,
-                "challenger": challenger,
-                "p95_a": p95_a,
-                "p95_c": p95_c,
-                "predicted_cost_small": cost_small.get("predicted_cost_small"),
-                "predicted_cost_large": cost_large.get("predicted_cost_large"),
-                "reason": "latency" if better_latency else "cost",
-            })
+            out.append(
+                {
+                    "role": role,
+                    "active": active,
+                    "challenger": challenger,
+                    "p95_a": p95_a,
+                    "p95_c": p95_c,
+                    "predicted_cost_small": cost_small.get("predicted_cost_small"),
+                    "predicted_cost_large": cost_large.get("predicted_cost_large"),
+                    "reason": "latency" if better_latency else "cost",
+                }
+            )
     return {"candidates": out}
 
 
@@ -1418,40 +1538,50 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     websockets.append(websocket)  # type: ignore
     try:
         while True:
-            await asyncio.sleep(10) # Or listen to engine.bus for immediate events
+            await asyncio.sleep(10)  # Or listen to engine.bus for immediate events
             try:
                 if engine is not None:
                     summary = engine.get_state_summary()
                     await websocket.send_json({"type": "state_update", "payload": summary})
-                    
+
                     approvals = await _get_approvals()
                     await websocket.send_json({"type": "approvals_update", "payload": approvals})
 
                     # --- Add custom events here ---
                     # Example: Get recent self_extension memories
-                    recent_autonomy_events = [m for m in list(engine.memory)[-50:] if m.get("role") in ["self_extension", "approval_feedback"]]
+                    recent_autonomy_events = [
+                        m
+                        for m in list(engine.memory)[-50:]
+                        if m.get("role") in ["self_extension", "approval_feedback"]
+                    ]
                     if recent_autonomy_events:
-                        await websocket.send_json({"type": "autonomy_events_recent", "payload": recent_autonomy_events})
-                    
+                        await websocket.send_json(
+                            {"type": "autonomy_events_recent", "payload": recent_autonomy_events}
+                        )
+
                     # RAG system status
                     if retriever is not None:
-                        rag_status: Dict[str, Any] = {
+                        rag_status: dict[str, Any] = {
                             "is_ready": retriever.is_ready,
                             "doc_count": len(retriever.doc_store) if retriever.doc_store else 0,
-                            "embedding_model": retriever.embed_model_id
+                            "embedding_model": retriever.embed_model_id,
                         }
                         await websocket.send_json({"type": "rag_status", "payload": rag_status})
-                    
+
                     # Enhanced Oracle/Arbiter system status (DeepSeek R1 ecosystem)
-                    oracle_status: Dict[str, Any] = {
+                    oracle_status: dict[str, Any] = {
                         "deepseek_available": bool(os.getenv("DEEPSEEK_API_KEY")),
-                        "deepseek_r1_arbiter": bool(os.getenv("DEEPSEEK_API_KEY")),  # R1 for reasoning
+                        "deepseek_r1_arbiter": bool(
+                            os.getenv("DEEPSEEK_API_KEY")
+                        ),  # R1 for reasoning
                         "unified_ecosystem": True,  # All DeepSeek, no mixed APIs
-                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False) if settings else False,
-                        "cost_advantage": "70% cheaper than GPT-4o"
+                        "refinement_enabled": getattr(settings, "ENABLE_ORACLE_REFINEMENT", False)
+                        if settings
+                        else False,
+                        "cost_advantage": "70% cheaper than GPT-4o",
                     }
                     await websocket.send_json({"type": "oracle_status", "payload": oracle_status})
-                    
+
                     # You could also listen to engine.bus.get_nowait() or a dedicated queue for events
                     # and immediately broadcast them.
                     # -----------------------------
@@ -1471,22 +1601,29 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 async def train() -> dict[str, str]:
     try:
         from hivemind.training.dataset_build import build_text_sft_and_prefs, build_vl_sft
+
         build_text_sft_and_prefs()
         try:
             build_vl_sft()
         except Exception:
             pass
-        import subprocess, pathlib, uuid as _uuid
+        import pathlib
+        import subprocess
+        import uuid as _uuid
+
         base = pathlib.Path(settings.adapters_dir if settings else "/app/adapters")  # type: ignore
         out_dir = base / "text" / f"adapter_{_uuid.uuid4().hex}"
         out_dir.mkdir(parents=True, exist_ok=True)
-        subprocess.run([
-            sys.executable,
-            "-m",
-            "hivemind.training.sft_text",
-            "--out",
-            str(out_dir),
-        ], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "hivemind.training.sft_text",
+                "--out",
+                str(out_dir),
+            ],
+            check=True,
+        )
         if settings is not None:
             settings.text_adapter_path = str(out_dir)
         return {"status": "success", "adapter_path": str(out_dir)}
@@ -1499,7 +1636,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     q = sanitize_input(q)
     if engine is None:
         return {"answer": "Engine not ready"}
-    
+
     # Step 1: Check semantic cache first
     if semantic_cache and semantic_cache.is_ready:
         try:
@@ -1511,7 +1648,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                 return cached_response
         except Exception as e:
             log.warning(f"Semantic cache check failed: {e}")
-    
+
     # Continue with normal processing if no cache hit
     if engine is not None:
         engine.add_memory("user", q)  # type: ignore
@@ -1559,26 +1696,26 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             gen_request: Any = GenRequestAny(
                 prompt=prompt,
                 system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
-                max_tokens=(getattr(settings, 'max_new_tokens', 512) if settings else 512),
-                temperature=0.7
+                max_tokens=(getattr(settings, "max_new_tokens", 512) if settings else 512),
+                temperature=0.7,
             )
-            
+
             # Generate using DS-Router
             gen_response: Any = await ds_router.generate(gen_request)  # type: ignore[operator]
-            
+
             answer = gen_response.content
             provider_used = gen_response.provider
             confidence = gen_response.confidence
             escalated = gen_response.metadata.get("escalated", False)
-            
+
             # Add routing info to request scope for metrics
             request.scope["provider_used"] = provider_used
             request.scope["router_confidence"] = confidence
             request.scope["escalated"] = escalated
-            
+
         except Exception as exc:
             answer = f"Error with DS-Router: {exc}. Falling back to legacy routing."
-            
+
     # Legacy routing fallback if DS-Router not available or failed
     if provider_used is None:
         policy_used = None
@@ -1600,7 +1737,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                     pass
             if engine is not None:
                 try:
-                    ctx["phi"] = engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")  # type: ignore[operator]
+                    ctx["phi"] = (
+                        engine.get_state_summary().get("self_awareness_metrics", {}).get("phi")
+                    )  # type: ignore[operator]
                 except Exception:
                     pass
             ctx["planner_hints"] = planner_hints or []
@@ -1609,10 +1748,11 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
             try:
                 import json as __json
                 import pathlib as __pathlib
+
                 runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
                 snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
                 if snap_path.exists():
-                    with open(snap_path, "r", encoding="utf-8") as __f:
+                    with open(snap_path, encoding="utf-8") as __f:
                         ctx["cognitive_map"] = __json.load(__f)
             except Exception:
                 pass
@@ -1647,10 +1787,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                 roles_any = roles_obj  # type: ignore[assignment]
                 judge_any = judge  # type: ignore[assignment]
                 if policy == "committee":
-                    tasks: List[str] = await asyncio.gather(*[
-                        roles_any.implementer(prompt)
-                        for _ in range(settings.committee_k)
-                    ])
+                    tasks: list[str] = await asyncio.gather(
+                        *[roles_any.implementer(prompt) for _ in range(settings.committee_k)]
+                    )
                     rankings = await judge_any.rank(tasks, prompt=prompt)
                     answer = judge_any.merge(tasks, rankings)
                 elif policy == "debate":
@@ -1661,14 +1800,21 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                 elif policy == "ethical_deliberation":
                     # Ethical Synthesizer: Handle ethical dilemmas
                     if engine is not None:
-                        ethical_analysis_raw: Any = decision.get("ethical_analysis", {}) if decision else {}
-                        ethical_analysis: dict[str, Any] = cast(dict[str, Any], ethical_analysis_raw if isinstance(ethical_analysis_raw, dict) else {})
+                        ethical_analysis_raw: Any = (
+                            decision.get("ethical_analysis", {}) if decision else {}
+                        )
+                        ethical_analysis: dict[str, Any] = cast(
+                            dict[str, Any],
+                            ethical_analysis_raw if isinstance(ethical_analysis_raw, dict) else {},
+                        )
                         dilemma_type: str = str(ethical_analysis.get("dilemma_type", "unknown"))
                         severity: str = str(ethical_analysis.get("severity", "medium"))
                         detected_raw: Any = ethical_analysis.get("all_detected", [])
                         if not isinstance(detected_raw, (list, tuple)):
                             detected_raw = []
-                        detected_list_any: list[Any] = list(detected_raw) if isinstance(detected_raw, (list, tuple)) else []  # type: ignore[list-item]
+                        detected_list_any: list[Any] = (
+                            list(detected_raw) if isinstance(detected_raw, (list, tuple)) else []
+                        )  # type: ignore[list-item]
                         detected_list: list[str] = [str(x) for x in detected_list_any]
 
                         # Create ethical deliberation proposal
@@ -1720,7 +1866,7 @@ This query has been flagged for ethical review. Please provide guidance on how t
         pass
 
     result: dict[str, Any] = {"answer": answer}
-    
+
     # Add DS-Router specific information
     if provider_used:
         result["provider"] = provider_used
@@ -1728,7 +1874,7 @@ This query has been flagged for ethical review. Please provide guidance on how t
         result["confidence"] = confidence
     if escalated:
         result["escalated"] = escalated
-    
+
     # Legacy information
     try:
         sr = request.scope.get("selector_reason")
@@ -1745,9 +1891,11 @@ This query has been flagged for ethical review. Please provide guidance on how t
         result["planner_hints"] = planner_hints  # type: ignore
     if reasoning_steps:
         result["reasoning_steps"] = reasoning_steps  # type: ignore
-    
+
     # Step: Cache the response for future similar queries
-    sc_ready = bool(getattr(semantic_cache, "is_ready", False)) if semantic_cache is not None else False
+    sc_ready = (
+        bool(getattr(semantic_cache, "is_ready", False)) if semantic_cache is not None else False
+    )
     if sc_ready and not result.get("cached"):
         try:
             # Only cache successful responses
@@ -1755,20 +1903,22 @@ This query has been flagged for ethical review. Please provide guidance on how t
                 cache_context: dict[str, Any] = {
                     "provider": provider_used,
                     "has_context": bool(context_txt),
-                    "query_length": len(q)
+                    "query_length": len(q),
                 }
-                
+
                 await cast(Any, semantic_cache).set(q, result, context=cache_context)
                 log.debug(f"Cached response for query: {q[:50]}...")
-                
+
         except Exception as e:
             log.warning(f"Failed to cache response: {e}")
-    
+
     return result
 
 
 @app.post(f"{API_PREFIX}/vision")
-async def vision(request: Request, question: str, file: UploadFile = File(...), grounding_required: bool = False):
+async def vision(
+    request: Request, question: str, file: UploadFile = File(...), grounding_required: bool = False
+):
     if engine is None:
         return {"answer": "Engine not ready"}
     if vl_roles is None or judge is None:
@@ -1789,8 +1939,8 @@ async def vision(request: Request, question: str, file: UploadFile = File(...), 
         critique = rankings.get("critique")
         if grounding_required:
             grounding = vl_any.grounding_validator(question, image_data, answer)
-    except Exception as exc:  # noqa: F841
-        answer = f"Error processing vision request: {str(exc)}"
+    except Exception as exc:
+        answer = f"Error processing vision request: {exc!s}"
     if engine is not None:
         engine.add_memory("assistant", answer)  # type: ignore
     try:
@@ -1802,83 +1952,82 @@ async def vision(request: Request, question: str, file: UploadFile = File(...), 
         resp["critique"] = critique
     if grounding:
         resp["grounding"] = grounding
+
+
 @app.websocket(f"{API_PREFIX}/ws/chat")
 async def websocket_chat_endpoint(websocket: WebSocket):
     """Enhanced WebSocket endpoint for streaming chat responses."""
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive message from client
             message = await websocket.receive_text()
-            
+
             try:
                 data = json.loads(message)
                 query = data.get("q", "")
                 stream_mode = data.get("stream", True)
-                
+
                 if not query:
-                    await websocket.send_json({
-                        "type": "error",
-                        "error": "Query is required"
-                    })
+                    await websocket.send_json({"type": "error", "error": "Query is required"})
                     continue
-                
+
                 # Sanitize input
                 query = sanitize_input(query)
-                
+
                 # Add to engine memory
                 if engine is not None:
                     engine.add_memory("user", query)  # type: ignore
-                
+
                 # Check semantic cache first
                 cached_response = None
-                sc_ready_ws = bool(getattr(semantic_cache, "is_ready", False)) if semantic_cache is not None else False  # type: ignore
+                sc_ready_ws = (
+                    bool(getattr(semantic_cache, "is_ready", False))
+                    if semantic_cache is not None
+                    else False
+                )  # type: ignore
                 if sc_ready_ws:
                     try:
                         cached_response = await semantic_cache.get(query)  # type: ignore
                     except Exception as e:
                         log.warning(f"Cache check failed: {e}")
-                
+
                 if cached_response:
                     cached_dict: dict[str, Any] = cast(dict[str, Any], cached_response)
                     # Send cached response immediately
-                    await websocket.send_json({
-                        "type": "cached_response",
-                        "content": cached_dict.get("answer", ""),
-                        "metadata": {
-                            "cached": True,
-                            "cache_similarity": cached_dict.get("cache_similarity", 1.0),
-                            "provider": cached_dict.get("provider", "cache")
+                    await websocket.send_json(
+                        {
+                            "type": "cached_response",
+                            "content": cached_dict.get("answer", ""),
+                            "metadata": {
+                                "cached": True,
+                                "cache_similarity": cached_dict.get("cache_similarity", 1.0),
+                                "provider": cached_dict.get("provider", "cache"),
+                            },
                         }
-                    })
-                    
+                    )
+
                     # Add to engine memory
                     if engine is not None:
                         engine.add_memory("assistant", cached_dict.get("answer", ""))  # type: ignore
-                    
+
                     # Send completion signal
                     await websocket.send_json({"type": "stream_complete"})
                     continue
-                
+
                 # No cache hit - generate streaming response
                 if stream_mode and ds_router is not None and GenRequest is not None:
                     await _handle_streaming_generation(websocket, query)
                 else:
                     # Fallback to non-streaming
                     await _handle_non_streaming_generation(websocket, query)
-                
+
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "error": "Invalid JSON message"
-                })
+                await websocket.send_json({"type": "error", "error": "Invalid JSON message"})
             except Exception as e:
-                await websocket.send_json({
-                    "type": "error", 
-                    "error": f"Processing error: {str(e)}"
-                })
-                
+                await websocket.send_json({"type": "error", "error": f"Processing error: {e!s}"})
+
     except WebSocketDisconnect:
         log.info("WebSocket client disconnected from streaming chat")
     except Exception as e:
@@ -1899,7 +2048,9 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
                     context_txt = str(retriever.format_context(docs))  # type: ignore
                 else:
                     # Fallback context formatting
-                    context_txt = "\n\n".join([getattr(doc, "page_content", "")[:200] for doc in docs[:3]])
+                    context_txt = "\n\n".join(
+                        [getattr(doc, "page_content", "")[:200] for doc in docs[:3]]
+                    )
 
                 enhanced_prompt = (
                     f"[CONTEXT]\n{context_txt}\n\n"
@@ -1915,19 +2066,21 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
         gen_request: Any = GenRequestAny(
             prompt=enhanced_prompt,
             system_prompt="You are a helpful AI assistant. Provide accurate and helpful responses.",
-            max_tokens=(getattr(settings, 'max_new_tokens', 1024) if settings else 1024),
+            max_tokens=(getattr(settings, "max_new_tokens", 1024) if settings else 1024),
             temperature=0.7,
             stream=True,
         )
 
         # Send stream start notification
-        await websocket.send_json({
-            "type": "stream_start",
-            "metadata": {
-                "has_context": bool(context_txt),
-                "enhanced_prompt_length": len(enhanced_prompt),
-            },
-        })
+        await websocket.send_json(
+            {
+                "type": "stream_start",
+                "metadata": {
+                    "has_context": bool(context_txt),
+                    "enhanced_prompt_length": len(enhanced_prompt),
+                },
+            }
+        )
 
         # Stream response chunks
         accumulated_content: str = ""
@@ -1938,21 +2091,25 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
             part: str = getattr(chunk, "content", "")
             accumulated_content += part
             chunk_count += 1
-            last_provider = cast(Optional[str], getattr(chunk, "provider", last_provider or "ds_router_stream"))
+            last_provider = cast(
+                Optional[str], getattr(chunk, "provider", last_provider or "ds_router_stream")
+            )
 
             # Send chunk to client
-            await websocket.send_json({
-                "type": "chunk",
-                "content": part,
-                "chunk_id": getattr(chunk, "chunk_id", chunk_count),
-                "is_final": bool(getattr(chunk, "is_final", False)),
-                "provider": last_provider,
-                "metadata": {
-                    **(getattr(chunk, "metadata", {}) or {}),
-                    "accumulated_length": len(accumulated_content),
-                    "total_chunks": chunk_count,
-                },
-            })
+            await websocket.send_json(
+                {
+                    "type": "chunk",
+                    "content": part,
+                    "chunk_id": getattr(chunk, "chunk_id", chunk_count),
+                    "is_final": bool(getattr(chunk, "is_final", False)),
+                    "provider": last_provider,
+                    "metadata": {
+                        **(getattr(chunk, "metadata", {}) or {}),
+                        "accumulated_length": len(accumulated_content),
+                        "total_chunks": chunk_count,
+                    },
+                }
+            )
 
             if bool(getattr(chunk, "is_final", False)):
                 break
@@ -1962,7 +2119,11 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
             engine.add_memory("assistant", accumulated_content)  # type: ignore
 
         # Cache the complete response
-        if semantic_cache is not None and bool(getattr(semantic_cache, "is_ready", False)) and accumulated_content:  # type: ignore
+        if (
+            semantic_cache is not None
+            and bool(getattr(semantic_cache, "is_ready", False))
+            and accumulated_content
+        ):  # type: ignore
             try:
                 response_to_cache: dict[str, Any] = {
                     "answer": accumulated_content,
@@ -1976,20 +2137,24 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
                 log.warning(f"Failed to cache streaming response: {e}")
 
         # Send completion signal
-        await websocket.send_json({
-            "type": "stream_complete",
-            "metadata": {
-                "total_chunks": chunk_count,
-                "total_length": len(accumulated_content),
-                "cached": True if semantic_cache else False,
-            },
-        })
+        await websocket.send_json(
+            {
+                "type": "stream_complete",
+                "metadata": {
+                    "total_chunks": chunk_count,
+                    "total_length": len(accumulated_content),
+                    "cached": True if semantic_cache else False,
+                },
+            }
+        )
 
     except Exception as e:
-        await websocket.send_json({
-            "type": "error",
-            "error": f"Streaming generation failed: {str(e)}",
-        })
+        await websocket.send_json(
+            {
+                "type": "error",
+                "error": f"Streaming generation failed: {e!s}",
+            }
+        )
 
 
 async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
@@ -1997,36 +2162,36 @@ async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
     try:
         # Use the existing chat logic but send as stream
         # This is a simplified version - you could enhance this further
-        
-        await websocket.send_json({
-            "type": "stream_start",
-            "metadata": {"fallback_mode": True}
-        })
-        
+
+        await websocket.send_json({"type": "stream_start", "metadata": {"fallback_mode": True}})
+
         # Generate response (simplified)
         response_content = "This is a fallback response when streaming is not available."
-        
+
         # Send as single chunk
-        await websocket.send_json({
-            "type": "chunk", 
-            "content": response_content,
-            "chunk_id": 0,
-            "is_final": True,
-            "provider": "fallback",
-            "metadata": {"non_streaming_fallback": True}
-        })
-        
+        await websocket.send_json(
+            {
+                "type": "chunk",
+                "content": response_content,
+                "chunk_id": 0,
+                "is_final": True,
+                "provider": "fallback",
+                "metadata": {"non_streaming_fallback": True},
+            }
+        )
+
         await websocket.send_json({"type": "stream_complete"})
-        
+
     except Exception as e:
-        await websocket.send_json({
-            "type": "error",
-            "error": f"Fallback generation failed: {str(e)}"
-        })
+        await websocket.send_json(
+            {"type": "error", "error": f"Fallback generation failed: {e!s}"}
+        )
+
 
 # Mount GUI SPA (prefer frontend/dist, then frontend/build, fallback to legacy gui paths)
 try:
     import pathlib
+
     repo_root = pathlib.Path(__file__).resolve().parents[1]
     candidates = [
         repo_root / "frontend" / "dist",

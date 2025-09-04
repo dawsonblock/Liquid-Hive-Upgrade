@@ -1,5 +1,6 @@
 import json
 from typing import Any
+
 from .utils import clamp_json
 
 PERCEPTOR_SYS = (
@@ -14,13 +15,14 @@ MMJUDGE_SYS = (
     "Return strict JSON {winner_id:int, critique:str, synthesized_answer:str}."
 )
 
+
 class VisionRoles:
     def __init__(self, vl_client):
         self.vl = vl_client
 
     async def perceptor(self, question, image):
         txt = self.vl.generate(PERCEPTOR_SYS + "\nQuestion:" + question, image)
-        return clamp_json(txt, defaults={"caption":"", "entities":[], "doc_like":False})
+        return clamp_json(txt, defaults={"caption": "", "entities": [], "doc_like": False})
 
     async def docvqa(self, question, image, context):
         txt = self.vl.generate(DOCVQA_SYS + "\nQuestion:" + question, image)
@@ -32,22 +34,23 @@ class VisionRoles:
     async def vl_committee(self, question, image, k=3, context=None):
         cands = []
         for i in range(k):
-            cands.append(self.vl.generate(f"Answer the user question concisely. Q:{question}", image))
+            cands.append(
+                self.vl.generate(f"Answer the user question concisely. Q:{question}", image)
+            )
         return cands
 
     async def mm_judge(self, question, image, candidates):
-        prompt = MMJUDGE_SYS + "\n" + "\n\n".join([f"[{i}] {c}" for i,c in enumerate(candidates)])
+        prompt = MMJUDGE_SYS + "\n" + "\n\n".join([f"[{i}] {c}" for i, c in enumerate(candidates)])
         txt = self.vl.generate(prompt, image)
         try:
             j = json.loads(txt)
-            j["winner_text"] = candidates[j.get("winner_id",0)]
+            j["winner_text"] = candidates[j.get("winner_id", 0)]
             return j
         except Exception:
-            return {"winner_id":0, "winner_text": candidates[0], "critique": txt}
+            return {"winner_id": 0, "winner_text": candidates[0], "critique": txt}
 
     def grounding_validator(self, question: str, image: Any, answer: str) -> dict[str, any]:
-        """
-        Validate that the answer is grounded in the contents of the image.
+        """Validate that the answer is grounded in the contents of the image.
 
         This is a simplistic implementation of the grounding validator.  It
         attempts to extract textual content from the image using the
@@ -65,7 +68,7 @@ class VisionRoles:
         answer: str
             The generated answer to validate.
 
-        Returns
+        Returns:
         -------
         dict
             A JSON object with ``status`` set to ``pass`` or ``fail`` and

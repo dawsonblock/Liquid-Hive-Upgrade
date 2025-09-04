@@ -11,11 +11,9 @@ is returned unchanged.
 
 from __future__ import annotations
 
-from typing import Tuple, Any
-
 try:
-    from hivemind.rag.retriever import Retriever
     from hivemind.rag.citations import format_context
+    from hivemind.rag.retriever import Retriever
 except Exception:
     Retriever = None  # type: ignore
     format_context = None  # type: ignore
@@ -34,7 +32,7 @@ class ContextBridge:
     def __init__(self, retriever: Retriever | None) -> None:
         self.retriever = retriever
 
-    async def enrich(self, prompt: str, k: int = 5) -> Tuple[str, str]:
+    async def enrich(self, prompt: str, k: int = 5) -> tuple[str, str]:
         """Enrich a prompt by retrieving context.
 
         Parameters
@@ -44,7 +42,7 @@ class ContextBridge:
         k: int, optional
             Number of documents to fetch from the index.
 
-        Returns
+        Returns:
         -------
         Tuple[str, str]
             A tuple ``(enriched_prompt, context)``.  ``context`` will be

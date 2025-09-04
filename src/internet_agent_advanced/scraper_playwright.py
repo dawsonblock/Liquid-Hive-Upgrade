@@ -1,9 +1,13 @@
 from __future__ import annotations
-import time, json
-from typing import List, Dict, Any, Optional
+
+import time
+from typing import Any, Optional
+
 from playwright.async_api import async_playwright
-from .schemas import PageContent
+
 from .normalizer import html_to_text
+from .schemas import PageContent
+
 
 def _detect_challenge(html: str) -> str:
     h = (html or "").lower()
@@ -11,24 +15,37 @@ def _detect_challenge(html: str) -> str:
         return "challenge_detected"
     return "none"
 
-async def fetch_playwright(url: str, wait_state: str = "networkidle", wait_selector: Optional[str] = None, storage_state_path: Optional[str] = None) -> PageContent:
+
+async def fetch_playwright(
+    url: str,
+    wait_state: str = "networkidle",
+    wait_selector: Optional[str] = None,
+    storage_state_path: Optional[str] = None,
+) -> PageContent:
     t0 = time.time()
-    network_payloads: List[Dict[str,Any]] = []
+    network_payloads: list[dict[str, Any]] = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        ctx = await browser.new_context(storage_state=storage_state_path) if storage_state_path else await browser.new_context()
+        ctx = (
+            await browser.new_context(storage_state=storage_state_path)
+            if storage_state_path
+            else await browser.new_context()
+        )
         page = await ctx.new_page()
 
         def on_response(response):
             try:
-                if "application/json" in (response.headers.get("content-type","")):
-                    network_payloads.append({
-                        "url": response.url,
-                        "status": response.status,
-                        "headers": dict(response.headers),
-                    })
+                if "application/json" in (response.headers.get("content-type", "")):
+                    network_payloads.append(
+                        {
+                            "url": response.url,
+                            "status": response.status,
+                            "headers": dict(response.headers),
+                        }
+                    )
             except Exception:
                 pass
+
         page.on("response", on_response)
 
         await page.goto(url, timeout=20000)
@@ -41,14 +58,25 @@ async def fetch_playwright(url: str, wait_state: str = "networkidle", wait_selec
         html = await page.content()
         png = await page.screenshot(full_page=True)
         title, text = html_to_text(html)
-        await ctx.close(); await browser.close()
+        await ctx.close()
+        await browser.close()
     challenge_status = _detect_challenge(html)
-    blocked = (challenge_status != "none")
-    dt = int((time.time()-t0)*1000)
+    blocked = challenge_status != "none"
+    dt = int((time.time() - t0) * 1000)
     return PageContent(
-        url=url, status=200, title=title, mime="text/html",
-        content=text, content_html=html, screenshot_png=png,
-        network_payloads=network_payloads, fetched_at=time.time(),
-        captcha_required=blocked, blocked=blocked, headers={}, rendered=True, elapsed_ms=dt,
-        challenge_status=challenge_status
+        url=url,
+        status=200,
+        title=title,
+        mime="text/html",
+        content=text,
+        content_html=html,
+        screenshot_png=png,
+        network_payloads=network_payloads,
+        fetched_at=time.time(),
+        captcha_required=blocked,
+        blocked=blocked,
+        headers={},
+        rendered=True,
+        elapsed_ms=dt,
+        challenge_status=challenge_status,
     )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -17,21 +17,24 @@ except Exception:  # pragma: no cover
 # Local constant to avoid circular import
 API_PREFIX = "/api"
 
-router = APIRouter(prefix=f"{API_PREFIX}/arena", tags=["arena"]) 
+router = APIRouter(prefix=f"{API_PREFIX}/arena", tags=["arena"])
 
 # -------------------
 # Data models
 # -------------------
 
+
 class SubmitRequest(BaseModel):
     task_id: Optional[str] = None
     input: str = Field(..., description="Prompt/input for the task")
     reference: Optional[str] = Field(None, description="Optional reference/ground truth")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class SubmitResponse(BaseModel):
     task_id: str
     stored: bool
+
 
 class CompareRequest(BaseModel):
     task_id: str
@@ -42,11 +45,13 @@ class CompareRequest(BaseModel):
     winner: Optional[str] = Field(None, description="'A' | 'B' | 'tie' (optional manual judgement)")
     judge: Optional[str] = Field(None, description="Judge identifier (optional)")
     rationale: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class CompareResponse(BaseModel):
     match_id: str
     decided_winner: str  # 'A' | 'B' | 'tie'
+
 
 class LeaderboardEntry(BaseModel):
     model: str
@@ -55,8 +60,9 @@ class LeaderboardEntry(BaseModel):
     ties: int
     win_rate: float
 
+
 class LeaderboardResponse(BaseModel):
-    leaderboard: List[LeaderboardEntry]
+    leaderboard: list[LeaderboardEntry]
 
 
 # -------------------
@@ -72,19 +78,21 @@ else:  # pragma: no cover
 # Storage Abstraction
 # -------------------
 
+
 class ArenaStore:
     def __init__(self):
         self.redis = None
         self.neo4j = None
 
         # In-memory fallback structures
-        self._tasks: Dict[str, Dict[str, Any]] = {}
-        self._matches: Dict[str, Dict[str, Any]] = {}
-        self._score: Dict[str, Dict[str, int]] = {}
+        self._tasks: dict[str, dict[str, Any]] = {}
+        self._matches: dict[str, dict[str, Any]] = {}
+        self._score: dict[str, dict[str, int]] = {}
 
         # Try Redis
         try:
             import redis as _redis  # type: ignore
+
             redis_url = os.getenv("REDIS_URL")
             if redis_url:
                 self.redis = _redis.Redis.from_url(redis_url, decode_responses=True)
@@ -95,6 +103,7 @@ class ArenaStore:
         # Try Neo4j
         try:
             from neo4j import GraphDatabase  # type: ignore
+
             uri = os.getenv("NEO4J_URI")
             user = os.getenv("NEO4J_USER")
             pwd = os.getenv("NEO4J_PASSWORD")
@@ -107,7 +116,7 @@ class ArenaStore:
             self.neo4j = None
 
     # -------- tasks --------
-    def create_task(self, task: Dict[str, Any]) -> bool:
+    def create_task(self, task: dict[str, Any]) -> bool:
         tid = task["task_id"]
         now = time.time()
         task["created_at"] = now
@@ -121,11 +130,11 @@ class ArenaStore:
                 pass
         if self.neo4j:
             try:
-                q = (
-                    "MERGE (t:Task {id: $id}) SET t.input=$input, t.reference=$reference, t.created_at=$ts"
-                )
+                q = "MERGE (t:Task {id: $id}) SET t.input=$input, t.reference=$reference, t.created_at=$ts"
                 with self.neo4j.session() as s:
-                    s.run(q, id=tid, input=task.get("input"), reference=task.get("reference"), ts=now)
+                    s.run(
+                        q, id=tid, input=task.get("input"), reference=task.get("reference"), ts=now
+                    )
             except Exception:
                 pass
         # Always keep in-memory fallback
@@ -133,7 +142,7 @@ class ArenaStore:
         return True
 
     # -------- matches --------
-    def record_match(self, match: Dict[str, Any]) -> bool:
+    def record_match(self, match: dict[str, Any]) -> bool:
         mid = match["match_id"]
         now = time.time()
         match["created_at"] = now
@@ -201,10 +210,10 @@ class ArenaStore:
         self._matches[mid] = match
         return True
 
-    def get_leaderboard(self) -> List[LeaderboardEntry]:
-        entries: List[LeaderboardEntry] = []
+    def get_leaderboard(self) -> list[LeaderboardEntry]:
+        entries: list[LeaderboardEntry] = []
         # Prefer Redis scoreboard if available
-        models: List[str] = list(self._score.keys())
+        models: list[str] = list(self._score.keys())
         if self.redis:
             try:
                 # Discover models from keys
@@ -219,7 +228,11 @@ class ArenaStore:
             ties = self._score.get(model, {}).get("ties", 0)
             total = max(1, wins + losses)  # ignore ties in denominator
             win_rate = wins / float(total)
-            entries.append(LeaderboardEntry(model=model, wins=wins, losses=losses, ties=ties, win_rate=win_rate))
+            entries.append(
+                LeaderboardEntry(
+                    model=model, wins=wins, losses=losses, ties=ties, win_rate=win_rate
+                )
+            )
 
         entries.sort(key=lambda e: e.win_rate, reverse=True)
         return entries
@@ -243,10 +256,16 @@ store = ArenaStore()
 # Endpoints
 # -------------------
 
+
 @router.post("/submit", response_model=SubmitResponse)
 async def submit_task(req: SubmitRequest) -> SubmitResponse:
     tid = req.task_id or uuid.uuid4().hex
-    payload = {"task_id": tid, "input": req.input, "reference": req.reference, "metadata": req.metadata}
+    payload = {
+        "task_id": tid,
+        "input": req.input,
+        "reference": req.reference,
+        "metadata": req.metadata,
+    }
     store.create_task(payload)
     return SubmitResponse(task_id=tid, stored=True)
 

@@ -1,5 +1,4 @@
-"""
-LAVA Client
+"""LAVA Client
 ===========
 
 This module provides a minimal client class for interacting with the LiquidAI
@@ -12,6 +11,7 @@ maintain compatibility in constrained environments where the actual LAVA
 model is not available.  In production you should replace the ``generate``
 method with calls to your dedicated LAVA inference service.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -38,8 +38,7 @@ class LAVAClient:
                 self._fallback = None
 
     def generate(self, prompt: str, image: Any) -> str:
-        """
-        Generate a critique or answer given a prompt and an image.
+        """Generate a critique or answer given a prompt and an image.
 
         Parameters
         ----------
@@ -48,7 +47,7 @@ class LAVAClient:
         image: Any
             Image data to process.
 
-        Returns
+        Returns:
         -------
         str
             The model's generated response.  Uses the fallback VLClient when
