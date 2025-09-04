@@ -1,0 +1,8 @@
+route:
+  receiver: default
+  group_by: ['alertname']
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: 'http://grafana:3000/api/alerts' # placeholder; replace with real webhook or contact points

@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: liquid-hive-unified-runtime
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: unified-runtime
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics

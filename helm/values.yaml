@@ -1,0 +1,41 @@
+image:
+  repository: ghcr.io/OWNER/REPO/liquid-hive
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  ENABLE_PLANNER: "true"
+  ENABLE_ARENA: "true"
+  ENVIRONMENT: dev
+  RATE_LIMIT_RPS: "10"
+  ROUTING_PROFILE: balanced
+  OTEL_SERVICE_NAME: liquid-hive-upgrade
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+
+secrets:
+  API_JWT_PUBLIC_KEY_PATH: /run/secrets/api_jwt_pub
+  API_JWT_AUDIENCE: liquid-hive
+
+redis:
+  url: redis://redis:6379/0
+
+neo4j:
+  uri: bolt://neo4j:7687
+  user: neo4j
+  passwordSecretName: neo4j-pass
+
+resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - host: lh.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

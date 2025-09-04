@@ -56,9 +56,10 @@ except Exception:
 
 try:
     from .model_router import DSRouter, RouterConfig
-except Exception:
+except Exception as e:
     DSRouter = None  # type: ignore
     RouterConfig = None  # type: ignore
+    log.warning(f"model_router import failed: {e}")
 
 try:
     from .providers import (
@@ -169,6 +170,16 @@ if MetricsMiddleware is not None:
 if metrics_router is not None:
     app.include_router(metrics_router)
 
+# Conditionally mount Arena service if enabled
+try:
+    from .arena import router as arena_router
+except Exception:
+    arena_router = None  # type: ignore
+
+if False and arena_router is not None:
+    # legacy static include disabled; we include dynamically in startup
+    pass
+
 # Include internet agent advanced routers and metrics if available
 if "internet_tools_router" in globals() and internet_tools_router is not None:
     app.include_router(internet_tools_router)
@@ -199,6 +210,21 @@ try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
 except Exception:
     AutonomyOrchestrator = None  # type: ignore
+    # Conditionally mount Arena at runtime (env may be mutated in tests)
+    try:
+        from .arena import router as arena_router  # type: ignore
+    except Exception:
+        arena_router = None  # type: ignore
+
+    # Try to mount if enabled
+    try:
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
+        if enabled and not already and arena_router is not None:
+            app.include_router(arena_router)
+    except Exception:
+        pass
+
 
 autonomy_orchestrator: Optional[Any] = None
 _autonomy_lock: Any = None
@@ -218,6 +244,30 @@ async def startup() -> None:
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
     global semantic_cache, cache_manager
+    # Initialize OTEL tracer (if enabled)
+    try:
+        from .observability import setup_tracing_if_enabled  # type: ignore
+        setup_tracing_if_enabled()
+    except Exception:
+        pass
+
+    # Mount Arena router dynamically based on env (useful for tests)
+    try:
+        from .arena import router as arena_router  # type: ignore
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
+        if enabled and not already:
+            app.include_router(arena_router)
+    except Exception:
+        pass
+    # Mount Providers admin endpoints if present (keys redacted)
+    try:
+        from .providers_admin_mount import mount_admin_providers  # type: ignore
+        mount_admin_providers(app)
+    except Exception:
+        pass
+
+
     
     # Initialize settings
     if Settings is not None:
@@ -1468,7 +1518,9 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
 
     planner_hints = None
     reasoning_steps = None
-    if plan_once is not None:
+    # Use planner only when explicitly enabled
+    use_planner = str(os.getenv("ENABLE_PLANNER", "false")).lower() == "true"
+    if use_planner and plan_once is not None:
         try:
             plan_result = await plan_once(q)
             planner_hints = plan_result.get("tool_hints")

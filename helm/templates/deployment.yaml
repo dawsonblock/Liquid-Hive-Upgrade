@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "liquid-hive-upgrade.fullname" . }}
+  labels:
+    app: {{ include "liquid-hive-upgrade.name" . }}
+    chart: {{ include "liquid-hive-upgrade.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "liquid-hive-upgrade.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "liquid-hive-upgrade.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ENABLE_PLANNER
+              value: {{ .Values.env.ENABLE_PLANNER | quote }}
+            - name: ENABLE_ARENA
+              value: {{ .Values.env.ENABLE_ARENA | quote }}
+            - name: ENVIRONMENT
+              value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: RATE_LIMIT_RPS
+              value: {{ .Values.env.RATE_LIMIT_RPS | quote }}
+            - name: ROUTING_PROFILE
+              value: {{ .Values.env.ROUTING_PROFILE | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.env.OTEL_SERVICE_NAME | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.env.OTEL_EXPORTER_OTLP_ENDPOINT | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.redis.url | quote }}
+            - name: NEO4J_URI
+              value: {{ .Values.neo4j.uri | quote }}
+            - name: NEO4J_USER
+              value: {{ .Values.neo4j.user | quote }}
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.neo4j.passwordSecretName }}
+                  key: password
+          volumeMounts:
+            - name: jwtpub
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: jwtpub
+          secret:
+            secretName: api-jwt-pub

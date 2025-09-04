@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+import httpx
+from typing import Any, Dict, Optional
+from .base import OracleProvider, ProviderConfig
+
+
+class DeepSeekProvider:
+    def __init__(self, cfg: ProviderConfig, api_key: Optional[str]) -> None:
+        self.name = cfg.name
+        self.cfg = cfg
+        self._key = api_key
+
+    async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+        # If no key provided, return a stubbed response for dev environments
+        if not self._key:
+            return {"provider": self.name, "content": f"[stub:deepseek] {prompt[:64]}...", "status": "stub"}
+        url = self.cfg.base_url.rstrip("/") + "/chat/completions"
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
+        payload = {
+            "model": self.cfg.model or "deepseek-chat",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": kwargs.get("max_tokens") or self.cfg.max_tokens or 512,
+        }
+        async with httpx.AsyncClient(timeout=kwargs.get("timeout", 30)) as client:
+            r = await client.post(url, json=payload, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return {"provider": self.name, "content": content, "raw": data}
+
+    async def health(self) -> Dict[str, Any]:
+        return {"status": "healthy" if bool(self._key) else "stub"}

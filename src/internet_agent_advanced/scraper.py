@@ -1,8 +1,16 @@
 from __future__ import annotations
+# Note: redis dependency is optional for tests; we guard its import.
+
 import urllib.parse
 from .robots import is_allowed
 from .rate_limit_local import limiter_for_host
-from .rate_limit_redis import acquire as redis_acquire
+# optional redis-based rate limiting (may be unavailable in tests)
+try:
+    from .rate_limit_redis import acquire as redis_acquire
+except Exception:
+    def redis_acquire(url: str):
+        return None
+
 from .scraper_http import fetch_httpx
 from .scraper_playwright import fetch_playwright
 from .schemas import PageContent

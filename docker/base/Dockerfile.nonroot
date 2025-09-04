@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.7
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UVICORN_WORKERS=2
+
+# Create non-root user and minimal dirs
+RUN set -eux; \
+    addgroup --system --gid 10001 app && adduser --system --uid 10001 --ingroup app app; \
+    mkdir -p /opt/app /home/app/.cache && chown -R app:app /opt/app /home/app; \
+    apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/app
+USER app
+
+# Copy minimal placeholder app interface. Replace with your app in downstream Dockerfiles.
+COPY --chown=app:app requirements.txt /opt/app/requirements.txt
+RUN --mount=type=cache,target=/home/app/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt || true
+
+# Example runtime command (override in downstream images)
+EXPOSE 8000
+CMD [ "python", "-c", "print('Non-root base ready'); import time; time.sleep(3600)" ]

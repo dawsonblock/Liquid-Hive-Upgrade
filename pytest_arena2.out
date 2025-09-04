@@ -1,0 +1,68 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+____________________ test_arena_submit_compare_leaderboard _____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xfb8243309c50>
+
+    def test_arena_submit_compare_leaderboard(monkeypatch):
+        # Force fallback storage by clearing envs
+        monkeypatch.delenv('REDIS_URL', raising=False)
+        monkeypatch.delenv('NEO4J_URI', raising=False)
+        monkeypatch.delenv('NEO4J_USER', raising=False)
+        monkeypatch.delenv('NEO4J_PASSWORD', raising=False)
+        monkeypatch.setenv('ENABLE_ARENA', 'true')
+    
+        with TestClient(app) as client:
+            # Submit task
+            r = client.post('/api/arena/submit', json={"input": "Translate 'hello' to French"})
+>           assert r.status_code == 200
+E           assert 404 == 200
+E            +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/test_arena.py:17: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  unified_runtime.model_router:model_router.py:708 Redis unavailable, using fallback tracking: No module named 'redis'
+___________________________ test_arena_manual_winner ___________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xfb824368d350>
+
+    def test_arena_manual_winner(monkeypatch):
+        monkeypatch.setenv('ENABLE_ARENA', 'true')
+    
+        with TestClient(app) as client:
+            # Create task
+            r = client.post('/api/arena/submit', json={"input": "Summarize this paragraph"})
+>           tid = r.json()['task_id']
+                  ^^^^^^^^^^^^^^^^^^^
+E           KeyError: 'task_id'
+
+tests/test_arena.py:46: KeyError
+------------------------------ Captured log call -------------------------------
+WARNING  unified_runtime.model_router:model_router.py:708 Redis unavailable, using fallback tracking: No module named 'redis'
+=============================== warnings summary ===============================
+../root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12
+  /root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+src/unified_runtime/server.py:239
+  /app/src/unified_runtime/server.py:239: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+../root/.venv/lib/python3.11/site-packages/fastapi/applications.py:4495
+  /root/.venv/lib/python3.11/site-packages/fastapi/applications.py:4495: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_arena.py::test_arena_submit_compare_leaderboard - assert 40...
+FAILED tests/test_arena.py::test_arena_manual_winner - KeyError: 'task_id'
