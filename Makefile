@@ -17,10 +17,7 @@ install: ## Install dependencies
 
 test: ## Run tests
 	@echo "Running tests..."
-	@if command -v pytest >/dev/null 2>&1; then \
-		pytest -q --cov=src --cov-report=term-missing; \
-	else \
-		bash tests/test_smoke.sh || true; \
+		bash tests/test_smoke.sh; \
 	fi
 
 lint: ## Run linting
