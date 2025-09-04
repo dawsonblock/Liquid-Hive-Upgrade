@@ -1,381 +1,124 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / temp
+*.log
+*.tmp
+*.swp
+
+# Build + caches
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-.coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+bin/
+obj/
+.out/
+.cache/
+__pycache__/
 .pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
 .mypy_cache/
-.dmypy.json
-dmypy.json
+.ipynb_checkpoints/
 
-# Pyre type checker
-.pyre/
+# Python
+.venv/
+venv/
+.env
+.env.*
+*.pyc
+*.pyo
+*.pyd
+pip-wheel-metadata/
 
-# Node.js
+# C/C++ toolchains
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+compile_commands.json
+.vscode/settings.json
+
+# Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-package-lock.json
-yarn.lock
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
+.pnpm-store/
+.next/
+.out/
 coverage/
-*.lcov
+*.tsbuildinfo
 
-# Dependency directories
-node_modules/
-jspm_packages/
+# Rust/Go/Java (if present)
+target/
+vendor/
+.gradle/
+build.gradle.kts
+.gradle/
+.idea/
 
-# TypeScript compiled files
-*.js
-*.js.map
-*.d.ts.map
+# Artifacts
+*.apk
+*.ipa
+*.a
+*.lib
+*.dll
+*.dylib
+*.so
 
-# Optional npm cache directory
-.npm
+# Model/data (prefer Releases/LFS)
+data/
+datasets/
+artifacts/
+checkpoints/
+models/
 
-# Optional eslint cache
-.eslintcache
+# Package manager lockfiles - enforce yarn only for Node.js
+package-lock.json
+pnpm-lock.yaml
 
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Environment files
+.env
+.env.*
 
-# Build artifacts
-dist/
-build/
-*.tar.gz
+# Compressed files
 *.zip
+*.tar.gz
+*.rar
 
-# User cache directories
-.local/
-.npm/
-.cache/
-.config/
-
-# Compiled binaries
-*.exe
-*.dll
-*.so
-*.dylib
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
+# Test coverage
+.coverage
+htmlcov/
+coverage/
+.nyc_output/
 
 # Temporary files
 *.tmp
 *.temp
 .tmp/
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
-# Flask stuff:
-instance/
-.webassets-cache
+# Local storage
+.local/
+.npm/
+.cache/
+.config/
 
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
+# Documentation build
+/site
 docs/_build/
 
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# IDE settings
-.vscode/
-.idea/
-
-# Node.js dependencies
-node_modules/
-
-# Build outputs
-build/
-dist/
-out/
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Compressed files
-*.zip
-*.tar.gz
-*.rar-e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
--e
-# Environment files
-*.env
-*.env.*
-
-# build/artifacts
-build/
-dist/
-out/
-target/
-.coverage
-htmlcov/
-coverage/
-*.log
-*.tmp
-
-# caches
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.cache/
-.ruff_cache/
-
-# envs & deps
-.venv/
-venv/
-node_modules/
-
-# ide/os cruft
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-
-# bundles
-*.zip
-*.tar
-*.tar.gz
-*.tgz
--e
-# Environment files
-*.env
-*.env.*
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
