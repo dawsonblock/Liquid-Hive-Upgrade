@@ -146,4 +146,4 @@ def main():
     print(f"Wrote {inv_path} and {dup_path}")
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
