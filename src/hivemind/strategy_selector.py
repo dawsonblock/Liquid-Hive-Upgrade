@@ -37,7 +37,7 @@ class StrategySelector:
 
     async def decide(self, prompt: str, ctx: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         ctx = ctx or {}
-        
+
         # Ethical Synthesizer: Check for ethical dilemmas first
         ethical_analysis = await self._analyze_ethical_content(prompt)
         if ethical_analysis["has_dilemma"]:
@@ -46,9 +46,9 @@ class StrategySelector:
                 "model": "large",  # Always use large model for ethical reasoning
                 "chosen_model": "Ethical Arbiter",
                 "reason": f"Ethical dilemma detected: {ethical_analysis['dilemma_type']}",
-                "ethical_analysis": ethical_analysis
+                "ethical_analysis": ethical_analysis,
             }
-        
+
         # Predict cost/size
         predicted_tokens = None
         predicted_cost = None
@@ -101,60 +101,68 @@ class StrategySelector:
             "chosen_model": human_alias,
             "reason": reason,
         }
-    
+
     async def _analyze_ethical_content(self, prompt: str) -> Dict[str, Any]:
         """Ethical Synthesizer: Analyze prompt for ethical dilemmas."""
         # Define ethical dilemma patterns
         ethical_patterns = {
             "harm": [
                 r"\b(kill|murder|harm|hurt|injure|attack|violence|weapon|bomb|poison)\b",
-                r"\b(suicide|self-harm|cutting|overdose)\b"
+                r"\b(suicide|self-harm|cutting|overdose)\b",
             ],
             "illegal": [
                 r"\b(hack|steal|rob|fraud|scam|illegal|criminal|break.*law)\b",
-                r"\b(drugs|cocaine|heroin|meth|trafficking)\b"
+                r"\b(drugs|cocaine|heroin|meth|trafficking)\b",
             ],
             "discrimination": [
                 r"\b(racist|sexist|homophobic|discriminat.*against)\b",
-                r"\b(hate.*speech|slur|bigot)\b"
+                r"\b(hate.*speech|slur|bigot)\b",
             ],
             "privacy": [
                 r"\b(personal.*information|private.*data|hack.*account|steal.*password)\b",
-                r"\b(dox|doxx|expose.*private)\b"
+                r"\b(dox|doxx|expose.*private)\b",
             ],
             "misinformation": [
                 r"\b(fake.*news|conspiracy|hoax|lie.*about|spread.*false)\b",
-                r"\b(medical.*advice|legal.*advice|financial.*advice).*without.*qualification\b"
-            ]
+                r"\b(medical.*advice|legal.*advice|financial.*advice).*without.*qualification\b",
+            ],
         }
-        
+
         import re
-        
+
         prompt_lower = prompt.lower()
         detected_dilemmas = []
-        
+
         for dilemma_type, patterns in ethical_patterns.items():
             for pattern in patterns:
                 if re.search(pattern, prompt_lower, re.IGNORECASE):
                     detected_dilemmas.append(dilemma_type)
                     break
-        
+
         # Additional heuristic: check for conflicting ethical principles
         conflicting_terms = [
-            ("freedom", "safety"), ("privacy", "transparency"), 
-            ("individual", "collective"), ("truth", "kindness")
+            ("freedom", "safety"),
+            ("privacy", "transparency"),
+            ("individual", "collective"),
+            ("truth", "kindness"),
         ]
-        
+
         conflicts = []
         for term1, term2 in conflicting_terms:
             if term1 in prompt_lower and term2 in prompt_lower:
                 conflicts.append(f"{term1}_vs_{term2}")
-        
+
         has_dilemma = bool(detected_dilemmas or conflicts)
-        
+
         return {
             "has_dilemma": has_dilemma,
-            "dilemma_type": detected_dilemmas[0] if detected_dilemmas else conflicts[0] if conflicts else None,
+            "dilemma_type": detected_dilemmas[0]
+            if detected_dilemmas
+            else conflicts[0]
+            if conflicts
+            else None,
             "all_detected": detected_dilemmas + conflicts,
-            "severity": "high" if "harm" in detected_dilemmas or "illegal" in detected_dilemmas else "medium"
+            "severity": "high"
+            if "harm" in detected_dilemmas or "illegal" in detected_dilemmas
+            else "medium",
         }

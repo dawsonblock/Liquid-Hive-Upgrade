@@ -13,7 +13,11 @@ class AnthropicProvider:
 
     async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
         if not self._key:
-            return {"provider": self.name, "content": f"[stub:anthropic] {prompt[:64]}...", "status": "stub"}
+            return {
+                "provider": self.name,
+                "content": f"[stub:anthropic] {prompt[:64]}...",
+                "status": "stub",
+            }
         # Anthropics' Messages API
         url = self.cfg.base_url.rstrip("/") + "/messages"
         headers = {

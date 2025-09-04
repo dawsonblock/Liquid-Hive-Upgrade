@@ -32,6 +32,7 @@ try:
     import redis.asyncio as redis
     import numpy as np
     from sentence_transformers import SentenceTransformer
+
     semcache_deps_available = True
 except ImportError as e:
     redis = None
@@ -41,16 +42,20 @@ except ImportError as e:
 
 log = logging.getLogger(__name__)
 
+
 class CacheStrategy(Enum):
     """Cache strategy for different types of queries."""
+
     AGGRESSIVE = "aggressive"  # Cache almost everything
     CONSERVATIVE = "conservative"  # Only cache high-confidence matches
     SELECTIVE = "selective"  # Cache based on query patterns
     DISABLED = "disabled"  # Disable caching
 
+
 @dataclass
 class CacheEntry:
     """Represents a cached response entry."""
+
     query: str
     query_hash: str
     embedding: List[float]
@@ -62,27 +67,28 @@ class CacheEntry:
     similarity_threshold: float = 0.95
     # For diagnostics during similarity matching
     last_similarity: float = 0.0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CacheEntry':
+    def from_dict(cls, data: Dict[str, Any]) -> "CacheEntry":
         return cls(**data)
-    
+
     def is_expired(self) -> bool:
         """Check if cache entry has expired."""
         return time.time() - self.created_at > self.ttl_seconds
-    
+
     def update_access(self):
         """Update access statistics."""
         self.accessed_count += 1
         self.last_accessed = time.time()
 
+
 class SemanticCache:
     """
     Semantic cache using Redis and embeddings for intelligent query matching.
-    
+
     This cache goes beyond exact string matching to understand semantic similarity
     between queries, enabling cache hits for paraphrased or similar questions.
     """
@@ -101,14 +107,15 @@ class SemanticCache:
     batch_size: int
     cleanup_interval: int
     stats: Dict[str, Any]
-    
-    def __init__(self, 
-                 redis_url: str = "redis://localhost:6379",
-                 embedding_model: str = "all-MiniLM-L6-v2",
-                 similarity_threshold: float = 0.95,
-                 default_ttl: int = 3600,
-                 strategy: CacheStrategy = CacheStrategy.CONSERVATIVE):
-        
+
+    def __init__(
+        self,
+        redis_url: str = "redis://localhost:6379",
+        embedding_model: str = "all-MiniLM-L6-v2",
+        similarity_threshold: float = 0.95,
+        default_ttl: int = 3600,
+        strategy: CacheStrategy = CacheStrategy.CONSERVATIVE,
+    ):
         self.redis_url = redis_url
         self.embedding_model_name = embedding_model
         self.similarity_threshold = similarity_threshold
@@ -143,7 +150,7 @@ class SemanticCache:
             "cache_misses": 0,
             "total_queries": 0,
             "average_similarity": 0.0,
-            "last_cleanup": time.time()
+            "last_cleanup": time.time(),
         }
 
         if semcache_deps_available:
@@ -153,7 +160,7 @@ class SemanticCache:
             if self.enable_memory_fallback:
                 self.is_ready = True
                 log.info("⚠️ Semantic cache running in in-memory fallback mode (no Redis/NumPy)")
-    
+
     async def _initialize(self):
         """Initialize Redis client and embedding model."""
         try:
@@ -170,7 +177,7 @@ class SemanticCache:
                     self.redis_client = None
             else:
                 self.redis_client = None
-            
+
             # Initialize embedding model
             try:
                 if SentenceTransformer is not None:
@@ -181,16 +188,16 @@ class SemanticCache:
             except Exception as e:
                 self.embedding_model = None
                 log.warning(f"Embedding model load failed; will use lightweight fallback: {e}")
-            
+
             # Load existing analytics
             await self._load_analytics()
-            
+
             self.is_ready = True
             log.info("🧠 Semantic cache initialized successfully")
-            
+
             # Start background cleanup task
             asyncio.create_task(self._periodic_cleanup())
-            
+
         except Exception as e:
             log.error(f"Failed to initialize semantic cache: {e}")
             if self.enable_memory_fallback:
@@ -198,105 +205,115 @@ class SemanticCache:
                 log.info("⚠️ Redis unavailable; using in-memory semantic cache fallback")
             else:
                 self.is_ready = False
-    
-    async def get(self, query: str, context: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+
+    async def get(
+        self, query: str, context: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Get cached response for a semantically similar query.
-        
+
         Args:
             query: The query to search for
             context: Optional context for more precise matching
-            
+
         Returns:
             Cached response if found, None otherwise
         """
         if not self.is_ready or self.strategy == CacheStrategy.DISABLED:
             return None
-        
+
         self.stats["total_queries"] += 1
-        
+
         try:
             # Normalize and preprocess query
             normalized_query = self._normalize_query(query)
             if not normalized_query:
                 return None
-            
+
             # Generate embedding
             query_embedding = self._get_embedding(normalized_query)
             if query_embedding is None:
                 return None
-            
+
             # Search for similar cached queries
-            similar_entry = await self._find_similar_entry(query_embedding, normalized_query, context)
-            
+            similar_entry = await self._find_similar_entry(
+                query_embedding, normalized_query, context
+            )
+
             if similar_entry:
                 # Update access statistics
                 similar_entry.update_access()
                 await self._update_cache_entry(similar_entry)
-                
+
                 self.stats["cache_hits"] += 1
-                
+
                 # Add cache metadata to response
                 response = similar_entry.response.copy()
                 response["cache_hit"] = True
-                response["cache_similarity"] = getattr(similar_entry, 'last_similarity', 1.0)
+                response["cache_similarity"] = getattr(similar_entry, "last_similarity", 1.0)
                 response["cache_original_query"] = similar_entry.query
                 response["cache_accessed_count"] = similar_entry.accessed_count
-                
-                log.debug(f"Cache hit for query '{query[:50]}...', similarity: {getattr(similar_entry, 'last_similarity', 1.0):.3f}")
-                
+
+                log.debug(
+                    f"Cache hit for query '{query[:50]}...', similarity: {getattr(similar_entry, 'last_similarity', 1.0):.3f}"
+                )
+
                 return response
             else:
                 self.stats["cache_misses"] += 1
                 log.debug(f"Cache miss for query '{query[:50]}...'")
                 return None
-                
+
         except Exception as e:
             log.error(f"Cache get failed for query '{query[:50]}...': {e}")
             return None
-    
-    async def set(self, query: str, response: Dict[str, Any], 
-                 context: Optional[Dict[str, Any]] = None,
-                 ttl: Optional[int] = None) -> bool:
+
+    async def set(
+        self,
+        query: str,
+        response: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+        ttl: Optional[int] = None,
+    ) -> bool:
         """
         Cache a response for a query.
-        
+
         Args:
             query: The original query
             response: The response to cache
             context: Optional context for the query
             ttl: Time-to-live in seconds (uses default if not specified)
-            
+
         Returns:
             True if cached successfully, False otherwise
         """
         if not self.is_ready or self.strategy == CacheStrategy.DISABLED:
             return False
-        
+
         try:
             # Check if we should cache this query based on strategy
             if not self._should_cache_query(query, response, context):
                 return False
-            
+
             # Normalize query
             normalized_query = self._normalize_query(query)
             if not normalized_query:
                 return False
-            
+
             # Generate embedding
             query_embedding = self._get_embedding(normalized_query)
             if query_embedding is None:
                 return False
-            
+
             # Create cache entry
             query_hash = self._hash_query(normalized_query)
             ttl = ttl or self._get_adaptive_ttl(response)
-            
+
             # Ensure embedding is a plain list[float] for serialization
             try:
                 if isinstance(query_embedding, list):
                     embedding_list = [float(x) for x in cast(List[float], query_embedding)]
-                elif hasattr(query_embedding, 'tolist'):
+                elif hasattr(query_embedding, "tolist"):
                     embedding_list = [float(x) for x in query_embedding.tolist()]
                 else:
                     iterable = cast(Iterable[float], query_embedding)
@@ -311,51 +328,66 @@ class SemanticCache:
                 response=self._sanitize_response(response),
                 created_at=time.time(),
                 ttl_seconds=ttl,
-                similarity_threshold=self._get_similarity_threshold(query, context)
+                similarity_threshold=self._get_similarity_threshold(query, context),
             )
-            
+
             # Store in Redis
             success = await self._store_cache_entry(cache_entry)
-            
+
             if success:
                 log.debug(f"Cached response for query '{query[:50]}...', TTL: {ttl}s")
-            
+
             return success
-            
+
         except Exception as e:
             log.error(f"Cache set failed for query '{query[:50]}...': {e}")
             return False
-    
+
     def _normalize_query(self, query: str) -> str:
         """Normalize query for consistent caching."""
         if not query or not query.strip():
             return ""
-        
+
         # Basic normalization
         normalized = query.strip().lower()
-        
+
         # Remove extra whitespace
         normalized = " ".join(normalized.split())
-        
+
         # Remove common stop words for better semantic matching
         # (In production, you might want more sophisticated preprocessing)
-        stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"}
+        stop_words = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+        }
         words = normalized.split()
-        
+
         # Only remove stop words if query is long enough
         if len(words) > 3:
             words = [word for word in words if word not in stop_words]
             normalized = " ".join(words)
-        
+
         return normalized
-    
+
     def _get_embedding(self, text: str) -> Optional[Any]:
         """Generate embedding for text with lightweight fallback when model missing."""
         if self.embedding_model is not None:
             try:
                 emb = self.embedding_model.encode(text)
                 # Convert to a plain list[float] for JSON serialization
-                if hasattr(emb, 'tolist'):
+                if hasattr(emb, "tolist"):
                     emb_list = emb.tolist()
                 else:
                     emb_list = list(emb)
@@ -369,7 +401,7 @@ class SemanticCache:
             size = 256
             counts = [0.0] * size
             for i in range(max(0, len(t) - 2)):
-                tri = t[i:i+3]
+                tri = t[i : i + 3]
                 h = (hash(tri) & 0xFFFFFFFF) % size
                 counts[h] += 1.0
             # normalize
@@ -380,48 +412,48 @@ class SemanticCache:
         except Exception as e:
             log.warning(f"Lightweight embedding failed: {e}")
             return None
-    
-    async def _find_similar_entry(self, query_embedding: Any, 
-                                 query: str, context: Optional[Dict[str, Any]]) -> Optional[CacheEntry]:
+
+    async def _find_similar_entry(
+        self, query_embedding: Any, query: str, context: Optional[Dict[str, Any]]
+    ) -> Optional[CacheEntry]:
         """Find the most similar cached entry."""
         try:
             # Get all cached entries (in production, you'd want more efficient similarity search)
             cached_entries = await self._get_cached_entries_sample()
-            
+
             if not cached_entries:
                 return None
-            
+
             best_entry = None
             best_similarity = 0.0
-            
+
             for entry in cached_entries:
                 if entry.is_expired():
                     continue
-                
+
                 # Calculate similarity
                 similarity = self._calculate_similarity(query_embedding, entry.embedding)
-                
+
                 # Check if similarity meets threshold
                 if similarity >= entry.similarity_threshold and similarity > best_similarity:
                     best_similarity = similarity
                     best_entry = entry
-            
+
             # Store similarity for debugging
             if best_entry:
                 best_entry.last_similarity = best_similarity
-                
+
                 # Update average similarity stat
                 self.stats["average_similarity"] = (
-                    (self.stats["average_similarity"] * self.stats["cache_hits"] + best_similarity) / 
-                    (self.stats["cache_hits"] + 1)
-                )
-            
+                    self.stats["average_similarity"] * self.stats["cache_hits"] + best_similarity
+                ) / (self.stats["cache_hits"] + 1)
+
             return best_entry
-            
+
         except Exception as e:
             log.error(f"Failed to find similar entry: {e}")
             return None
-    
+
     def _calculate_similarity(self, embedding1: Any, embedding2: Any) -> float:
         """Calculate cosine similarity between embeddings (numpy or pure Python)."""
         try:
@@ -448,7 +480,7 @@ class SemanticCache:
             return dot / (n1 * n2)
         except Exception:
             return 0.0
-    
+
     async def _get_cached_entries_sample(self, limit: int = 1000) -> List[CacheEntry]:
         """Get a sample of cached entries for similarity comparison."""
         try:
@@ -480,7 +512,7 @@ class SemanticCache:
         except Exception as e:
             log.error(f"Failed to get cached entries sample: {e}")
             return []
-    
+
     async def _store_cache_entry(self, entry: CacheEntry) -> bool:
         """Store cache entry in Redis."""
         try:
@@ -493,17 +525,13 @@ class SemanticCache:
             # Store metadata
             metadata_key = f"{self.metadata_key_prefix}:{entry.query_hash}"
             await self.redis_client.setex(
-                metadata_key,
-                entry.ttl_seconds,
-                json.dumps(entry.to_dict())
+                metadata_key, entry.ttl_seconds, json.dumps(entry.to_dict())
             )
 
             # Store vector separately for efficient similarity search
             vector_key = f"{self.vector_key_prefix}:{entry.query_hash}"
             await self.redis_client.setex(
-                vector_key,
-                entry.ttl_seconds,
-                json.dumps(entry.embedding)
+                vector_key, entry.ttl_seconds, json.dumps(entry.embedding)
             )
 
             # Manage cache size
@@ -514,7 +542,7 @@ class SemanticCache:
         except Exception as e:
             log.error(f"Failed to store cache entry: {e}")
             return False
-    
+
     async def _update_cache_entry(self, entry: CacheEntry):
         """Update an existing cache entry with new access statistics."""
         try:
@@ -523,76 +551,85 @@ class SemanticCache:
                 return
             metadata_key = f"{self.metadata_key_prefix}:{entry.query_hash}"
             await self.redis_client.setex(
-                metadata_key,
-                entry.ttl_seconds,
-                json.dumps(entry.to_dict())
+                metadata_key, entry.ttl_seconds, json.dumps(entry.to_dict())
             )
         except Exception as e:
             log.warning(f"Failed to update cache entry: {e}")
-    
-    def _should_cache_query(self, query: str, response: Dict[str, Any], 
-                           context: Optional[Dict[str, Any]]) -> bool:
+
+    def _should_cache_query(
+        self, query: str, response: Dict[str, Any], context: Optional[Dict[str, Any]]
+    ) -> bool:
         """Determine if a query should be cached based on strategy and content."""
-        
+
         if self.strategy == CacheStrategy.DISABLED:
             return False
-        
+
         # Don't cache very short queries
         if len(query.strip()) < 10:
             return False
-        
+
         # Don't cache if response indicates an error
         if response.get("error") or not response.get("answer"):
             return False
-        
+
         # Don't cache very short responses (likely not useful)
         answer = response.get("answer", "")
         if len(answer) < 20:
             return False
-        
+
         if self.strategy == CacheStrategy.AGGRESSIVE:
             return True
-        
+
         elif self.strategy == CacheStrategy.CONSERVATIVE:
             # Only cache if response seems high-quality
             return (
-                len(answer) > 50 and
-                len(query.strip()) > 20 and
-                not any(uncertainty in answer.lower() 
-                       for uncertainty in ["i don't know", "unclear", "uncertain"])
+                len(answer) > 50
+                and len(query.strip()) > 20
+                and not any(
+                    uncertainty in answer.lower()
+                    for uncertainty in ["i don't know", "unclear", "uncertain"]
+                )
             )
-        
+
         elif self.strategy == CacheStrategy.SELECTIVE:
             # Cache based on query patterns
             query_lower = query.lower()
             cache_patterns = [
-                "what is", "how to", "explain", "define", "describe",
-                "difference between", "pros and cons", "advantages",
-                "best practices", "tutorial", "guide"
+                "what is",
+                "how to",
+                "explain",
+                "define",
+                "describe",
+                "difference between",
+                "pros and cons",
+                "advantages",
+                "best practices",
+                "tutorial",
+                "guide",
             ]
-            
+
             return any(pattern in query_lower for pattern in cache_patterns)
-        
+
         return False
-    
+
     def _get_adaptive_ttl(self, response: Dict[str, Any]) -> int:
         """Get adaptive TTL based on response characteristics."""
         base_ttl = self.default_ttl
-        
+
         # Longer TTL for longer, more comprehensive responses
         answer = response.get("answer", "")
         if len(answer) > 500:
             base_ttl *= 2
         elif len(answer) > 1000:
             base_ttl *= 3
-        
+
         # Shorter TTL for responses that might become outdated quickly
         time_sensitive_keywords = ["latest", "recent", "current", "today", "now", "2024", "2025"]
         if any(keyword in answer.lower() for keyword in time_sensitive_keywords):
             base_ttl = min(base_ttl, 1800)  # 30 minutes max
-        
+
         return base_ttl
-    
+
     def _get_similarity_threshold(self, query: str, context: Optional[Dict[str, Any]]) -> float:
         """Get adaptive similarity threshold based on query and context."""
         base_threshold = self.similarity_threshold
@@ -600,28 +637,33 @@ class SemanticCache:
         # If using lightweight fallback embeddings, be more permissive
         if self.embedding_model is None:
             base_threshold -= 0.10
-        
+
         # Lower threshold for longer queries (more context)
         if len(query) > 100:
             base_threshold -= 0.05
-        
+
         # Higher threshold for short queries (less context, need closer match)
         elif len(query) < 30:
             base_threshold += 0.02
 
         return max(0.60, min(0.98, base_threshold))
-    
+
     def _sanitize_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize response before caching to remove sensitive data."""
         # Create a copy and remove potentially sensitive fields
         sanitized = response.copy()
-        
+
         # Remove fields that shouldn't be cached
         sensitive_fields = [
-            "request_id", "user_id", "session_id", "timestamp", 
-            "execution_time", "provider_metadata", "internal_metadata"
+            "request_id",
+            "user_id",
+            "session_id",
+            "timestamp",
+            "execution_time",
+            "provider_metadata",
+            "internal_metadata",
         ]
-        
+
         for field in sensitive_fields:
             sanitized.pop(field, None)
 
@@ -629,11 +671,11 @@ class SemanticCache:
         sanitized["cached_at"] = datetime.now(timezone.utc).isoformat()
 
         return sanitized
-    
+
     def _hash_query(self, query: str) -> str:
         """Generate hash for query."""
         return hashlib.sha256(query.encode()).hexdigest()[:16]
-    
+
     async def _manage_cache_size(self):
         """Manage cache size by removing least recently used entries."""
         try:
@@ -642,7 +684,9 @@ class SemanticCache:
                 if len(self._mem_store) <= self.max_cache_size:
                     return
                 # sort by last_accessed
-                items: List[Tuple[str, CacheEntry]] = sorted(self._mem_store.items(), key=lambda kv: kv[1].last_accessed)
+                items: List[Tuple[str, CacheEntry]] = sorted(
+                    self._mem_store.items(), key=lambda kv: kv[1].last_accessed
+                )
                 to_remove = len(items) - self.max_cache_size + 100
                 for i in range(max(0, to_remove)):
                     key, _ = items[i]
@@ -672,7 +716,9 @@ class SemanticCache:
             entries_with_access.sort(key=lambda x: x[1].get("last_accessed", 0))
 
             # Remove oldest entries
-            entries_to_remove = len(entries_with_access) - self.max_cache_size + 100  # Remove extra for buffer
+            entries_to_remove = (
+                len(entries_with_access) - self.max_cache_size + 100
+            )  # Remove extra for buffer
 
             for i in range(min(entries_to_remove, len(entries_with_access))):
                 key, entry_dict = entries_with_access[i]
@@ -688,29 +734,29 @@ class SemanticCache:
 
         except Exception as e:
             log.error(f"Failed to manage cache size: {e}")
-    
+
     async def _periodic_cleanup(self):
         """Periodically clean up expired entries and update analytics."""
         while True:
             try:
                 await asyncio.sleep(self.cleanup_interval)
-                
+
                 if not self.is_ready:
                     continue
-                
+
                 # Clean up expired entries
                 await self._cleanup_expired_entries()
-                
+
                 # Save analytics
                 await self._save_analytics()
-                
+
                 # Update last cleanup time
                 self.stats["last_cleanup"] = time.time()
-                
+
             except Exception as e:
                 log.error(f"Periodic cleanup failed: {e}")
                 await asyncio.sleep(60)  # Wait before retrying
-    
+
     async def _cleanup_expired_entries(self):
         """Clean up expired cache entries."""
         try:
@@ -760,7 +806,7 @@ class SemanticCache:
 
         except Exception as e:
             log.error(f"Failed to cleanup expired entries: {e}")
-    
+
     async def _load_analytics(self):
         """Load analytics from Redis."""
         try:
@@ -773,7 +819,7 @@ class SemanticCache:
                 log.debug("Loaded cache analytics from Redis")
         except Exception:
             pass  # Use default stats
-    
+
     async def _save_analytics(self):
         """Save analytics to Redis."""
         try:
@@ -782,11 +828,11 @@ class SemanticCache:
             await self.redis_client.setex(
                 self.analytics_key,
                 86400,  # 24 hours
-                json.dumps(self.stats)
+                json.dumps(self.stats),
             )
         except Exception as e:
             log.warning(f"Failed to save analytics: {e}")
-    
+
     async def get_analytics(self) -> Dict[str, Any]:
         """Get comprehensive cache analytics."""
         try:
@@ -818,13 +864,13 @@ class SemanticCache:
                 "average_similarity": self.stats["average_similarity"],
                 "memory_usage_mb": memory_usage,
                 "last_cleanup": datetime.fromtimestamp(self.stats["last_cleanup"]).isoformat(),
-                "ttl_seconds": self.default_ttl
+                "ttl_seconds": self.default_ttl,
             }
 
         except Exception as e:
             log.error(f"Failed to get analytics: {e}")
             return {"error": str(e)}
-    
+
     async def _estimate_memory_usage(self) -> float:
         """Estimate memory usage of cache in MB."""
         try:
@@ -837,13 +883,15 @@ class SemanticCache:
             return used_memory / (1024 * 1024)
         except Exception:
             return 0.0
-    
+
     async def clear_cache(self, pattern: Optional[str] = None) -> Dict[str, Any]:
         """Clear cache entries matching pattern."""
         try:
             if self.redis_client is None:
                 if pattern:
-                    to_del = [k for k, v in self._mem_store.items() if pattern in k or pattern in v.query]
+                    to_del = [
+                        k for k, v in self._mem_store.items() if pattern in k or pattern in v.query
+                    ]
                     for k in to_del:
                         self._mem_store.pop(k, None)
                     cleared = len(to_del)
@@ -857,14 +905,19 @@ class SemanticCache:
                         "cache_misses": 0,
                         "total_queries": 0,
                         "average_similarity": 0.0,
-                        "last_cleanup": time.time()
+                        "last_cleanup": time.time(),
                     }
                 return {"cleared_entries": cleared, "pattern": pattern or "all"}
 
             if pattern:
-                keys = cast(List[str], await self.redis_client.keys(f"{self.metadata_key_prefix}:*{pattern}*"))
+                keys = cast(
+                    List[str],
+                    await self.redis_client.keys(f"{self.metadata_key_prefix}:*{pattern}*"),
+                )
             else:
-                keys = cast(List[str], await self.redis_client.keys(f"{self.metadata_key_prefix}:*"))
+                keys = cast(
+                    List[str], await self.redis_client.keys(f"{self.metadata_key_prefix}:*")
+                )
 
             # Also clear corresponding vector keys
             vector_keys: List[str] = []
@@ -886,19 +939,16 @@ class SemanticCache:
                     "cache_misses": 0,
                     "total_queries": 0,
                     "average_similarity": 0.0,
-                    "last_cleanup": time.time()
+                    "last_cleanup": time.time(),
                 }
                 await self._save_analytics()
 
-            return {
-                "cleared_entries": len(keys),
-                "pattern": pattern or "all"
-            }
+            return {"cleared_entries": len(keys), "pattern": pattern or "all"}
 
         except Exception as e:
             log.error(f"Failed to clear cache: {e}")
             return {"error": str(e)}
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check on semantic cache."""
         health: Dict[str, Any] = {
@@ -906,7 +956,7 @@ class SemanticCache:
             "redis_connected": False,
             "embedding_model_loaded": False,
             "in_memory": self.redis_client is None,
-            "last_error": None
+            "last_error": None,
         }
 
         try:
@@ -929,22 +979,26 @@ class SemanticCache:
 
         return health
 
+
 # Global semantic cache instance
 _semantic_cache: Optional[SemanticCache] = None
 
-async def get_semantic_cache(redis_url: str = "redis://localhost:6379",
-                           embedding_model: str = "all-MiniLM-L6-v2",
-                           similarity_threshold: float = 0.95) -> Optional[SemanticCache]:
+
+async def get_semantic_cache(
+    redis_url: str = "redis://localhost:6379",
+    embedding_model: str = "all-MiniLM-L6-v2",
+    similarity_threshold: float = 0.95,
+) -> Optional[SemanticCache]:
     """Get global semantic cache instance."""
     global _semantic_cache
-    
+
     if _semantic_cache is None:
         _semantic_cache = SemanticCache(
             redis_url=redis_url,
             embedding_model=embedding_model,
-            similarity_threshold=similarity_threshold
+            similarity_threshold=similarity_threshold,
         )
         # Give it time to initialize
         await asyncio.sleep(2)
-    
+
     return _semantic_cache

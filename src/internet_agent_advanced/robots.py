@@ -6,6 +6,7 @@ from .config import RESPECT_ROBOTS, ROBOTS_TTL_S
 
 _cache: dict[str, tuple[RobotExclusionRulesParser, float]] = {}
 
+
 async def is_allowed(url: str, user_agent: str = "internet_agent_advanced"):
     if not RESPECT_ROBOTS:
         return True

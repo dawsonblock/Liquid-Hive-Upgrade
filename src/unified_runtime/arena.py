@@ -17,11 +17,12 @@ except Exception:  # pragma: no cover
 # Local constant to avoid circular import
 API_PREFIX = "/api"
 
-router = APIRouter(prefix=f"{API_PREFIX}/arena", tags=["arena"]) 
+router = APIRouter(prefix=f"{API_PREFIX}/arena", tags=["arena"])
 
 # -------------------
 # Data models
 # -------------------
+
 
 class SubmitRequest(BaseModel):
     task_id: Optional[str] = None
@@ -29,9 +30,11 @@ class SubmitRequest(BaseModel):
     reference: Optional[str] = Field(None, description="Optional reference/ground truth")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+
 class SubmitResponse(BaseModel):
     task_id: str
     stored: bool
+
 
 class CompareRequest(BaseModel):
     task_id: str
@@ -44,9 +47,11 @@ class CompareRequest(BaseModel):
     rationale: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+
 class CompareResponse(BaseModel):
     match_id: str
     decided_winner: str  # 'A' | 'B' | 'tie'
+
 
 class LeaderboardEntry(BaseModel):
     model: str
@@ -54,6 +59,7 @@ class LeaderboardEntry(BaseModel):
     losses: int
     ties: int
     win_rate: float
+
 
 class LeaderboardResponse(BaseModel):
     leaderboard: List[LeaderboardEntry]
@@ -72,6 +78,7 @@ else:  # pragma: no cover
 # Storage Abstraction
 # -------------------
 
+
 class ArenaStore:
     def __init__(self):
         self.redis = None
@@ -85,6 +92,7 @@ class ArenaStore:
         # Try Redis
         try:
             import redis as _redis  # type: ignore
+
             redis_url = os.getenv("REDIS_URL")
             if redis_url:
                 self.redis = _redis.Redis.from_url(redis_url, decode_responses=True)
@@ -95,6 +103,7 @@ class ArenaStore:
         # Try Neo4j
         try:
             from neo4j import GraphDatabase  # type: ignore
+
             uri = os.getenv("NEO4J_URI")
             user = os.getenv("NEO4J_USER")
             pwd = os.getenv("NEO4J_PASSWORD")
@@ -121,11 +130,11 @@ class ArenaStore:
                 pass
         if self.neo4j:
             try:
-                q = (
-                    "MERGE (t:Task {id: $id}) SET t.input=$input, t.reference=$reference, t.created_at=$ts"
-                )
+                q = "MERGE (t:Task {id: $id}) SET t.input=$input, t.reference=$reference, t.created_at=$ts"
                 with self.neo4j.session() as s:
-                    s.run(q, id=tid, input=task.get("input"), reference=task.get("reference"), ts=now)
+                    s.run(
+                        q, id=tid, input=task.get("input"), reference=task.get("reference"), ts=now
+                    )
             except Exception:
                 pass
         # Always keep in-memory fallback
@@ -219,7 +228,11 @@ class ArenaStore:
             ties = self._score.get(model, {}).get("ties", 0)
             total = max(1, wins + losses)  # ignore ties in denominator
             win_rate = wins / float(total)
-            entries.append(LeaderboardEntry(model=model, wins=wins, losses=losses, ties=ties, win_rate=win_rate))
+            entries.append(
+                LeaderboardEntry(
+                    model=model, wins=wins, losses=losses, ties=ties, win_rate=win_rate
+                )
+            )
 
         entries.sort(key=lambda e: e.win_rate, reverse=True)
         return entries
@@ -243,10 +256,16 @@ store = ArenaStore()
 # Endpoints
 # -------------------
 
+
 @router.post("/submit", response_model=SubmitResponse)
 async def submit_task(req: SubmitRequest) -> SubmitResponse:
     tid = req.task_id or uuid.uuid4().hex
-    payload = {"task_id": tid, "input": req.input, "reference": req.reference, "metadata": req.metadata}
+    payload = {
+        "task_id": tid,
+        "input": req.input,
+        "reference": req.reference,
+        "metadata": req.metadata,
+    }
     store.create_task(payload)
     return SubmitResponse(task_id=tid, stored=True)
 

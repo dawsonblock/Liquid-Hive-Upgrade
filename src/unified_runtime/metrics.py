@@ -9,11 +9,19 @@ except Exception:  # pragma: no cover
     Gauge = None  # type: ignore
 
 if Counter is not None:
-    RATE_LIMIT_ALLOWED = Counter("cb_rate_limit_allowed_total", "Rate limit allowed", labelnames=("tenant",))
-    RATE_LIMIT_DENIED = Counter("cb_rate_limit_denied_total", "Rate limit denied", labelnames=("tenant",))
-    BUDGET_TOKENS = Counter("cb_budget_tokens_total", "Budget tokens recorded", labelnames=("tenant",))
+    RATE_LIMIT_ALLOWED = Counter(
+        "cb_rate_limit_allowed_total", "Rate limit allowed", labelnames=("tenant",)
+    )
+    RATE_LIMIT_DENIED = Counter(
+        "cb_rate_limit_denied_total", "Rate limit denied", labelnames=("tenant",)
+    )
+    BUDGET_TOKENS = Counter(
+        "cb_budget_tokens_total", "Budget tokens recorded", labelnames=("tenant",)
+    )
     BUDGET_USD = Counter("cb_budget_usd_total", "Budget USD recorded", labelnames=("tenant",))
-    BUDGET_EXCEEDED = Gauge("cb_budget_exceeded", "Budget exceeded flag (1=yes)", labelnames=("tenant",))
+    BUDGET_EXCEEDED = Gauge(
+        "cb_budget_exceeded", "Budget exceeded flag (1=yes)", labelnames=("tenant",)
+    )
 else:  # pragma: no cover
     RATE_LIMIT_ALLOWED = RATE_LIMIT_DENIED = BUDGET_TOKENS = BUDGET_USD = BUDGET_EXCEEDED = None  # type: ignore
 

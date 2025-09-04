@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field, model_validator
 
 
 OpKind = Literal[
-    "local_search",    # stubbed local search
-    "calculator",      # safe calculator
-    "flaky",           # helper for tests: fails N times before success
-    "sleep",           # helper op: sleep N ms
+    "local_search",  # stubbed local search
+    "calculator",  # safe calculator
+    "flaky",  # helper for tests: fails N times before success
+    "sleep",  # helper op: sleep N ms
 ]
 
 

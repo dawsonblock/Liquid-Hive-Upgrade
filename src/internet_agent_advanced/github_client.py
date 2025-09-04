@@ -3,9 +3,11 @@ import os, time
 from typing import Optional, Dict, Any
 from github import Github
 
+
 def get_github(token: Optional[str] = None) -> Github:
     token = token or os.getenv("GITHUB_TOKEN")
     return Github(login_or_token=token) if token else Github()
+
 
 def fetch_repo_readme(full_name: str, token: Optional[str] = None) -> Dict[str, Any]:
     gh = get_github(token)
@@ -16,8 +18,14 @@ def fetch_repo_readme(full_name: str, token: Optional[str] = None) -> Dict[str, 
     except Exception:
         content = ""
     return {
-        "full_name": full_name, "description": repo.description, "stars": repo.stargazers_count,
-        "forks": repo.forks_count, "open_issues": repo.open_issues_count,
-        "default_branch": repo.default_branch, "homepage": repo.homepage,
-        "readme": content, "html_url": repo.html_url, "fetched_at": time.time(),
+        "full_name": full_name,
+        "description": repo.description,
+        "stars": repo.stargazers_count,
+        "forks": repo.forks_count,
+        "open_issues": repo.open_issues_count,
+        "default_branch": repo.default_branch,
+        "homepage": repo.homepage,
+        "readme": content,
+        "html_url": repo.html_url,
+        "fetched_at": time.time(),
     }

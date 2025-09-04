@@ -9,7 +9,7 @@ from oracle.manager import ProviderManager
 
 API_PREFIX = "/api"
 
-router = APIRouter(prefix=f"{API_PREFIX}/admin", tags=["admin"]) 
+router = APIRouter(prefix=f"{API_PREFIX}/admin", tags=["admin"])
 
 # Global singleton for simplicity
 _pm = ProviderManager()
@@ -17,8 +17,10 @@ _pm = ProviderManager()
 try:
     from .security import auth_optional
 except Exception:
+
     async def auth_optional(*args, **kwargs):
         return None
+
 
 _providers_cache: Dict[str, Any] = {}
 _routing: Dict[str, Any] = {}
@@ -36,15 +38,19 @@ def _load_providers() -> None:
         try:
             if cfg.kind == "deepseek":
                 from oracle.deepseek import DeepSeekProvider
+
                 prov = DeepSeekProvider(cfg, key)
             elif cfg.kind == "openai":
                 from oracle.openai import OpenAIProvider
+
                 prov = OpenAIProvider(cfg, key)
             elif cfg.kind == "anthropic":
                 from oracle.anthropic import AnthropicProvider
+
                 prov = AnthropicProvider(cfg, key)
             elif cfg.kind == "qwen":
                 from oracle.qwen import QwenProvider
+
                 prov = QwenProvider(cfg, key)
         except Exception:
             prov = None
@@ -63,15 +69,17 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
     out = []
     for name, prov in _providers_cache.items():
         cfg = getattr(prov, "cfg")
-        out.append({
-            "name": name,
-            "kind": cfg.kind,
-            "base_url": cfg.base_url,
-            "model": cfg.model,
-            "max_tokens": cfg.max_tokens,
-            "role": cfg.role,
-            "state": "unknown",  # placeholder for breaker state in future
-        })
+        out.append(
+            {
+                "name": name,
+                "kind": cfg.kind,
+                "base_url": cfg.base_url,
+                "model": cfg.model,
+                "max_tokens": cfg.max_tokens,
+                "role": cfg.role,
+                "state": "unknown",  # placeholder for breaker state in future
+            }
+        )
     return {
         "providers": out,
         "routing": _routing,

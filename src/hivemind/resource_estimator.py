@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class CostModel:
-    token_price_small: float = 2e-6   # $/token (example)
-    token_price_large: float = 1e-5   # $/token (example)
+    token_price_small: float = 2e-6  # $/token (example)
+    token_price_large: float = 1e-5  # $/token (example)
 
 
 class ResourceEstimator:
@@ -26,10 +26,12 @@ class ResourceEstimator:
         base = max(1, len(prompt) // 4)
         punctuation = sum(prompt.count(c) for c in ".,;:!?()[]{}")
         lines = prompt.count("\n") + 1
-        bonus = int(0.1 * punctuation + 0.05 * lines * base ** 0.3)
+        bonus = int(0.1 * punctuation + 0.05 * lines * base**0.3)
         return int(base + bonus)
 
-    def estimate_cost(self, role: str = "implementer", tier: str = "auto", prompt: Optional[str] = None) -> Dict[str, Any]:
+    def estimate_cost(
+        self, role: str = "implementer", tier: str = "auto", prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
         predicted_tokens = None
         if prompt:
             predicted_tokens = self._estimate_tokens(prompt)

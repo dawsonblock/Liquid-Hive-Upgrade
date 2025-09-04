@@ -14,7 +14,9 @@ def run_bootstrap(
     out_path = pathlib.Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    base_model = base_model or os.environ.get("BASE_MODEL", "unsloth/llama-3.1-8b-instruct-bnb-4bit")
+    base_model = base_model or os.environ.get(
+        "BASE_MODEL", "unsloth/llama-3.1-8b-instruct-bnb-4bit"
+    )
 
     # Curated mix: SlimOrca + OpenHermes-2.5
     datasets = [

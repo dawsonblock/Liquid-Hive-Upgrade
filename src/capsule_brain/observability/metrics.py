@@ -1,7 +1,13 @@
 from time import time
 import re
 from typing import Callable
-from prometheus_client import CollectorRegistry, CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import (
+    CollectorRegistry,
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    generate_latest,
+)
 from fastapi import APIRouter, Response
 
 registry = CollectorRegistry()
@@ -27,10 +33,12 @@ TOKENS_USED = Counter(
 
 router = APIRouter()
 
+
 @router.get("/metrics")
 async def metrics() -> Response:
     data = generate_latest(registry)
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
 
 class MetricsMiddleware:
     def __init__(self, app: Callable):
@@ -70,4 +78,6 @@ class MetricsMiddleware:
                 else:
                     adapter_version = "unknown"
             REQUEST_LATENCY.labels(method, norm_path, adapter_version).observe(elapsed)
-            REQUEST_COUNT.labels(method, norm_path, status_code_container["code"], adapter_version).inc()
+            REQUEST_COUNT.labels(
+                method, norm_path, status_code_container["code"], adapter_version
+            ).inc()

@@ -12,6 +12,7 @@ maintain compatibility in constrained environments where the actual LAVA
 model is not available.  In production you should replace the ``generate``
 method with calls to your dedicated LAVA inference service.
 """
+
 from __future__ import annotations
 
 from typing import Any

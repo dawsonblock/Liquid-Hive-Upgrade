@@ -14,7 +14,11 @@ class DeepSeekProvider:
     async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
         # If no key provided, return a stubbed response for dev environments
         if not self._key:
-            return {"provider": self.name, "content": f"[stub:deepseek] {prompt[:64]}...", "status": "stub"}
+            return {
+                "provider": self.name,
+                "content": f"[stub:deepseek] {prompt[:64]}...",
+                "status": "stub",
+            }
         url = self.cfg.base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
         payload = {

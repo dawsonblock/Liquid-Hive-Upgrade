@@ -55,7 +55,9 @@ async def test_fan_in_out():
 
 @pytest.mark.asyncio
 async def test_from_query_helper_runs():
-    plan = PlanExecutor.plan_from_query("Please calculate 2+2 and show the latest news about SpaceX")
+    plan = PlanExecutor.plan_from_query(
+        "Please calculate 2+2 and show the latest news about SpaceX"
+    )
     ex = PlanExecutor(plan)
     res = await ex.execute()
     assert any(n.ok for n in res.values())

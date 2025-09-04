@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
+
 class PageContent(BaseModel):
     url: str
     status: int
@@ -10,7 +11,7 @@ class PageContent(BaseModel):
     content: Optional[str] = None
     content_html: Optional[str] = None
     screenshot_png: Optional[bytes] = None
-    network_payloads: List[Dict[str,Any]] = Field(default_factory=list)
+    network_payloads: List[Dict[str, Any]] = Field(default_factory=list)
     fetched_at: float
     captcha_required: bool = False
     blocked: bool = False
@@ -28,6 +29,7 @@ class ScoredItem(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
+
 
 class FetchResult(BaseModel):
     trusted: list[ScoredItem] = Field(default_factory=list)

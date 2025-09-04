@@ -9,7 +9,7 @@ from typing import Any, Dict, Tuple, Callable, Awaitable, Optional
 
 from .schema import Plan, TaskNode
 
-ENABLE_PLANNER = ("true" == str(__import__("os").environ.get("ENABLE_PLANNER", "false").lower()))
+ENABLE_PLANNER = "true" == str(__import__("os").environ.get("ENABLE_PLANNER", "false").lower())
 
 
 @dataclass
@@ -80,7 +80,9 @@ class PlanExecutor:
         return {"slept_ms": ms}
 
     # ---------- Execution ----------
-    async def execute(self, *, max_concurrency: int = 8, fail_fast: bool = False) -> Dict[str, NodeResult]:
+    async def execute(
+        self, *, max_concurrency: int = 8, fail_fast: bool = False
+    ) -> Dict[str, NodeResult]:
         start = time.perf_counter()
         # Topologically sort and schedule by dependency readiness
         pending: Dict[str, TaskNode] = dict(self.plan.nodes)
@@ -102,7 +104,13 @@ class PlanExecutor:
                         else:
                             val = await coro
                         duration = (time.perf_counter() - node_start) * 1000.0
-                        res = NodeResult(node_id=n.id, ok=True, value=val, attempts=attempts, duration_ms=duration)
+                        res = NodeResult(
+                            node_id=n.id,
+                            ok=True,
+                            value=val,
+                            attempts=attempts,
+                            duration_ms=duration,
+                        )
                         self.results[n.id] = res
                         return
                     except asyncio.TimeoutError:
@@ -112,7 +120,12 @@ class PlanExecutor:
                     if attempts > n.retries:
                         duration = (time.perf_counter() - node_start) * 1000.0
                         self.results[n.id] = NodeResult(
-                            node_id=n.id, ok=False, value=None, attempts=attempts, duration_ms=duration, error=last_err
+                            node_id=n.id,
+                            ok=False,
+                            value=None,
+                            attempts=attempts,
+                            duration_ms=duration,
+                            error=last_err,
                         )
                         if fail_fast:
                             raise RuntimeError(f"Node {n.id} failed: {last_err}")
@@ -136,12 +149,16 @@ class PlanExecutor:
                     # Deadlock: dependencies failed or cycle in runtime (should be prevented by validation)
                     # Mark remaining as failed due to unmet deps
                     for nid, n in list(pending.items()):
-                        self.results[nid] = NodeResult(nid, False, None, 0, 0.0, "unmet_dependencies")
+                        self.results[nid] = NodeResult(
+                            nid, False, None, 0, 0.0, "unmet_dependencies"
+                        )
                         del pending[nid]
                     break
 
                 if in_progress:
-                    done, _ = await asyncio.wait(in_progress.values(), return_when=asyncio.FIRST_COMPLETED)
+                    done, _ = await asyncio.wait(
+                        in_progress.values(), return_when=asyncio.FIRST_COMPLETED
+                    )
                     # Remove done tasks
                     for t in list(done):
                         # map back to node id
@@ -175,7 +192,9 @@ class PlanExecutor:
         # optional calc node
         if any(k in ql for k in ["calculate", "compute", "math", "+", "-", "*", "/"]):
             dep = ["search"] if "search" in nodes else []
-            nodes["calc"] = TaskNode(id="calc", op="calculator", params={"expression": q}, depends_on=dep)
+            nodes["calc"] = TaskNode(
+                id="calc", op="calculator", params={"expression": q}, depends_on=dep
+            )
         if not nodes:
             nodes["noop"] = TaskNode(id="noop", op="sleep", params={"ms": 5})
         return Plan(nodes=nodes, description="auto-plan")

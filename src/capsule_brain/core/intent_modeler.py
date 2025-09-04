@@ -14,9 +14,11 @@ heuristics to derive a single sentence summarising the user's goals from
 their recent prompts.  In a production system this would call out to a
 powerful LLM with a specialised prompt.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
+
 
 class IntentModeler:
     """Analyse user prompt history to derive high‑level operator intent."""

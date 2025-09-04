@@ -27,8 +27,16 @@ def _format_sample(sample: Dict[str, Any]) -> Optional[str]:
     # Conversations format (ShareGPT-style)
     conv = sample.get("conversations") or sample.get("messages")
     if isinstance(conv, list) and conv:
-        user_msgs = [m.get("content", "") for m in conv if (m.get("role") or m.get("from")) in ("user", "human")]
-        asst_msgs = [m.get("content", "") for m in conv if (m.get("role") or m.get("from")) in ("assistant", "gpt")]
+        user_msgs = [
+            m.get("content", "")
+            for m in conv
+            if (m.get("role") or m.get("from")) in ("user", "human")
+        ]
+        asst_msgs = [
+            m.get("content", "")
+            for m in conv
+            if (m.get("role") or m.get("from")) in ("assistant", "gpt")
+        ]
         if user_msgs and asst_msgs:
             return f"{SYSTEM_PREFIX}{user_msgs[0].strip()}{ASSISTANT_PREFIX}{asst_msgs[0].strip()}"
 
@@ -83,7 +91,9 @@ def load_mixture(cfg: DataConfig) -> (Dataset, Optional[Dataset]):
             except Exception:
                 continue
         split_name = cfg.split
-        train_ds = ds[split_name] if split_name in ds else (ds.get("train") or next(iter(ds.values())))
+        train_ds = (
+            ds[split_name] if split_name in ds else (ds.get("train") or next(iter(ds.values())))
+        )
         if cfg.max_train_samples:
             train_ds = train_ds.select(range(min(len(train_ds), cfg.max_train_samples)))
         train_parts.append(train_ds)
@@ -100,12 +110,22 @@ def load_mixture(cfg: DataConfig) -> (Dataset, Optional[Dataset]):
                 eval_parts.append(eval_ds)
 
     def map_to_text(d: Dataset) -> Dataset:
-        return d.map(lambda x: {"text": _format_sample(x)}, remove_columns=d.column_names).filter(lambda x: x["text"] is not None)
+        return d.map(lambda x: {"text": _format_sample(x)}, remove_columns=d.column_names).filter(
+            lambda x: x["text"] is not None
+        )
 
-    train = concatenate_datasets([map_to_text(d) for d in train_parts]) if len(train_parts) > 1 else map_to_text(train_parts[0])
+    train = (
+        concatenate_datasets([map_to_text(d) for d in train_parts])
+        if len(train_parts) > 1
+        else map_to_text(train_parts[0])
+    )
     evalset = None
     if eval_parts:
-        evalset = concatenate_datasets([map_to_text(d) for d in eval_parts]) if len(eval_parts) > 1 else map_to_text(eval_parts[0])
+        evalset = (
+            concatenate_datasets([map_to_text(d) for d in eval_parts])
+            if len(eval_parts) > 1
+            else map_to_text(eval_parts[0])
+        )
     return train, evalset
 
 
@@ -138,8 +158,13 @@ def train_sft(
         lora_alpha=16,
         lora_dropout=0.0,
         target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
         bias="none",
         use_gradient_checkpointing="unsloth",
@@ -148,7 +173,11 @@ def train_sft(
     )
 
     # Prepare data
-    cfg = DataConfig(datasets=datasets or DEFAULT_DATASETS, max_train_samples=max_train_samples, max_eval_samples=max_eval_samples)
+    cfg = DataConfig(
+        datasets=datasets or DEFAULT_DATASETS,
+        max_train_samples=max_train_samples,
+        max_eval_samples=max_eval_samples,
+    )
     train_set, eval_set = load_mixture(cfg)
 
     # Trainer with packing to maximize throughput
@@ -187,8 +216,13 @@ def train_sft(
 def main():
     parser = argparse.ArgumentParser(description="SFT with Unsloth QLoRA")
     parser.add_argument("--out", required=True, help="Output directory for the adapter")
-    parser.add_argument("--base_model", default=os.environ.get("BASE_MODEL", "unsloth/llama-3.1-8b-instruct-bnb-4bit"))
-    parser.add_argument("--dataset", action="append", help="HF dataset repo id. Can be passed multiple times.")
+    parser.add_argument(
+        "--base_model",
+        default=os.environ.get("BASE_MODEL", "unsloth/llama-3.1-8b-instruct-bnb-4bit"),
+    )
+    parser.add_argument(
+        "--dataset", action="append", help="HF dataset repo id. Can be passed multiple times."
+    )
     parser.add_argument("--max_train_samples", type=int, default=None)
     parser.add_argument("--max_eval_samples", type=int, default=None)
     parser.add_argument("--epochs", type=float, default=1.0)

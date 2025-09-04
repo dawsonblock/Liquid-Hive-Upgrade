@@ -44,8 +44,10 @@ class DSRouter:
         class _Echo(BaseProvider):
             async def generate(self, request: GenRequest) -> GenResponse:
                 return GenResponse(content="Simple response", provider=self.name, confidence=0.8)
+
             async def health_check(self) -> Dict[str, Any]:
                 return {"status": "healthy"}
+
         self.providers["deepseek_chat"] = _Echo("deepseek_chat")
         self.providers["deepseek_thinking"] = _Echo("deepseek_thinking")
         self.providers["deepseek_r1"] = _Echo("deepseek_r1")
