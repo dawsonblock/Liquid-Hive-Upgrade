@@ -1,51 +1,97 @@
-# LIQUID-HIVE
+# 🧠 LIQUID-HIVE
 
-[README.md](https://github.com/user-attachments/files/22033452/README.md)
+[![CI](https://github.com/AetheronResearch/liquid-hive/workflows/CI/badge.svg)](https://github.com/AetheronResearch/liquid-hive/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
+[![Security](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 
-# Apex Hive‑Mind Unified Build
+> **Production-Ready AI Cognitive System** - A unified multi-agent reasoning platform with advanced memory, retrieval, and self-improvement capabilities.
 
-This repository represents a unified fusion of the cognitive agents from
-`hivemind2` with the stateful ingestion and retrieval capabilities of
-`hivemind_book_pipeline`. It exposes a single FastAPI server in
-`unified_runtime/server.py` that enriches user prompts via retrieval and
-forwards them to a dynamic multi‑agent reasoning core. The system logs
-all interactions into a Capsule memory and supports a self‑improvement
-loop via LoRA fine‑tuning.
+## 🚀 Quick Start
 
-## Key Components
-
-- **unified_runtime/** – the entry point for serving requests. It contains
-  the FastAPI application, the dynamic strategy selector and the context
-  bridge.
-- **capsule_brain/** – provides long‑term memory, knowledge graph and
-  self‑analysis routines.
-- **hivemind/** – contains the agent roles, judge logic, retrieval and
-  training scripts.
-- **prometheus/** and **grafana/** – metrics collection and dashboards.
-- **docker-compose.yml** – orchestrates the unified runtime and all supporting
-  services. It now includes Redis (message bus), Neo4j (knowledge graph), and
-  a vLLM server (text model API) alongside Prometheus and Grafana for
-  observability.
-
-## Running Locally
-
-Install the dependencies:
+**One-command deployment:**
 
 ```bash
-pip install -r requirements.txt
+# Development setup
+git clone https://github.com/AetheronResearch/liquid-hive.git
+cd liquid-hive
+make dev-setup
+
+# Production deployment
+docker-compose up --build -d
 ```
 
-Then start the services:
+**API Usage:**
 
 ```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the capital of France?"}'
+```
+
+## 🏗️ Architecture
+
+Liquid-Hive is a production-grade cognitive system built on a microservices architecture:
+
+### **Core Components**
+
+- 🧠 **unified_runtime/** – FastAPI server with dynamic strategy selection
+- 💾 **capsule_brain/** – Long-term memory and knowledge graph
+- 🤖 **hivemind/** – Multi-agent reasoning core with specialized roles
+- 📊 **Observability** – Prometheus metrics + Grafana dashboards
+- 🌐 **Frontend** – React/TypeScript interface with real-time chat
+
+### **Infrastructure Services**
+
+| Service | Purpose | Port |
+|---------|---------|------|
+| FastAPI Backend | Core API | 8000 |
+| React Frontend | Web Interface | 3000 |
+| Redis | Message Bus | 6379 |
+| Neo4j | Knowledge Graph | 7474 |
+| Qdrant | Vector Database | 6333 |
+| Prometheus | Metrics | 9090 |
+| Grafana | Dashboards | 3030 |
+
+## 📦 Installation
+
+### **Prerequisites**
+
+- Python 3.10+
+- Node.js 18+
+- Docker & Docker Compose
+- 8GB+ RAM (for AI models)
+
+### **Development Setup**
+
+```bash
+# Clone and install
+git clone https://github.com/AetheronResearch/liquid-hive.git
+cd liquid-hive
+
+# Backend setup
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Frontend setup
+cd frontend
+yarn install --frozen-lockfile
+yarn build
+
+# Start services
 docker-compose up --build
 ```
 
-This will launch all required services and expose the API on port 8000. You can
-query it via:
+### **Production Docker**
 
 ```bash
-curl -X POST http://localhost:8000/api/chat -d 'q=What is the capital of France?'
+# Build production image
+docker build -t liquid-hive:latest .
+
+# Deploy with compose
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 Health check:
