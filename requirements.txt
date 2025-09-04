@@ -66,22 +66,16 @@ isort==5.13.2
 bandit[toml]==1.7.9  # Security vulnerability scanner
 vulture==2.11  # Dead code detection
 pydocstyle==6.3.0  # Documentation style checker
-safety==3.3.0  # Known security vulnerabilities
-pylint==3.3.4  # Comprehensive code analysis
 
 # Pre-commit and Hooks
 pre-commit==4.0.1
 detect-secrets==1.5.0
-gitlint==0.19.1  # Git commit message linting
 
 # Code Complexity and Quality Analysis
 radon==6.0.1  # Complexity analysis
-xenon==0.9.1  # Code complexity monitoring
 mccabe==0.7.0  # McCabe complexity checker
 
 # Documentation and Type Checking
-sphinx==7.4.7  # Documentation generation
-sphinx-rtd-theme==2.0.0  # ReadTheDocs theme
 mypy-extensions==1.0.0
 types-requests==2.32.0.20241016
 types-PyYAML==6.0.12.20240917
