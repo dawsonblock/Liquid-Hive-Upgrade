@@ -2,28 +2,52 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-
+    schedule: { interval: "weekly" }
+    
   - package-ecosystem: "pip"
     directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "all"
+    schedule: { interval: "weekly" }
+    ignore:
+      - dependency-name: "torch"  # Pin GPU/ML versions manually
+      - dependency-name: "numpy"  # Pin for compatibility
+    groups:
+      ml-dependencies:
+        patterns:
+          - "torch*"
+          - "transformers*"
+          - "sentence-transformers*"
+          - "faiss-*"
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "black"
+          - "isort"
+          - "bandit"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "all"
+    schedule: { interval: "weekly" }
+    versioning-strategy: "increase"
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing-tools:
+        patterns:
+          - "@testing-library/*"
+          - "jest*"
+          - "@types/jest"
+      build-tools:
+        patterns:
+          - "vite*"
+          - "@vitejs/*"
+          - "typescript"
+          - "eslint*"
+          - "@typescript-eslint/*"
 
-  - package-ecosystem: "npm"
-    directory: "/sdks/js"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule: { interval: "weekly" }

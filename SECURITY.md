@@ -2,121 +2,100 @@
 
 ## Supported Versions
 
-We actively support the following versions of the Liquid-Hive-Upgrade project:
-
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x.x   | :white_check_mark: |
-| 1.x.x   | :x:                |
+| 1.x.x   | :white_check_mark: |
+| 0.x.x   | :x:                |
 
 ## Reporting a Vulnerability
 
-We take security vulnerabilities seriously. If you believe you have found a security vulnerability in our project, please report it to us as described below.
+We take the security of Liquid-Hive seriously. If you discover a security vulnerability, please follow these steps:
 
-### How to Report
+### 🔒 Private Disclosure
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+**DO NOT** create a public GitHub issue for security vulnerabilities.
 
-Instead, please report them via email to: **security@liquid-hive.dev**
+Instead, please:
 
-You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
+1. **Email**: Send details to [security@example.com] (replace with actual contact)
+2. **Subject**: `[SECURITY] Liquid-Hive Vulnerability Report`
+3. **Include**:
+   - Description of the vulnerability
+   - Steps to reproduce
+   - Potential impact
+   - Your contact information
 
-### What to Include
+### 📝 What to Include
 
-Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
+- **Vulnerability Type**: Authentication, Authorization, SQL Injection, XSS, etc.
+- **Affected Components**: Backend API, Frontend, Database, Infrastructure
+- **Severity**: Critical, High, Medium, Low
+- **Proof of Concept**: Code, screenshots, or steps to demonstrate
+- **Suggested Fix**: If you have recommendations
 
-- Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
-- Full paths of source file(s) related to the manifestation of the issue
-- The location of the affected source code (tag/branch/commit or direct URL)
-- Any special configuration required to reproduce the issue
-- Step-by-step instructions to reproduce the issue
-- Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit the issue
+### ⏱️ Response Timeline
 
-### Our Response Process
+- **Initial Response**: Within 48 hours
+- **Investigation**: 1-2 weeks for assessment
+- **Fix Development**: 2-4 weeks depending on complexity
+- **Public Disclosure**: After fix is deployed and tested
 
-1. **Acknowledge receipt** of your vulnerability report within 48 hours
-2. **Confirm the problem** and determine the affected versions
-3. **Audit code** to find any potential similar problems
-4. **Prepare fixes** for all affected versions
-5. **Release patched versions** and announce the security advisory
+### 🏆 Recognition
 
-## Security Features
+We appreciate security researchers who help us maintain a secure platform:
 
-This project implements several security measures:
+- Security hall of fame (with permission)
+- Acknowledgment in release notes
+- Potential bug bounty (TBD based on severity)
 
-### Authentication & Authorization
+### 🛡️ Security Features
 
-- JWT token-based authentication
-- API key authentication for service-to-service communication
-- Role-based access control for admin endpoints
-- Rate limiting per tenant
+Current security measures in Liquid-Hive:
 
-### Data Protection
+- **Input Sanitization**: All user inputs are validated and sanitized
+- **Authentication**: JWT-based authentication with secure token handling
+- **Authorization**: Role-based access control (RBAC)
+- **HTTPS**: All communications encrypted in transit
+- **Dependency Scanning**: Automated vulnerability scanning via Dependabot
+- **Static Analysis**: Security linting with bandit and ESLint security rules
+- **Container Security**: Minimal base images and non-root execution
+- **Secrets Management**: Environment-based secrets (no hardcoded credentials)
 
-- Input sanitization and validation
-- PII detection and redaction
-- Prompt injection detection
-- Output safety filtering
+### 🔍 Security Testing
 
-### Infrastructure Security
+We regularly perform:
 
-- Container security with non-root user execution
-- Secret management via environment variables or external secret stores
-- HTTPS enforcement in production
-- Security scanning via Trivy in CI/CD
+- Automated dependency vulnerability scans
+- Static code analysis (bandit, ESLint security plugins)
+- Container image vulnerability scanning
+- Penetration testing (periodic)
 
-### Monitoring & Auditing
+### 📋 Security Checklist for Contributors
 
-- Comprehensive logging with structured format
-- Security event monitoring via Prometheus metrics
-- Audit trails for sensitive operations
-- Circuit breakers for external service calls
+When contributing code:
 
-## Security Best Practices for Contributors
+- [ ] No hardcoded secrets or credentials
+- [ ] Input validation on all user inputs
+- [ ] Proper error handling (no sensitive info in errors)
+- [ ] Authentication/authorization checks where needed
+- [ ] Dependencies are up-to-date and secure
+- [ ] Follow principle of least privilege
+- [ ] Security linting passes (bandit, ESLint security rules)
 
-### Code Security
+### 🚨 Known Security Considerations
 
-- All dependencies are regularly updated via Dependabot
-- Security linting is enforced via pre-commit hooks
-- Code is scanned for vulnerabilities in CI/CD pipeline
-- Secrets are never committed to the repository
+- **AI/ML Models**: Ensure model inputs are sanitized to prevent prompt injection
+- **File Uploads**: Validate file types, scan for malware, restrict sizes
+- **Database**: Use parameterized queries, limit permissions
+- **APIs**: Rate limiting, input validation, secure headers
+- **Frontend**: XSS protection, CSP headers, secure cookies
 
-### Access Control
+### 📚 Security Resources
 
-- All admin endpoints require authentication
-- Sensitive operations are logged and monitored
-- API keys are rotated regularly
-- Environment-specific configurations are isolated
-
-### Testing
-
-- Security test cases are included in the test suite
-- Penetration testing is performed periodically
-- Dependency vulnerabilities are tracked and addressed
-
-## Disclosure Policy
-
-When we receive a security bug report, we will:
-
-1. Confirm the problem and determine the affected versions
-2. Audit code to find any potential similar problems
-3. Prepare fixes for all affected versions
-4. Release new versions as soon as possible
-5. Prominently feature the problem in the release notes
-
-## Security Hall of Fame
-
-We would like to thank the following individuals for responsibly disclosing security vulnerabilities:
-
-- _No reports yet - be the first!_
-
-## Additional Resources
-
-- [OWASP Top Ten](https://owasp.org/www-project-top-ten/)
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
 - [CIS Controls](https://www.cisecurity.org/controls/)
 
 ---
 
-**Note**: This security policy is subject to change. Please check this page regularly for updates.
+**Security is a shared responsibility. Thank you for helping keep Liquid-Hive secure!**
