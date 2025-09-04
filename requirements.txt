@@ -84,5 +84,5 @@ mccabe==0.7.0  # McCabe complexity checker
 sphinx==7.4.7  # Documentation generation
 sphinx-rtd-theme==2.0.0  # ReadTheDocs theme
 mypy-extensions==1.0.0
-types-requests==2.31.0.20240905
+types-requests==2.32.0.20241016
 types-PyYAML==6.0.12.20240917
