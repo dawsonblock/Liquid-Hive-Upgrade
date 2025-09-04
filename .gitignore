@@ -170,3 +170,38 @@ pnpm-debug.log*
 # Environment files
 *.env
 *.env.*
+
+# build/artifacts
+build/
+dist/
+out/
+target/
+.coverage
+htmlcov/
+coverage/
+*.log
+*.tmp
+
+# caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.cache/
+.ruff_cache/
+
+# envs & deps
+.venv/
+venv/
+node_modules/
+
+# ide/os cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# bundles
+*.zip
+*.tar
+*.tar.gz
+*.tgz
