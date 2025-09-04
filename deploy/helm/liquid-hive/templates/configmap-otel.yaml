@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: liquid-hive-otel-config
+  namespace: {{ .Values.namespace }}
+data:
+  otlpEndpoint: {{ .Values.global.otel.endpoint | quote }}

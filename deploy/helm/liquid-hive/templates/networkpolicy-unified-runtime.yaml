@@ -1,0 +1,19 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: liquid-hive-unified-runtime
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: unified-runtime
+  policyTypes: ["Ingress","Egress"]
+  ingress:
+    - from:
+        - podSelector: {} # Adjust to ingress controller or internal callers
+      ports:
+        - port: {{ .Values.unifiedRuntime.service.port }}
+  egress:
+    {{- toYaml .Values.networkPolicy.egress | nindent 4 }}
+{{- end }}

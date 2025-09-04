@@ -128,6 +128,23 @@ serviceMonitor:
   interval: 15s
   additionalLabels: {}
 
+logging:
+  level: INFO
+  json: true
+
+security:
+  tenancyMode: single        # single | multi
+  adminToken: ""            # Prefer ExternalSecrets in prod
+  apiJwtPublicKeyPath: ""   # e.g. /var/run/secrets/jwt.pub
+  apiJwtAudience: ""
+
+rateLimit:
+  rps: 10
+
+otel:
+  endpoint: ""
+  serviceName: liquid-hive-upgrade
+
 externalSecrets:
   enabled: false
   secretStore:

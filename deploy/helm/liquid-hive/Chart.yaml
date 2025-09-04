@@ -1,0 +1,12 @@
+apiVersion: v2
+name: liquid-hive
+description: Liquid-Hive umbrella chart (runtime, security, autoscaling, observability)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - fastapi
+  - observability
+  - ai
+  - otel
+dependencies: []
