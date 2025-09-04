@@ -1,45 +1,48 @@
-# Git
+# VCS
 .git
 .gitignore
+.gitattributes
 
-# Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
+# CI/workflows (not needed in build context)
+.github
 
-# Node.js
-frontend/node_modules
-node_modules
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+# Local env/secrets
 .env
-.venv
-env/
-venv/
-ENV/
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
 
-# IDE / OS
-.vscode/
-.idea/
+# OS/editor
 .DS_Store
 Thumbs.db
+.vscode
+.idea
 
-# Test files
-*.test.tsx
-*.test.ts
-*.spec.ts
-*.spec.tsx
-frontend/src/**/*.test.tsx
-frontend/src/**/*.spec.tsx
+# Caches and artifacts
+__pycache__
+.pytest_cache
+.mypy_cache
+.venv
+venv
+env
+.cache
+coverage
+htmlcov
+dist
+build
+out
+node_modules
+frontend/node_modules
+.eslintcache
+*.tsbuildinfo
+reports
 
-# Docs & Misc
-README.md
-docs/
+# Logs and maps
+*.log
+*.tmp
+*.map
+
+# Tests outputs
+*.out

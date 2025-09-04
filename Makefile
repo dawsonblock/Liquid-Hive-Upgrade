@@ -22,6 +22,9 @@ help:
 	@echo "  make precommit-install  # install pre-commit git hooks"
 	@echo "  make lint               # run ruff checks"
 	@echo "  make format             # run formatters (ruff, black, isort if available)"
+	@echo "  make audit              # inventory + duplicate analysis (dry-run)"
+	@echo "  make clean              # remove artifacts (safe apply)"
+	@echo "  make distclean          # deep clean (node_modules, caches, reports)"
 
 .PHONY: install
 install:
@@ -72,3 +75,17 @@ format:
 	ruff format . || true
 	black . || true
 	isort . || true
+
+.PHONY: audit
+audit:
+	@mkdir -p reports
+	$(PY) tools/audit_repo.py
+	$(PY) tools/dedupe_by_hash.py  # dry-run by default
+
+.PHONY: clean
+clean:
+	$(PY) tools/clean_repo.py --apply
+
+.PHONY: distclean
+distclean:
+	$(PY) tools/clean_repo.py --apply --deep
