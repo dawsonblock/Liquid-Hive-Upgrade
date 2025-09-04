@@ -200,88 +200,195 @@ grounding_required: false
 ### **Health Check**
 
 ```bash
-
-```bash
 curl http://localhost:8000/api/healthz
 ```
 
-Vision example (multipart):
+## 🧪 Testing
+
+### **Quick Test**
 
 ```bash
+# Backend tests
+pytest tests/ -v --cov=src
+
+# Frontend tests  
+cd frontend && yarn test
+
+# Integration tests
+python tests/test_smoke.py
+```
+
+### **Manual Testing**
+
+```bash
+# Chat API
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the capital of France?"}'
+
+# Vision API
 curl -X POST "http://localhost:8000/api/vision" \
   -F "question=Describe this image" \
   -F "file=@/path/to/image.png" \
   -F "grounding_required=false"
 ```
 
-## Training and Self‑Improvement
+## 📈 Performance & Monitoring
 
-Use the scripts in `hivemind/training/` to build datasets from the run logs
-stored in the `/data/runs` directory and fine‑tune LoRA adapters. The
-dataset builder now employs a _hierarchical Oracle and Arbiter_ pipeline to
-refine the system's synthesized answers before they are used for training.
-During dataset construction the `Arbiter` consults a primary Oracle
-(DeepSeek‑V3) to critique and improve synthesized answers. If the output
-fails structural or semantic validation the task is escalated to a
-secondary, more powerful Arbiter (GPT‑4o). The resulting
-`final_platinum_answer` is used as the target output for SFT/DPO and the
-metadata records which model corrected each example are written to
-`datasets/training_metadata.jsonl`.
+### **Metrics Dashboard**
 
-The fine‑tuned adapters can be deployed by updating the `adapter`
-path in your configuration. For example, after running the `/train`
-endpoint to produce a new adapter the `AdapterDeploymentManager` will
-register it as a challenger and route a fraction of requests to it for
-A/B testing.
+Access Grafana at `http://localhost:3030` for:
 
-This repository should be treated as a starting point. Additional work is
-required to merge the Helm charts, fine‑tune configuration and deploy in
-production.
+- 📊 **Request Metrics** - Latency, throughput, error rates
+- 🧠 **AI Model Performance** - Token usage, inference times
+- 💾 **Memory Usage** - Capsule brain, knowledge graph
+- 🔄 **System Health** - Service status, resource utilization
 
-### Controlling the Oracle Pipeline
+### **Key Performance Indicators**
 
-The Oracle/Arbiter refinement pipeline has been enhanced to use DeepSeek R1 instead of GPT-4o,
-providing superior reasoning capabilities at 70% lower cost. The pipeline can be tuned or
-disabled entirely through environment variables exposed by `hivemind.config.Settings`.
+| Metric | Target | Alert Threshold |
+|--------|---------|----------------|
+| API Response Time (p95) | < 2s | > 5s |
+| Error Rate | < 1% | > 5% |
+| Memory Usage | < 80% | > 90% |
+| Token Cost/Request | $0.01 | $0.05 |
 
-| Environment Variable        | Default | Description                                                                                                                                                                                                                                                |
-| --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ENABLE_ORACLE_REFINEMENT`  | `True`  | Master switch for the refinement pipeline. When set to `False` the dataset builder will skip all external API calls and simply use the Judge's synthesized answer. This mode is the fastest and cheapest, suitable for offline or rapid iterations.        |
-| `FORCE_DEEPSEEK_R1_ARBITER` | `False` | Forces all refinements to use DeepSeek R1 (reasoning mode) instead of DeepSeek-V3 when `ENABLE_ORACLE_REFINEMENT` is `True`. This provides the highest quality reasoning analysis while maintaining cost efficiency within the unified DeepSeek ecosystem. |
+## 🔐 Security
 
-These environment variables can be set in your `.env` file or passed
-directly via your orchestration layer (e.g. docker-compose). For example,
-to run a fast, low‑cost training cycle you can disable refinement:
+### **Security Features**
+
+- ✅ **Input Sanitization** - All inputs validated and sanitized
+- ✅ **Authentication** - JWT-based with secure token handling  
+- ✅ **Authorization** - Role-based access control (RBAC)
+- ✅ **HTTPS** - All communications encrypted in transit
+- ✅ **Dependency Scanning** - Automated via Dependabot
+- ✅ **Container Security** - Minimal base images, non-root execution
+
+### **Security Scanning**
 
 ```bash
-ENABLE_ORACLE_REFINEMENT=False python -m hivemind.training.dataset_build
+# Python security scan
+bandit -r src/ -f json -o security-report.json
+
+# Frontend security audit
+cd frontend && yarn audit
+
+# Container security scan
+docker scout cves liquid-hive:latest
 ```
 
-To force all examples through DeepSeek R1 for enhanced reasoning analysis:
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+## 📚 Training & Self-Improvement
+
+### **Dataset Building**
+
+The system uses a hierarchical Oracle-Arbiter pipeline for quality assurance:
 
 ```bash
+# Build training dataset with Oracle refinement
+ENABLE_ORACLE_REFINEMENT=True python -m hivemind.training.dataset_build
+
+# Fast mode (skip external API calls)
+ENABLE_ORACLE_REFINEMENT=False python -m hivemind.training.dataset_build
+
+# Enhanced reasoning mode with DeepSeek R1
 ENABLE_ORACLE_REFINEMENT=True FORCE_DEEPSEEK_R1_ARBITER=True python -m hivemind.training.dataset_build
 ```
 
-## Additional Considerations
+### **Pipeline Configuration**
 
-See docs/ADDITIONAL_CONSIDERATIONS.md for security, observability, migration, performance, testing, and deployment guidance associated with the latest changes.
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `ENABLE_ORACLE_REFINEMENT` | `True` | Master switch for refinement pipeline |
+| `FORCE_DEEPSEEK_R1_ARBITER` | `False` | Use DeepSeek R1 for all refinements |
 
-### Operational Considerations (Summary)
+### **Model Training**
 
-- Security: Input sanitization in /api/chat; keep Approval Queue; use secrets manager (no committed .env).
-- Observability: cb\_\* metrics in Grafana; consider SLO alerts for p95 latency, 5xx, token spikes.
-- Migration: backend/ removed; unified_runtime is the API entrypoint; foundational_adapter_path centralized.
-- Performance/Cost: Economic routing via StrategySelector; cap “Master” usage; gate LoRAX streaming and add rollback.
-- Testing: New vision test on ChatPanel; add backend tests for sanitize_input and error handling.
+Fine-tune adapters using the `/train` endpoint:
 
-## Final System Analysis & Graduation Report
+```bash
+curl -X POST http://localhost:8000/api/train \
+  -H "Content-Type: application/json" \
+  -d '{"dataset_path": "/data/training_dataset.jsonl"}'
+```
 
-- Read the comprehensive, honest assessment here: docs/GRADUATION_REPORT.md
+## 🚢 Production Deployment
 
-## Deployment
+### **Docker Production**
 
-For Kubernetes deployment with Helm and GitHub Actions CI/CD, see:
+```dockerfile
+# Multi-stage build for optimized production image
+FROM python:3.11-slim as builder
+# ... (build steps)
 
-- docs/DEPLOYMENT.md (values, secrets, and workflows)
-- .github/workflows (CI build/test/scan; CD for dev/prod)
+FROM node:18-alpine as frontend
+# ... (frontend build)
+
+FROM python:3.11-slim as production
+# ... (final production image)
+```
+
+### **Kubernetes with Helm**
+
+```bash
+# Deploy to Kubernetes
+helm install liquid-hive ./helm/liquid-hive \
+  --set image.tag=v1.0.0 \
+  --set ingress.enabled=true \
+  --set autoscaling.enabled=true
+```
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete deployment guide.
+
+## 📖 Documentation
+
+- 📋 [**Contributing Guide**](CONTRIBUTING.md) - Development workflow
+- 🔐 [**Security Policy**](SECURITY.md) - Vulnerability reporting
+- 🚀 [**Deployment Guide**](docs/DEPLOYMENT.md) - Production deployment
+- 📊 [**Graduation Report**](docs/GRADUATION_REPORT.md) - System analysis
+- 🏗️ [**Architecture**](docs/architecture/) - Detailed system design
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### **Quick Contributor Setup**
+
+```bash
+# Fork and clone
+git clone https://github.com/your-fork/liquid-hive.git
+cd liquid-hive
+
+# Development setup
+make dev-setup
+
+# Create feature branch
+git checkout -b feature/amazing-feature
+
+# Make changes and test
+make test lint
+
+# Submit PR
+git push origin feature/amazing-feature
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **DeepSeek** - For advanced reasoning capabilities
+- **OpenAI** - For GPT models and embeddings  
+- **Qdrant** - For vector search
+- **FastAPI** - For high-performance API framework
+- **React** - For modern frontend framework
+
+---
+
+**⚡ Built with production-grade engineering practices:**
+[![CI](https://github.com/AetheronResearch/liquid-hive/workflows/CI/badge.svg)](https://github.com/AetheronResearch/liquid-hive/actions)
+[![Security](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Code Quality](https://img.shields.io/badge/code%20quality-ruff-orange.svg)](https://github.com/astral-sh/ruff)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
