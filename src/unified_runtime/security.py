@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 import time
-import base64
 from typing import Optional
-from fastapi import Request, HTTPException
+
+from fastapi import HTTPException, Request
 
 # Optional JWT verification using a public key file if provided
 try:
@@ -16,8 +16,10 @@ except Exception:  # PyJWT may not be installed; make this optional
 try:
     from .metrics import bump_rate_limit  # type: ignore
 except Exception:
+
     def bump_rate_limit(*args, **kwargs):
         return None
+
 
 # Simple in-memory rate limits map as fallback (tenant -> (tokens, refill_ts))
 _rate_state: dict[str, dict[str, float]] = {}
@@ -47,7 +49,13 @@ def _extract_sub_from_jwt(token: str) -> Optional[str]:
     try:
         with open(pub_path, "rb") as f:
             pub = f.read()
-        payload = jwt.decode(token, pub, algorithms=["RS256", "ES256"], audience=aud, options={"verify_aud": bool(aud)})
+        payload = jwt.decode(
+            token,
+            pub,
+            algorithms=["RS256", "ES256"],
+            audience=aud,
+            options={"verify_aud": bool(aud)},
+        )
         return str(payload.get("sub")) if payload.get("sub") else None
     except Exception:
         return None
@@ -93,6 +101,7 @@ async def rate_limit_dependency(request: Request) -> None:
     if redis_url:
         try:
             import redis  # type: ignore
+
             r = redis.Redis.from_url(redis_url, decode_responses=True)
             key = f"lh:rl:{tenant}"
             now = time.time()

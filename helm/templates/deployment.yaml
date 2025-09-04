@@ -3,62 +3,193 @@ kind: Deployment
 metadata:
   name: {{ include "liquid-hive-upgrade.fullname" . }}
   labels:
-    app: {{ include "liquid-hive-upgrade.name" . }}
-    chart: {{ include "liquid-hive-upgrade.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "liquid-hive-upgrade.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
-      app: {{ include "liquid-hive-upgrade.name" . }}
-      release: {{ .Release.Name }}
+      {{- include "liquid-hive-upgrade.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ include "liquid-hive-upgrade.name" . }}
-        release: {{ .Release.Name }}
+        {{- include "liquid-hive-upgrade.selectorLabels" . | nindent 8 }}
+        {{- with .Values.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+        {{- with .Values.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "liquid-hive-upgrade.serviceAccountName" . }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
           env:
-            - name: ENABLE_PLANNER
-              value: {{ .Values.env.ENABLE_PLANNER | quote }}
-            - name: ENABLE_ARENA
-              value: {{ .Values.env.ENABLE_ARENA | quote }}
-            - name: ENVIRONMENT
-              value: {{ .Values.env.ENVIRONMENT | quote }}
-            - name: RATE_LIMIT_RPS
-              value: {{ .Values.env.RATE_LIMIT_RPS | quote }}
-            - name: ROUTING_PROFILE
-              value: {{ .Values.env.ROUTING_PROFILE | quote }}
-            - name: OTEL_SERVICE_NAME
-              value: {{ .Values.env.OTEL_SERVICE_NAME | quote }}
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.env.OTEL_EXPORTER_OTLP_ENDPOINT | quote }}
+            # Application Environment Variables
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+
+            # Database Configuration
+            {{- if .Values.databases.mongodb.enabled }}
+            - name: MONGO_URL
+              value: {{ .Values.databases.mongodb.connectionString | quote }}
+            {{- end }}
+
+            {{- if .Values.databases.redis.enabled }}
             - name: REDIS_URL
-              value: {{ .Values.redis.url | quote }}
+              value: {{ .Values.databases.redis.url | quote }}
+            {{- if .Values.databases.redis.passwordSecretRef }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.databases.redis.passwordSecretRef }}
+                  key: password
+            {{- end }}
+            {{- end }}
+
+            {{- if .Values.databases.neo4j.enabled }}
             - name: NEO4J_URI
-              value: {{ .Values.neo4j.uri | quote }}
+              value: {{ .Values.databases.neo4j.uri | quote }}
             - name: NEO4J_USER
-              value: {{ .Values.neo4j.user | quote }}
+              value: {{ .Values.databases.neo4j.user | quote }}
             - name: NEO4J_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.neo4j.passwordSecretName }}
+                  name: {{ .Values.databases.neo4j.passwordSecretName }}
                   key: password
+            {{- end }}
+
+            {{- if .Values.databases.qdrant.enabled }}
+            - name: QDRANT_URL
+              value: {{ .Values.databases.qdrant.url | quote }}
+            {{- if .Values.databases.qdrant.apiKeySecretRef }}
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.databases.qdrant.apiKeySecretRef }}
+                  key: api-key
+            {{- end }}
+            {{- end }}
+
+            # External Secrets
+            {{- range .Values.secrets.externalSecrets }}
+            {{- range .keys }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.name }}
+                  key: {{ . }}
+            {{- end }}
+            {{- end }}
+
+          # Health Checks
+          {{- with .Values.healthChecks.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- with .Values.healthChecks.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- with .Values.healthChecks.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          # Resource Limits
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          # Volume Mounts
           volumeMounts:
-            - name: jwtpub
+            # JWT Public Key
+            - name: jwt-public-key
               mountPath: /run/secrets
               readOnly: true
+
+            # Application Data
+            {{- if .Values.persistence.enabled }}
+            - name: app-data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+            {{- end }}
+
+            # Configuration Files
+            - name: config
+              mountPath: /app/config/app-config.yaml
+              subPath: app-config.yaml
+              readOnly: true
+
+      # Volumes
       volumes:
-        - name: jwtpub
+        # JWT Public Key Secret
+        - name: jwt-public-key
           secret:
             secretName: api-jwt-pub
+
+        # Configuration ConfigMap
+        - name: config
+          configMap:
+            name: {{ include "liquid-hive-upgrade.fullname" . }}-config
+
+        # Persistent Volumes
+        {{- if .Values.persistence.enabled }}
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: {{ include "liquid-hive-upgrade.fullname" . }}-data
+        - name: logs
+          persistentVolumeClaim:
+            claimName: {{ include "liquid-hive-upgrade.fullname" . }}-logs
+        {{- end }}
+
+      # Node Selection and Scheduling
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # Termination Grace Period
+      terminationGracePeriodSeconds: 30

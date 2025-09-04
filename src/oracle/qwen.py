@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from typing import Any, Optional
+
 import httpx
-from typing import Any, Dict, Optional
+
 from .base import ProviderConfig
 
 
@@ -11,9 +13,13 @@ class QwenProvider:
         self.cfg = cfg
         self._key = api_key
 
-    async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+    async def generate(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         if not self._key:
-            return {"provider": self.name, "content": f"[stub:qwen] {prompt[:64]}...", "status": "stub"}
+            return {
+                "provider": self.name,
+                "content": f"[stub:qwen] {prompt[:64]}...",
+                "status": "stub",
+            }
         url = self.cfg.base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
         payload = {
@@ -28,5 +34,5 @@ class QwenProvider:
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             return {"provider": self.name, "content": content, "raw": data}
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> dict[str, Any]:
         return {"status": "healthy" if bool(self._key) else "stub"}

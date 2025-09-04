@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import os
 import signal
-from typing import Any, Dict
-from fastapi import APIRouter, Request, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, Request
 
 from oracle.manager import ProviderManager
 
 API_PREFIX = "/api"
 
-router = APIRouter(prefix=f"{API_PREFIX}/admin", tags=["admin"]) 
+router = APIRouter(prefix=f"{API_PREFIX}/admin", tags=["admin"])
 
 # Global singleton for simplicity
 _pm = ProviderManager()
@@ -17,11 +18,13 @@ _pm = ProviderManager()
 try:
     from .security import auth_optional
 except Exception:
+
     async def auth_optional(*args, **kwargs):
         return None
 
-_providers_cache: Dict[str, Any] = {}
-_routing: Dict[str, Any] = {}
+
+_providers_cache: dict[str, Any] = {}
+_routing: dict[str, Any] = {}
 
 
 def _load_providers() -> None:
@@ -29,22 +32,26 @@ def _load_providers() -> None:
     providers, routing = _pm.load()
     _routing = routing
     # Resolve keys from env. Keys are never returned in API.
-    cache: Dict[str, Any] = {}
+    cache: dict[str, Any] = {}
     for name, cfg in providers.items():
         key = _pm.resolve_api_key(cfg)
         prov = None
         try:
             if cfg.kind == "deepseek":
                 from oracle.deepseek import DeepSeekProvider
+
                 prov = DeepSeekProvider(cfg, key)
             elif cfg.kind == "openai":
                 from oracle.openai import OpenAIProvider
+
                 prov = OpenAIProvider(cfg, key)
             elif cfg.kind == "anthropic":
                 from oracle.anthropic import AnthropicProvider
+
                 prov = AnthropicProvider(cfg, key)
             elif cfg.kind == "qwen":
                 from oracle.qwen import QwenProvider
+
                 prov = QwenProvider(cfg, key)
         except Exception:
             prov = None
@@ -54,7 +61,7 @@ def _load_providers() -> None:
 
 
 @router.get("/providers")
-async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
+async def list_providers(dep: Any = Depends(auth_optional)) -> dict[str, Any]:
     if not _providers_cache:
         try:
             _load_providers()
@@ -62,16 +69,18 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
             return {"error": str(e)}
     out = []
     for name, prov in _providers_cache.items():
-        cfg = getattr(prov, "cfg")
-        out.append({
-            "name": name,
-            "kind": cfg.kind,
-            "base_url": cfg.base_url,
-            "model": cfg.model,
-            "max_tokens": cfg.max_tokens,
-            "role": cfg.role,
-            "state": "unknown",  # placeholder for breaker state in future
-        })
+        cfg = prov.cfg
+        out.append(
+            {
+                "name": name,
+                "kind": cfg.kind,
+                "base_url": cfg.base_url,
+                "model": cfg.model,
+                "max_tokens": cfg.max_tokens,
+                "role": cfg.role,
+                "state": "unknown",  # placeholder for breaker state in future
+            }
+        )
     return {
         "providers": out,
         "routing": _routing,
@@ -79,7 +88,7 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
 
 
 @router.post("/reload-providers")
-async def reload_providers(request: Request, dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
+async def reload_providers(request: Request, dep: Any = Depends(auth_optional)) -> dict[str, Any]:
     # Optional simple admin token check
     admin_token = os.getenv("ADMIN_TOKEN")
     if admin_token:

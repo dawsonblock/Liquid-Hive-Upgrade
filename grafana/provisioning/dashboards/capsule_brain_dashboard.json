@@ -1,10 +1,7 @@
 {
   "id": null,
   "title": "Capsule Brain Supreme - Core Metrics",
-  "tags": [
-    "capsule_brain",
-    "agi"
-  ],
+  "tags": ["capsule_brain", "agi"],
   "timezone": "browser",
   "schemaVersion": 36,
   "version": 1,

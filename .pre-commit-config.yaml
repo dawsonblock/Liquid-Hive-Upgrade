@@ -1,31 +1,193 @@
 repos:
+  # Basic file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: check-merge-conflict
       - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml
+      - id: check-json
+      - id: check-xml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: debug-statements
+      - id: detect-private-key
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python code formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.5
+    rev: v0.6.8
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+        types_or: [python, pyi]
       - id: ruff-format
+        types_or: [python, pyi]
+
+  # Black formatting (backup to ruff)
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:
       - id: black
         language_version: python3
+        args: ['--line-length=100']
+
+  # Import sorting
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
+        args: ['--profile', 'black', '--line-length=100']
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML, types-setuptools]
+        args: [--ignore-missing-imports, --show-error-codes]
+        exclude: ^(tests/|scripts/|frontend/)
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            .*\.lock$|
+            .*\.log$|
+            frontend/node_modules/.*|
+            frontend/dist/.*|
+            .*\.min\.(js|css)$
+          )$
+
+  # Python security analysis
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.7.9'
+    hooks:
+      - id: bandit
+        args: ['-r', 'src/', '-f', 'json', '-o', 'bandit-report.json']
+        exclude: ^tests/
+
+  # Documentation style
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: '6.3.0'
+    hooks:
+      - id: pydocstyle
+        args: ['--convention=google', '--add-ignore=D100,D101,D102,D103,D104,D105,D106,D107']
+        exclude: ^(tests/|scripts/|frontend/)
+
+  # Dead code detection
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: 'v2.11'
+    hooks:
+      - id: vulture
+        args: ['--min-confidence', '80']
+        exclude: ^(tests/|frontend/|node_modules/)
+
+  # Frontend linting and formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        additional_dependencies: ["prettier@3.3.3"]
+        additional_dependencies: ["prettier@3.4.2"]
+        files: \.(js|ts|jsx|tsx|json|css|md|yml|yaml)$
+        exclude: |
+          (?x)^(
+            frontend/node_modules/.*|
+            frontend/dist/.*|
+            .*\.min\.(js|css)$|
+            package-lock\.json|
+            yarn\.lock
+          )$
+
+  # ESLint for frontend
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && yarn lint --fix'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # TypeScript type checking for frontend
+  - repo: local
+    hooks:
+      - id: tsc
+        name: TypeScript type check
+        entry: bash -c 'cd frontend && yarn type-check'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # Commit message linting
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.19.1
+    hooks:
+      - id: gitlint
+        args: ['--config', '.gitlint']
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint.yml]
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: ['--format=gcc', '--shell=bash']
+
+  # File size and complexity checks
+  - repo: local
+    hooks:
+      - id: check-file-size
+        name: Check file size
+        entry: bash -c 'find . -name "*.py" -size +10k -not -path "./frontend/*" -not -path "./node_modules/*" -not -path "./.venv/*" | head -10'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: complexity-check
+        name: Check code complexity
+        entry: bash -c 'if command -v radon >/dev/null 2>&1; then radon cc src/ -a -nb; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+
+exclude: |
+  (?x)^(
+    docs/openapi\.json|
+    frontend/node_modules/.*|
+    frontend/dist/.*|
+    .*\.min\.(js|css)$|
+    .*\.lock$|
+    .*\.log$
+  )$
 
   # ESLint (frontend only)
   - repo: https://github.com/pre-commit/mirrors-eslint

@@ -1,6 +1,7 @@
 # Internet Agent — Full Build (Advanced + Consent + Challenge)
 
 This package is pre-patched with:
+
 - Advanced dual-lane fetch (HTTPX + Playwright)
 - Trust tiers, robots.txt enforcement, domain policy
 - RAG ingest → Qdrant, lineage → MinIO
@@ -17,6 +18,7 @@ This package is pre-patched with:
   - Test harness: `GET /test/challenge`, `GET /test/ok`
 
 ## Wire into your FastAPI app
+
 ```python
 from internet_agent_advanced.fastapi_plugin import router as tools_router, metrics_app, test_router
 
@@ -26,6 +28,7 @@ app.mount("/metrics", metrics_app)
 ```
 
 ## Consent scopes (configurable: config/permissions.yaml)
+
 - fetch_http (default allow)
 - render_js (ask)
 - ingest_index (ask)
@@ -34,9 +37,11 @@ app.mount("/metrics", metrics_app)
 - **Prohibited**: captcha_bypass, robots_override
 
 ## Determinism
+
 Fixed seeds + stable UA. See `consent/determinism.py` and headers via `consent/middleware.py`.
 
 ## Run smoke
+
 ```bash
 curl -X POST http://127.0.0.1:8080/tools/internet_fetch -H 'Content-Type: application/json'   -d '{"urls":["https://nasa.gov"],"render_js":false}'
 curl -X POST http://127.0.0.1:8080/tools/internet_ingest -H 'Content-Type: application/json'   -d '{"url":"https://nasa.gov","render_js":false}'

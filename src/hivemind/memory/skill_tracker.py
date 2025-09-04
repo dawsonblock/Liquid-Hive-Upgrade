@@ -1,4 +1,6 @@
-import json, pathlib, math
+import json
+import pathlib
+
 
 class SkillTracker:
     def __init__(self, path="./runs/skills.json"):
@@ -12,7 +14,7 @@ class SkillTracker:
 
     def update(self, tag: str, win: bool, alpha: float = 0.2):
         s = self.state.get(tag, {"p": 0.5})
-        s["p"] = alpha* (1.0 if win else 0.0) + (1-alpha)*s["p"]
+        s["p"] = alpha * (1.0 if win else 0.0) + (1 - alpha) * s["p"]
         self.state[tag] = s
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(self.state, indent=2))

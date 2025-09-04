@@ -7,7 +7,7 @@ import { makeStore } from '../store';
 jest.mock('../services/api', () => ({
   postChat: jest.fn(async () => ({ answer: 'Hello World' })),
   fetchState: async () => ({ operator_intent: 'Answering' }),
-  postVision: async () => ({ answer: 'This is an image.' })
+  postVision: async () => ({ answer: 'This is an image.' }),
 }));
 
 const renderWithProviders = (ui: React.ReactElement) => {
@@ -29,10 +29,10 @@ test('sends an image when a file is selected', async () => {
   renderWithProviders(<ChatPanel />);
   const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
   const fileInput = screen.getByLabelText(/attach file/i);
-  
+
   // Simulate file upload
   fireEvent.change(fileInput, { target: { files: [file] } });
-  
+
   const sendImageButton = screen.getByRole('button', { name: /send image/i });
   fireEvent.click(sendImageButton);
 

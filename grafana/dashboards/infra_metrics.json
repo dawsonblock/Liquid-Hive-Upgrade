@@ -1,7 +1,15 @@
 {
   "title": "Infra Metrics",
   "panels": [
-    {"type": "graph", "title": "CPU %", "targets": [{"expr": "avg(rate(process_cpu_seconds_total[1m]))"}]},
-    {"type": "graph", "title": "Memory", "targets": [{"expr": "avg(process_resident_memory_bytes)"}]}
+    {
+      "type": "graph",
+      "title": "CPU %",
+      "targets": [{ "expr": "avg(rate(process_cpu_seconds_total[1m]))" }]
+    },
+    {
+      "type": "graph",
+      "title": "Memory",
+      "targets": [{ "expr": "avg(process_resident_memory_bytes)" }]
+    }
   ]
 }

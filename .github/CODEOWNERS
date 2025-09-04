@@ -1,0 +1,28 @@
+# Global owners - these users will be requested for review when someone opens a pull request
+* @liquid-hive/core-team
+
+# CI/CD and Infrastructure
+/.github/ @liquid-hive/devops-team
+/helm/ @liquid-hive/devops-team
+/k8s/ @liquid-hive/devops-team
+/docker-compose.yml @liquid-hive/devops-team
+/Dockerfile @liquid-hive/devops-team
+/Makefile @liquid-hive/devops-team
+
+# Security and Configuration
+/config/ @liquid-hive/security-team
+SECURITY.md @liquid-hive/security-team
+
+# Core Runtime and Source
+/src/ @liquid-hive/backend-team
+
+# Documentation
+/docs/ @liquid-hive/docs-team
+README.md @liquid-hive/docs-team
+CONTRIBUTING.md @liquid-hive/docs-team
+
+# Frontend
+/frontend/ @liquid-hive/frontend-team
+
+# Tests
+/tests/ @liquid-hive/qa-team

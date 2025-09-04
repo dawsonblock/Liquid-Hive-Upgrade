@@ -49,3 +49,33 @@ aiofiles==23.2.1
 psutil==5.9.8
 aiohttp==3.9.5
 neo4j==5.22.0
+
+# Development and Testing Dependencies
+pytest==8.4.1
+pytest-asyncio==0.24.0
+pytest-cov==6.2.0
+pytest-xdist==3.6.1  # Parallel test execution
+pytest-benchmark==4.0.0  # Performance benchmarking
+pytest-mock==3.12.0  # Enhanced mocking
+
+# Code Quality Tools
+ruff==0.6.8
+mypy==1.11.2
+black==24.8.0
+isort==5.13.2
+bandit[toml]==1.7.9  # Security vulnerability scanner
+vulture==2.11  # Dead code detection
+pydocstyle==6.3.0  # Documentation style checker
+
+# Pre-commit and Hooks
+pre-commit==4.0.1
+detect-secrets==1.5.0
+
+# Code Complexity and Quality Analysis
+radon==6.0.1  # Complexity analysis
+mccabe==0.7.0  # McCabe complexity checker
+
+# Documentation and Type Checking
+mypy-extensions==1.0.0
+types-requests==2.32.0.20241016
+types-PyYAML==6.0.12.20240917

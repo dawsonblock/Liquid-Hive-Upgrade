@@ -1,14 +1,22 @@
-import httpx, os
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
+
+import httpx
+
 if TYPE_CHECKING:
     from hivemind.adapter_deployment_manager import AdapterDeploymentManager
 
+
 class VLLMClient:
-    def __init__(self, endpoint: str, api_key: str, max_new_tokens: int = 512,
-                 adapter: str | None = None, adapter_manager: 'AdapterDeploymentManager | None' = None,
-                 role: str = "implementer"):
-        """
-        Parameters
+    def __init__(
+        self,
+        endpoint: str,
+        api_key: str,
+        max_new_tokens: int = 512,
+        adapter: str | None = None,
+        adapter_manager: "AdapterDeploymentManager | None" = None,
+        role: str = "implementer",
+    ):
+        """Parameters
         ----------
         endpoint: str
             The vLLM API base URL.
@@ -52,6 +60,7 @@ class VLLMClient:
             try:
                 # Use challenger with 5% probability when available
                 import random
+
                 challenger = self.adapter_manager.get_challenger(self.role)
                 if challenger and random.random() < 0.05:
                     adapter_path = challenger
@@ -70,10 +79,10 @@ class VLLMClient:
             "model": "vllm",
             "messages": [
                 {"role": "system", "content": system if system else ""},
-                {"role": "user", "content": user}
+                {"role": "user", "content": user},
             ],
             "max_tokens": self.mnt,
-            "temperature": temperature
+            "temperature": temperature,
         }
         if adapter_path:
             payload["lora"] = {"modules": [{"name": "text-role-adapter", "path": adapter_path}]}

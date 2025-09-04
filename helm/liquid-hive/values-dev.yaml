@@ -9,7 +9,7 @@ secrets:
   vault:
     enabled: true
     address: "http://liquid-hive-vault-dev:8200"
-    token: "dev-token"  # Only for development!
+    token: "dev-token" # Only for development!
     mountPath: "secret"
 
 # Development configuration

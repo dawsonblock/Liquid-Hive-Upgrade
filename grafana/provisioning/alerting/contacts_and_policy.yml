@@ -7,8 +7,8 @@ contactPoints:
         settings:
           url: ${GRAFANA_SLACK_CRITICAL_WEBHOOK}
           recipient: ${GRAFANA_SLACK_CRITICAL_CHANNEL}
-          title: '[CRIT] {{ .CommonLabels.alertname }}'
-          text: '*CRITICAL ALERT* {{ .CommonLabels.alertname }} - Status: {{ .Status }}'
+          title: "[CRIT] {{ .CommonLabels.alertname }}"
+          text: "*CRITICAL ALERT* {{ .CommonLabels.alertname }} - Status: {{ .Status }}"
   - name: slack-warning
     receivers:
       - uid: slack_warn
@@ -16,8 +16,8 @@ contactPoints:
         settings:
           url: ${GRAFANA_SLACK_WARNING_WEBHOOK}
           recipient: ${GRAFANA_SLACK_WARNING_CHANNEL}
-          title: '[WARN] {{ .CommonLabels.alertname }}'
-          text: '*WARNING ALERT* {{ .CommonLabels.alertname }} - Status: {{ .Status }}'
+          title: "[WARN] {{ .CommonLabels.alertname }}"
+          text: "*WARNING ALERT* {{ .CommonLabels.alertname }} - Status: {{ .Status }}"
   # - name: pager-critical
   #   receivers:
   #     - uid: pager_crit
@@ -45,7 +45,7 @@ contactPoints:
 policies:
   - orgId: 1
     receiver: default-webhook
-    group_by: ['alertname']
+    group_by: ["alertname"]
     group_wait: 30s
     group_interval: 5m
     repeat_interval: 2h
@@ -53,27 +53,27 @@ policies:
       # Critical during on-call hours -> Slack critical
       - receiver: slack-critical
         object_matchers:
-          - [ "severity", "=", "critical" ]
+          - ["severity", "=", "critical"]
         mute_timings:
           - off_hours
         continue: true
       # Critical off-hours -> Pager webhook (e.g., PagerDuty/phone)
       - receiver: pager-critical
         object_matchers:
-          - [ "severity", "=", "critical" ]
+          - ["severity", "=", "critical"]
         mute_timings:
           - on_hours
         continue: true
       # Warnings -> Slack warning (muted nights/weekends) + Email
       - receiver: slack-warning
         object_matchers:
-          - [ "severity", "=", "warning" ]
+          - ["severity", "=", "warning"]
         mute_timings:
           - nights_and_weekends
         continue: true
       - receiver: default-email
         object_matchers:
-          - [ "severity", "=", "warning" ]
+          - ["severity", "=", "warning"]
 
 muteTimings:
   # On-call hours: 08:00–22:00 weekdays
@@ -82,7 +82,7 @@ muteTimings:
       - times:
           - start_time: "08:00"
             end_time: "22:00"
-        weekdays: ["monday","tuesday","wednesday","thursday","friday"]
+        weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"]
 
   # Off-hours: nights + weekends
   - name: off_hours
@@ -90,8 +90,8 @@ muteTimings:
       - times:
           - start_time: "22:00"
             end_time: "08:00"
-        weekdays: ["monday","tuesday","wednesday","thursday","friday"]
-      - weekdays: ["saturday","sunday"]
+        weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+      - weekdays: ["saturday", "sunday"]
 
   # Warnings quiet times
   - name: nights_and_weekends
@@ -99,5 +99,5 @@ muteTimings:
       - times:
           - start_time: "18:00"
             end_time: "08:00"
-        weekdays: ["monday","tuesday","wednesday","thursday","friday"]
-      - weekdays: ["saturday","sunday"]
+        weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+      - weekdays: ["saturday", "sunday"]

@@ -24,7 +24,7 @@ import {
   Switch,
   TextField,
   Typography,
-  Tooltip
+  Tooltip,
 } from '@mui/material';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Markdown from './Markdown';
@@ -52,7 +52,9 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'disconnected' | 'connecting' | 'connected' | 'error'
+  >('disconnected');
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [streamMetadata, setStreamMetadata] = useState<any>(null);
   const [cacheAnalytics, setCacheAnalytics] = useState<any>(null);
@@ -93,7 +95,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       console.log('🔗 Connected to streaming chat WebSocket');
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       try {
         const data = JSON.parse(event.data);
         handleWebSocketMessage(data);
@@ -108,7 +110,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       console.log('🔌 WebSocket connection closed');
     };
 
-    ws.onerror = (error) => {
+    ws.onerror = error => {
       setConnectionStatus('error');
       setIsStreaming(false);
       console.error('WebSocket error:', error);
@@ -131,20 +133,22 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
         setCurrentStreamingMessage(prev => prev + data.content);
 
         // Update the last assistant message in real-time
-        if (history.length > 0 && history[history.length - 1].role === 'assistant') {
+        if (history.length > 0 && history[history.length - 1]?.role === 'assistant') {
           dispatch(updateLastMessage(currentStreamingMessage + data.content));
         }
         break;
 
       case 'cached_response':
         // Handle cached response
-        dispatch(addChat({
-          role: 'assistant',
-          content: data.content,
-          timestamp: new Date(),
-          cached: true,
-          metadata: data.metadata
-        }));
+        dispatch(
+          addChat({
+            role: 'assistant',
+            content: data.content,
+            timestamp: new Date(),
+            cached: true,
+            metadata: data.metadata,
+          })
+        );
         setStreamMetadata({ ...(data.metadata || {}), cached: true });
         break;
 
@@ -164,12 +168,14 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
 
       case 'error':
         setIsStreaming(false);
-        dispatch(addChat({
-          role: 'assistant',
-          content: `Error: ${data.error}`,
-          timestamp: new Date(),
-          metadata: { error: true }
-        }));
+        dispatch(
+          addChat({
+            role: 'assistant',
+            content: `Error: ${data.error}`,
+            timestamp: new Date(),
+            metadata: { error: true },
+          })
+        );
         console.error('❌ Streaming error:', data.error);
         break;
 
@@ -178,28 +184,33 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     }
   };
 
-  const resendForRegeneration = useCallback((idx: number) => {
-    // Find the nearest previous user prompt and resend it
-    for (let j = idx - 1; j >= 0; j--) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg: any = (history as any)[j];
-      if (msg?.role === 'user') {
-        const payload = { q: msg.content, stream: streamingEnabled };
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify(payload));
-          // Add placeholder for assistant response
-          dispatch(addChat({ role: 'assistant', content: '', timestamp: new Date(), isStreaming: true }));
+  const resendForRegeneration = useCallback(
+    (idx: number) => {
+      // Find the nearest previous user prompt and resend it
+      for (let j = idx - 1; j >= 0; j--) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const msg: any = (history as any)[j];
+        if (msg?.role === 'user') {
+          const payload = { q: msg.content, stream: streamingEnabled };
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify(payload));
+            // Add placeholder for assistant response
+            dispatch(
+              addChat({ role: 'assistant', content: '', timestamp: new Date(), isStreaming: true })
+            );
+          }
+          break;
         }
-        break;
       }
-    }
-  }, [dispatch, history, streamingEnabled]);
+    },
+    [dispatch, history, streamingEnabled]
+  );
 
   const copyToClipboard = async (text: string, idx: number) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1500);
+      setTimeout(() => setCopiedIdx(c => (c === idx ? null : c)), 1500);
     } catch {}
   };
 
@@ -236,24 +247,28 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     }
 
     // Add user message to history
-    dispatch(addChat({
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    }));
+    dispatch(
+      addChat({
+        role: 'user',
+        content: input,
+        timestamp: new Date(),
+      })
+    );
 
     // Add placeholder for assistant response
-    dispatch(addChat({
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isStreaming: true
-    }));
+    dispatch(
+      addChat({
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true,
+      })
+    );
 
     // Send query via WebSocket
     const message = {
       q: input,
-      stream: streamingEnabled
+      stream: streamingEnabled,
     };
 
     wsRef.current.send(JSON.stringify(message));
@@ -273,7 +288,9 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     }
     // Finalize current partial message
     if (currentStreamingMessage) {
-      dispatch(finalizeStreamingMessage({ content: currentStreamingMessage, metadata: streamMetadata }));
+      dispatch(
+        finalizeStreamingMessage({ content: currentStreamingMessage, metadata: streamMetadata })
+      );
     }
     setIsStreaming(false);
     setCurrentStreamingMessage('');
@@ -284,7 +301,9 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   useEffect(() => {
     const el = messagesEndRef.current as any;
     if (el && typeof el.scrollIntoView === 'function') {
-      try { el.scrollIntoView({ behavior: 'smooth' }); } catch {}
+      try {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } catch {}
     }
   }, [history, currentStreamingMessage]);
 
@@ -313,10 +332,14 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
   // Connection status indicator
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
-      case 'connected': return 'success';
-      case 'connecting': return 'warning';
-      case 'error': return 'error';
-      default: return 'default';
+      case 'connected':
+        return 'success';
+      case 'connecting':
+        return 'warning';
+      case 'error':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -325,23 +348,33 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
       <Grid item xs={12} md={8}>
         <Stack spacing={2}>
           {/* Status Bar */}
-          <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 4 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
+          <Paper variant='outlined' sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 4 }}>
+            <Stack direction='row' spacing={2} alignItems='center'>
               <Chip
-                icon={connectionStatus === 'connecting' ? <CircularProgress size={16} /> : <StreamIcon />}
+                icon={
+                  connectionStatus === 'connecting' ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <StreamIcon />
+                  )
+                }
                 label={`Streaming: ${connectionStatus}`}
                 color={getConnectionStatusColor()}
-                variant="outlined"
-                size="small"
+                variant='outlined'
+                size='small'
               />
 
               {streamMetadata && (
                 <Chip
                   icon={<CacheIcon />}
-                  label={streamMetadata.cached ? (`Cache Hit${typeof streamMetadata.cache_similarity === 'number' ? ` (${(streamMetadata.cache_similarity * 100).toFixed(0)}%)` : ''}`) : 'Live Generation'}
+                  label={
+                    streamMetadata.cached
+                      ? `Cache Hit${typeof streamMetadata.cache_similarity === 'number' ? ` (${(streamMetadata.cache_similarity * 100).toFixed(0)}%)` : ''}`
+                      : 'Live Generation'
+                  }
                   color={streamMetadata.cached ? 'success' : 'primary'}
-                  variant="outlined"
-                  size="small"
+                  variant='outlined'
+                  size='small'
                 />
               )}
 
@@ -350,34 +383,40 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                   icon={<CacheIcon />}
                   label={`Cache: ${Math.round((cacheAnalytics.hit_rate || 0) * 100)}%`}
                   color={(cacheAnalytics.hit_rate || 0) > 0.5 ? 'success' : 'default'}
-                  variant="outlined"
-                  size="small"
+                  variant='outlined'
+                  size='small'
                 />
               )}
 
               {isStreaming && (
-                <Typography variant="caption" color="primary">
+                <Typography variant='caption' color='primary'>
                   Generating response...
                 </Typography>
               )}
 
               <Box sx={{ flex: 1 }} />
               {isStreaming && (
-                <Button size="small" color="error" variant="outlined" onClick={stopGeneration} startIcon={<StopIcon />}>
+                <Button
+                  size='small'
+                  color='error'
+                  variant='outlined'
+                  onClick={stopGeneration}
+                  startIcon={<StopIcon />}
+                >
                   Stop
                 </Button>
               )}
               <Button
-                size="small"
-                variant="outlined"
+                size='small'
+                variant='outlined'
                 onClick={refreshProviders}
                 startIcon={providersLoading ? <CircularProgress size={14} /> : <RefreshIcon />}
               >
                 Refresh Providers
               </Button>
               <Button
-                size="small"
-                variant="outlined"
+                size='small'
+                variant='outlined'
                 onClick={refreshCacheAnalytics}
                 startIcon={cacheLoading ? <CircularProgress size={14} /> : <CacheIcon />}
               >
@@ -388,11 +427,20 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
 
           {/* Provider chips */}
           {providers && Object.keys(providers).length > 0 && (
-            <Paper variant="outlined" sx={{ p: 1 }}>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Paper variant='outlined' sx={{ p: 1 }}>
+              <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap'>
                 {Object.entries(providers).map(([name, info]) => (
-                  <Chip key={name} size="small" label={`${name}: ${info?.status || 'unknown'}`}
-                    color={(info?.status === 'healthy' ? 'success' : (info?.status ? 'warning' : 'default')) as any}
+                  <Chip
+                    key={name}
+                    size='small'
+                    label={`${name}: ${info?.status || 'unknown'}`}
+                    color={
+                      (info?.status === 'healthy'
+                        ? 'success'
+                        : info?.status
+                          ? 'warning'
+                          : 'default') as any
+                    }
                   />
                 ))}
               </Stack>
@@ -400,56 +448,88 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
           )}
 
           {/* Chat History */}
-          <Paper variant="outlined" sx={{ p: 2.5, height: 520, overflowY: 'auto', bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.9)', borderRadius: 4 }}>
+          <Paper
+            variant='outlined'
+            sx={{
+              p: 2.5,
+              height: 520,
+              overflowY: 'auto',
+              bgcolor: t =>
+                t.palette.mode === 'dark' ? 'rgba(2,6,23,0.6)' : 'rgba(255,255,255,0.9)',
+              borderRadius: 4,
+            }}
+          >
             {history.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                Start the conversation with the Enhanced Cognitive Core.
-                Streaming is enabled for real-time responses.
+              <Typography variant='body2' color='text.secondary'>
+                Start the conversation with the Enhanced Cognitive Core. Streaming is enabled for
+                real-time responses.
               </Typography>
             )}
 
             {history.map((message, i) => (
               <Box key={i} sx={{ mb: 2 }}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="caption" color="text.secondary">
+                <Stack direction='row' spacing={1} alignItems='center'>
+                  <Typography variant='caption' color='text.secondary'>
                     {message.role.toUpperCase()}
                   </Typography>
 
-                  {message.cached && (
-                    <Chip label="CACHED" color="success" size="small" />
-                  )}
+                  {message.cached && <Chip label='CACHED' color='success' size='small' />}
 
-                  {message.provider && (
-                    <Chip label={message.provider} color="info" size="small" />
-                  )}
+                  {message.provider && <Chip label={message.provider} color='info' size='small' />}
 
-                  {message.isStreaming && (
-                    <CircularProgress size={12} />
-                  )}
+                  {message.isStreaming && <CircularProgress size={12} />}
                 </Stack>
 
-                <Box sx={{ mt: 1, px: 1.25, py: 1, borderRadius: 3, bgcolor: (t) => message.role === 'user' ? (t.palette.mode === 'dark' ? 'rgba(26,115,232,0.14)' : 'rgba(26,115,232,0.08)') : t.palette.background.paper, border: (t) => `1px solid ${t.palette.divider}`, opacity: 0, animation: 'fadeIn 200ms ease forwards' }}>
+                <Box
+                  sx={{
+                    mt: 1,
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: 3,
+                    bgcolor: t =>
+                      message.role === 'user'
+                        ? t.palette.mode === 'dark'
+                          ? 'rgba(26,115,232,0.14)'
+                          : 'rgba(26,115,232,0.08)'
+                        : t.palette.background.paper,
+                    border: t => `1px solid ${t.palette.divider}`,
+                    opacity: 0,
+                    animation: 'fadeIn 200ms ease forwards',
+                  }}
+                >
                   <Markdown>
                     {message.role === 'assistant' && message.isStreaming
-                      ? (currentStreamingMessage || message.content)
-                      : message.content
-                    }
+                      ? currentStreamingMessage || message.content
+                      : message.content}
                   </Markdown>
                 </Box>
 
                 {message.role === 'assistant' && (
-                  <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                  <Stack direction='row' spacing={1} sx={{ mt: 0.5 }}>
                     <Tooltip title={copiedIdx === i ? 'Copied' : 'Copy message'}>
                       <span>
-                        <IconButton size="small" onClick={() => copyToClipboard(message.content, i)} aria-label="Copy message">
-                          {copiedIdx === i ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+                        <IconButton
+                          size='small'
+                          onClick={() => copyToClipboard(message.content, i)}
+                          aria-label='Copy message'
+                        >
+                          {copiedIdx === i ? (
+                            <CheckIcon fontSize='small' />
+                          ) : (
+                            <ContentCopyIcon fontSize='small' />
+                          )}
                         </IconButton>
                       </span>
                     </Tooltip>
-                    <Tooltip title="Regenerate response">
+                    <Tooltip title='Regenerate response'>
                       <span>
-                        <IconButton size="small" onClick={() => resendForRegeneration(i)} aria-label="Regenerate response" disabled={connectionStatus !== 'connected'}>
-                          <ReplayIcon fontSize="small" />
+                        <IconButton
+                          size='small'
+                          onClick={() => resendForRegeneration(i)}
+                          aria-label='Regenerate response'
+                          disabled={connectionStatus !== 'connected'}
+                        >
+                          <ReplayIcon fontSize='small' />
                         </IconButton>
                       </span>
                     </Tooltip>
@@ -459,7 +539,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                 {/* Show streaming indicator for active streaming message */}
                 {message.role === 'assistant' && message.isStreaming && isStreaming && (
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" color="primary">
+                    <Typography variant='caption' color='primary'>
                       ▋ {/* Cursor indicator */}
                     </Typography>
                   </Box>
@@ -469,7 +549,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                 {message.metadata && (
                   <Accordion sx={{ mt: 1 }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                      <Typography variant="caption">Show Details</Typography>
+                      <Typography variant='caption'>Show Details</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                       <pre style={{ fontSize: '0.75rem', maxHeight: '200px', overflow: 'auto' }}>
@@ -485,15 +565,15 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
           </Paper>
 
           {/* Input Area */}
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction='row' spacing={1} alignItems='center'>
             <TextField
               fullWidth
-              size="small"
-              placeholder={isStreaming ? "Generating response..." : "Type a message..."}
+              size='small'
+              placeholder={isStreaming ? 'Generating response...' : 'Type a message...'}
               value={input}
               onChange={e => setInput(e.target.value)}
               disabled={isStreaming}
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   sendStreamingMessage();
@@ -502,7 +582,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
             />
 
             <IconButton
-              color="primary"
+              color='primary'
               onClick={sendStreamingMessage}
               disabled={isStreaming || !input.trim() || connectionStatus !== 'connected'}
             >
@@ -511,7 +591,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
           </Stack>
 
           {/* Streaming Controls */}
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction='row' spacing={2} alignItems='center'>
             <FormControlLabel
               control={
                 <Switch
@@ -519,12 +599,12 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
                   onChange={e => setStreamingEnabled(e.target.checked)}
                 />
               }
-              label="Enable Streaming"
+              label='Enable Streaming'
             />
 
             <Button
-              variant="outlined"
-              size="small"
+              variant='outlined'
+              size='small'
               onClick={connectWebSocket}
               disabled={connectionStatus === 'connected' || connectionStatus === 'connecting'}
             >
@@ -532,7 +612,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
             </Button>
 
             {connectionStatus === 'error' && (
-              <Alert severity="warning" sx={{ flex: 1 }}>
+              <Alert severity='warning' sx={{ flex: 1 }}>
                 Connection lost. Click reconnect to restore streaming.
               </Alert>
             )}

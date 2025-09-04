@@ -28,8 +28,8 @@ const initialState: AppState = {
   streamingStatus: {
     isStreaming: false,
     connectionStatus: 'disconnected',
-    currentProvider: null
-  }
+    currentProvider: null,
+  },
 };
 
 const appSlice = createSlice({
@@ -39,24 +39,27 @@ const appSlice = createSlice({
     addChat(state, action: PayloadAction<ChatMessage>) {
       state.chatHistory.push({
         ...action.payload,
-        timestamp: action.payload.timestamp || new Date()
+        timestamp: action.payload.timestamp || new Date(),
       });
     },
     updateLastMessage(state, action: PayloadAction<string>) {
       if (state.chatHistory.length > 0) {
         const lastMessage = state.chatHistory[state.chatHistory.length - 1];
-        if (lastMessage.role === 'assistant') {
+        if (lastMessage && lastMessage.role === 'assistant') {
           lastMessage.content = action.payload;
         }
       }
     },
-    updateStreamingStatus(state, action: PayloadAction<Partial<typeof initialState.streamingStatus>>) {
+    updateStreamingStatus(
+      state,
+      action: PayloadAction<Partial<typeof initialState.streamingStatus>>
+    ) {
       state.streamingStatus = { ...state.streamingStatus, ...action.payload };
     },
     finalizeStreamingMessage(state, action: PayloadAction<{ content: string; metadata?: any }>) {
       if (state.chatHistory.length > 0) {
         const lastMessage = state.chatHistory[state.chatHistory.length - 1];
-        if (lastMessage.role === 'assistant' && lastMessage.isStreaming) {
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.isStreaming) {
           lastMessage.content = action.payload.content;
           lastMessage.isStreaming = false;
           lastMessage.metadata = action.payload.metadata;
@@ -73,13 +76,13 @@ const appSlice = createSlice({
   },
 });
 
-export const { 
-  addChat, 
+export const {
+  addChat,
   updateLastMessage,
   updateStreamingStatus,
   finalizeStreamingMessage,
-  setApprovals, 
-  setStateSummary 
+  setApprovals,
+  setStateSummary,
 } = appSlice.actions;
 
 export const store = configureStore({ reducer: appSlice.reducer });

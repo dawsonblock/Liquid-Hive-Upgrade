@@ -1,24 +1,146 @@
 name: Release
+
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
 
 jobs:
-  semantic-release:
+  package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install semantic-release
+          cache: 'yarn'
+          cache-dependency-path: 'frontend/yarn.lock'
+      
+      - name: Install dependencies
         run: |
-          npm init -y >/dev/null 2>&1 || true
-          npm install -D semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
-      - name: Run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+          # Python dependencies
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Frontend dependencies
+          cd frontend
+          yarn install --frozen-lockfile
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          yarn build
+      
+      - name: Run tests
+        run: |
+          # Python tests
+          pytest --maxfail=1 --disable-warnings
+          
+          # Frontend tests
+          cd frontend
+          yarn test --ci --watchAll=false
+      
+      - name: Create release archive
+        run: |
+          mkdir -p out
+          
+          # Create source archive (excluding dev dependencies)
+          tar --exclude='frontend/node_modules' \
+              --exclude='frontend/dist' \
+              --exclude='.git' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.pytest_cache' \
+              --exclude='.mypy_cache' \
+              -czf out/liquid-hive-${GITHUB_REF_NAME}-source.tar.gz .
+          
+          # Create production archive (with built frontend)
+          tar --exclude='frontend/node_modules' \
+              --exclude='frontend/src' \
+              --exclude='frontend/public' \
+              --exclude='.git' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.pytest_cache' \
+              --exclude='.mypy_cache' \
+              --exclude='tests' \
+              -czf out/liquid-hive-${GITHUB_REF_NAME}-production.tar.gz .
+          
+          # Create zip versions
+          cd out
+          tar -xzf liquid-hive-${GITHUB_REF_NAME}-source.tar.gz -C tmp-source/
+          tar -xzf liquid-hive-${GITHUB_REF_NAME}-production.tar.gz -C tmp-prod/
+          zip -qr liquid-hive-${GITHUB_REF_NAME}-source.zip tmp-source/
+          zip -qr liquid-hive-${GITHUB_REF_NAME}-production.zip tmp-prod/
+          rm -rf tmp-source tmp-prod
+      
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: liquid-hive-${{ github.ref_name }}-sbom.spdx.json
+          format: spdx-json
+      
+      - name: Generate checksums
+        run: |
+          cd out
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          sha512sum *.tar.gz *.zip > SHA512SUMS.txt
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Liquid-Hive v${{ github.ref_name }}"
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          files: |
+            out/*.tar.gz
+            out/*.zip
+            out/SHA256SUMS.txt
+            out/SHA512SUMS.txt
+            liquid-hive-*.spdx.json
+          body: |
+            ## 🚀 Liquid-Hive Release ${{ github.ref_name }}
+            
+            This release includes:
+            - **Source code** with all development files
+            - **Production build** with compiled frontend and optimized backend
+            - **SBOM** (Software Bill of Materials) for security compliance
+            - **Checksums** for integrity verification
+            
+            ### 📦 Download Guide
+            - `liquid-hive-*-source.tar.gz` - Full source with development dependencies
+            - `liquid-hive-*-production.tar.gz` - Production-ready deployment package
+            - `liquid-hive-*-sbom.spdx.json` - Software Bill of Materials
+            - `SHA256SUMS.txt` / `SHA512SUMS.txt` - File integrity checksums
+            
+            ### 🔐 Verification
+            ```bash
+            # Verify checksums
+            sha256sum -c SHA256SUMS.txt
+            
+            # Extract and deploy
+            tar -xzf liquid-hive-*-production.tar.gz
+            cd liquid-hive-*-production
+            # Follow deployment instructions in README.md
+            ```
+      
+      - name: Update latest release info
+        run: |
+          echo "Release ${{ github.ref_name }} created successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Source archive: $(ls -lh out/*-source.tar.gz | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "- Production archive: $(ls -lh out/*-production.tar.gz | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY

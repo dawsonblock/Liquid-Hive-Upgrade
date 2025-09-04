@@ -1,8 +1,27 @@
 version: "3.8"
 
+# =============================================================================
+# Development Docker Compose Configuration
+# Includes all services with proper dependencies, health checks, and volumes
+# =============================================================================
+
+x-common-env: &common-env
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_JSON: ${LOG_JSON:-1}
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
 services:
+  # =============================================================================
+  # Main Application
+  # =============================================================================
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
     env_file:
       - .env
     read_only: true
@@ -11,11 +30,10 @@ services:
     cap_drop:
       - ALL
     ports:
-      - "8000:8000"
-    # Run the unified runtime service.
-    command: ["python", "-m", "unified_runtime.__main__"]
+      - "${API_PORT:-8000}:8000"
     environment:
-      # Logging
+
+        # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_JSON=${LOG_JSON:-1}
       # Core dependencies
@@ -54,48 +72,227 @@ services:
       timeout: 5s
       retries: 5
 
+      <<: *common-env
+      PYTHONPATH: /app/src:/app
+      HOST: 0.0.0.0
+      PORT: 8000
+    volumes:
+      # Development volume mounts for hot reloading
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+
+      <<: *common-env
+      PYTHONPATH: /app/src:/app
+      HOST: 0.0.0.0
+      PORT: 8000
+    volumes:
+      # Development volume mounts for hot reloading
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks: [liquid-hive-net]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    <<: *restart-policy
+        main
+
+  # =============================================================================
+  # Database Services
+  # =============================================================================
+
+  # MongoDB - Primary database
+  mongodb:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-liquid_hive}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks: [liquid-hive-net]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    <<: *restart-policy
+
+  # Redis - Caching and session management
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    networks: [liquid-hive-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    <<: *restart-policy
+
+  # Neo4j - Graph database
+  neo4j:
+    image: neo4j:5.15
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-change_this_password}
+      NEO4J_PLUGINS: ["apoc", "graph-data-science"]
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 2G
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks: [liquid-hive-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "${NEO4J_USER:-neo4j}",
+          "-p",
+          "${NEO4J_PASSWORD:-change_this_password}",
+          "RETURN 1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    <<: *restart-policy
+
+  # Qdrant - Vector database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./config/qdrant-config.yaml:/qdrant/config/production.yaml:ro
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__LOG_LEVEL: ${QDRANT_LOG_LEVEL:-INFO}
+    networks: [liquid-hive-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    <<: *restart-policy
+
+  # =============================================================================
+  # Monitoring and Observability
+  # =============================================================================
+
+  # Prometheus - Metrics collection
   prometheus:
     image: prom/prometheus:latest
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
     ports:
-      - "9090:9090"
-    networks: [fusionnet]
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+      - "--web.external-url=http://localhost:9090"
+    networks: [liquid-hive-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/-/healthy",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    <<: *restart-policy
 
+  # Grafana - Metrics visualization
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=${GRAFANA_SMTP_HOST}
-      - GF_SMTP_USER=${GRAFANA_SMTP_USER}
-      - GF_SMTP_PASSWORD=${GRAFANA_SMTP_PASSWORD}
-      - GF_SMTP_FROM_ADDRESS=${GRAFANA_SMTP_FROM}
-      - GRAFANA_SLACK_CRITICAL_WEBHOOK=${GRAFANA_SLACK_CRITICAL_WEBHOOK}
-      - GRAFANA_SLACK_CRITICAL_CHANNEL=${GRAFANA_SLACK_CRITICAL_CHANNEL}
-      - GRAFANA_SLACK_WARNING_WEBHOOK=${GRAFANA_SLACK_WARNING_WEBHOOK}
-      - GRAFANA_SLACK_WARNING_CHANNEL=${GRAFANA_SLACK_WARNING_CHANNEL}
-      - GRAFANA_WEBHOOK_URL=${GRAFANA_WEBHOOK_URL}
-      - GRAFANA_PAGER_WEBHOOK=${GRAFANA_PAGER_WEBHOOK}
-      - GRAFANA_ALERT_EMAILS=${GRAFANA_ALERT_EMAILS}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/your/webhook/url}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      # SMTP Configuration
+      GF_SMTP_ENABLED: ${GRAFANA_SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${GRAFANA_SMTP_HOST:-}
+      GF_SMTP_USER: ${GRAFANA_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GRAFANA_SMTP_FROM:-}
+      # Alert Configuration
+      GRAFANA_SLACK_CRITICAL_WEBHOOK: ${GRAFANA_SLACK_CRITICAL_WEBHOOK:-}
+      GRAFANA_SLACK_CRITICAL_CHANNEL: ${GRAFANA_SLACK_CRITICAL_CHANNEL:-}
+      GRAFANA_SLACK_WARNING_WEBHOOK: ${GRAFANA_SLACK_WARNING_WEBHOOK:-}
+      GRAFANA_SLACK_WARNING_CHANNEL: ${GRAFANA_SLACK_WARNING_CHANNEL:-}
+      GRAFANA_WEBHOOK_URL: ${GRAFANA_WEBHOOK_URL:-}
+      GRAFANA_PAGER_WEBHOOK: ${GRAFANA_PAGER_WEBHOOK:-}
+      GRAFANA_ALERT_EMAILS: ${GRAFANA_ALERT_EMAILS:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/your/webhook/url}
     volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      # - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
-      - prometheus
-    networks: [fusionnet]
+      prometheus:
+        condition: service_healthy
+    networks: [liquid-hive-net]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    <<: *restart-policy
 
-  # Redis serves as the message bus for Capsule‑Brain and caching layer.  A simple
-  # in‑memory instance suffices for local development.
-  redis:
-    image: redis:7-alpine
+  # Alertmanager - Alert routing
+  alertmanager:
+    image: prom/alertmanager:latest
     ports:
       - "6379:6379"
     networks: [fusionnet]
@@ -120,18 +317,46 @@ services:
       timeout: 5s
       retries: 10
 
-  # vLLM text model server.  This exposes an OpenAI‑compatible API used by
-  # the agent roles and judge.  In production this should run on a GPU host.
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:9093"
+    networks: [liquid-hive-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9093/-/healthy",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    <<: *restart-policy
+
+  # =============================================================================
+  # Optional Services
+  # =============================================================================
+        main
+
+  # VLLM - Local LLM serving (GPU required)
   vllm:
     image: vllm/vllm-openai:latest
-    profiles:
-      - gpu
+    profiles: [gpu, llm]
     environment:
-      - MODEL_NAME=llama-2-13b-chat-hf
-      - NVIDIA_VISIBLE_DEVICES=all
+      MODEL_NAME: ${VLLM_MODEL_NAME:-microsoft/DialoGPT-medium}
+      NVIDIA_VISIBLE_DEVICES: all
+      CUDA_VISIBLE_DEVICES: 0
     ports:
-      - "8001:8000"
-    networks: [fusionnet]
+      - "${VLLM_PORT:-8001}:8000"
+    networks: [liquid-hive-net]
     deploy:
       resources:
         reservations:
@@ -140,6 +365,7 @@ services:
               count: 1
               capabilities: [gpu]
     healthcheck:
+
       test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 20s
       timeout: 5s
@@ -177,24 +403,106 @@ services:
   # RAG watcher daemon.  Monitors the ingest directory and automatically
   # indexes new documents into the vector store.  Uses the same image as
   # the API since the script resides in this repository.
+
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    <<: *restart-policy
+
+  # RAG Document Watcher - Automated document indexing
+        main
   rag_watcher:
     build: .
+    profiles: [rag, full]
     command: ["python", "-m", "rag_watcher_service"]
     environment:
-      - INGEST_WATCH_DIR=/app/data/ingest
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - LOG_JSON=${LOG_JSON:-1}
+      <<: *common-env
+      INGEST_WATCH_DIR: /app/data/ingest
+      PYTHONPATH: /app/src:/app
     volumes:
       - ./data/ingest:/app/data/ingest
       - ./data/rag_index:/app/rag_index
-      - ./data/qdrant_storage:/app/qdrant_storage
-      - ./hivemind/rag:/app/hivemind/rag
-      - ./capsule_brain:/app/capsule_brain
+      - qdrant_data:/app/qdrant_storage
+      - ./src:/app/src:ro
     depends_on:
-      - api
-      - qdrant
-    networks: [fusionnet]
+      api:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks: [liquid-hive-net]
+    <<: *restart-policy
+
+  # =============================================================================
+  # Development Tools
+  # =============================================================================
+
+  # Adminer - Database administration
+  adminer:
+    image: adminer:latest
+    profiles: [dev, tools]
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mongodb
+    networks: [liquid-hive-net]
+    <<: *restart-policy
+
+  # Redis Commander - Redis administration
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    profiles: [dev, tools]
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+      HTTP_USER: ${REDIS_COMMANDER_USER:-admin}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD:-admin}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [liquid-hive-net]
+    <<: *restart-policy
+
+# =============================================================================
+# Networks and Volumes
+# =============================================================================
 
 networks:
-  fusionnet:
+
+fusionnet:
     driver: bridge
+
+  liquid-hive-net:
+    driver: bridge
+    name: liquid-hive-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  # Database volumes
+  mongodb_data:
+    name: liquid_hive_mongodb_data
+  redis_data:
+    name: liquid_hive_redis_data
+  neo4j_data:
+    name: liquid_hive_neo4j_data
+  neo4j_logs:
+    name: liquid_hive_neo4j_logs
+  neo4j_import:
+    name: liquid_hive_neo4j_import
+  neo4j_plugins:
+    name: liquid_hive_neo4j_plugins
+  qdrant_data:
+    name: liquid_hive_qdrant_data
+
+  # Monitoring volumes
+  prometheus_data:
+    name: liquid_hive_prometheus_data
+  grafana_data:
+    name: liquid_hive_grafana_data
+  alertmanager_data:
+    name: liquid_hive_alertmanager_data
+        main

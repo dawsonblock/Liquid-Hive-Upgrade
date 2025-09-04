@@ -1,0 +1,219 @@
+# MkDocs Configuration for Liquid-Hive-Upgrade Documentation
+
+site_name: Liquid-Hive-Upgrade Documentation
+site_description: Comprehensive documentation for Liquid-Hive-Upgrade Oracle Provider Router
+site_author: Liquid-Hive Team
+site_url: https://liquid-hive.github.io/upgrade/
+
+# Repository
+repo_name: liquid-hive/upgrade
+repo_url: https://github.com/liquid-hive/upgrade
+edit_uri: edit/main/docs/
+
+# Theme configuration
+theme:
+  name: material
+  language: en
+
+  # Color palette
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+  # Font configuration
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  # Logo and favicon
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+
+  # Features
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - toc.follow
+    - toc.integrate
+
+# Extensions
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: Page contents
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+  - git-authors
+  - swagger-ui-tag
+  - mermaid2
+
+# Extra CSS and JavaScript
+extra_css:
+  - assets/css/custom.css
+  - https://unpkg.com/mermaid@10.6.0/dist/mermaid.min.css
+
+extra_javascript:
+  - assets/js/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10.6.0/dist/mermaid.min.js
+
+# Extra configuration
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/liquid-hive/upgrade
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/liquid-hive/upgrade
+    - icon: fontawesome/solid/envelope
+      link: mailto:support@liquid-hive.dev
+
+# Navigation structure
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/overview.md
+      - Quick Start: getting-started/quick-start.md
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+
+  - Architecture:
+      - System Overview: architecture/system-overview.md
+      - Components: architecture/components.md
+      - Data Flow: architecture/data-flow.md
+      - Security: architecture/security.md
+      - Deployment: architecture/deployment.md
+
+  - Developer Guide:
+      - Getting Started: development/getting-started.md
+      - Code Standards: development/code-standards.md
+      - Testing Guide: development/testing.md
+      - API Development: development/api-development.md
+      - Frontend Development: development/frontend-development.md
+      - Contributing: CONTRIBUTING.md
+
+  - User Guide:
+      - Oracle Providers: user-guide/oracle-providers.md
+      - Planner Service: user-guide/planner.md
+      - Arena Service: user-guide/arena.md
+      - Authentication: user-guide/authentication.md
+      - Rate Limiting: user-guide/rate-limiting.md
+
+  - API Documentation:
+      - Overview: api/overview.md
+      - Authentication: api/authentication.md
+      - Endpoints: api/endpoints.md
+      - SDKs: api/sdks.md
+      - OpenAPI Spec: api/openapi.json
+
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Kubernetes: deployment/kubernetes.md
+      - Cloud Deployment: deployment/cloud.md
+      - Environment Config: deployment/environment.md
+      - Monitoring Setup: deployment/monitoring.md
+
+  - Operations:
+      - Runbooks:
+          - Overview: runbooks/overview.md
+          - Deployment: runbooks/deployment.md
+          - Monitoring: runbooks/monitoring.md
+          - Troubleshooting: runbooks/troubleshooting.md
+          - Database Operations: runbooks/database-ops.md
+          - Backup & Recovery: runbooks/backup-recovery.md
+      - Performance Tuning: operations/performance-tuning.md
+      - Security Hardening: operations/security-hardening.md
+      - Disaster Recovery: operations/disaster-recovery.md
+
+  - Architecture Decisions:
+      - ADR-001 Technology Stack: adrs/001-technology-stack.md
+      - ADR-002 Oracle Interface: adrs/002-oracle-provider-interface.md
+      - ADR-003 Authentication: adrs/003-authentication-strategy.md
+      - ADR-004 Database Selection: adrs/004-database-selection.md
+
+  - Reference:
+      - Configuration Reference: reference/configuration.md
+      - CLI Reference: reference/cli.md
+      - Metrics Reference: reference/metrics.md
+      - Error Codes: reference/error-codes.md
+      - Glossary: reference/glossary.md
+
+  - Community:
+      - Code of Conduct: CODE_OF_CONDUCT.md
+      - Security Policy: SECURITY.md
+      - License: LICENSE
+      - Changelog: CHANGELOG.md
+
+# Copyright
+copyright: Copyright &copy; 2024 Liquid-Hive Team
