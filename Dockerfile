@@ -125,6 +125,17 @@ ENV PYTHONPATH=/app/src:/app
 # Expose port
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python - <<'PY' || exit 1
+import urllib.request
+import sys
+try:
+    with urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=3) as r:
+        sys.exit(0 if r.status == 200 else 1)
+except Exception:
+    sys.exit(1)
+PY
+
+
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD /usr/local/bin/health-check.sh
@@ -140,4 +151,5 @@ LABEL org.opencontainers.image.documentation="https://docs.liquid-hive.dev"
 ENTRYPOINT ["dumb-init", "--"]
 
 # Default command
+        main
 CMD ["python", "-m", "unified_runtime.__main__"]

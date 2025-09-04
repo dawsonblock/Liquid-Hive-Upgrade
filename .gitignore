@@ -2,6 +2,62 @@
 .DS_Store
 Thumbs.db
 
+# Logs, temp, maps
+*.log
+*.tmp
+*.swp
+*.swo
+*.orig
+*.map
+
+# Reports/artifacts
+reports/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+dist/
+build/
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+dist/
+build/
+out/
+.eslintcache
+*.tsbuildinfo
+
+# IDE / Editors
+.vscode/
+.idea/
+*.iml
+
+# Docker overrides
+docker-compose.override.yml
+
 # Logs / temp
 *.log
 *.tmp
@@ -129,3 +185,4 @@ docs/_build/
 # Environment files
 *.env
 *.env.*
+        main

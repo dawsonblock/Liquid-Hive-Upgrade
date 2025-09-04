@@ -24,9 +24,63 @@ services:
       target: runtime
     env_file:
       - .env
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
+
+        # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_JSON=${LOG_JSON:-1}
+      # Core dependencies
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-web_corpus}
+      - VLLM_ENDPOINT=${VLLM_ENDPOINT:-http://vllm:8000}
+      - VLLM_ENDPOINT_SMALL=${VLLM_ENDPOINT_SMALL}
+      - VLLM_ENDPOINT_LARGE=${VLLM_ENDPOINT_LARGE}
+      # Security and limits
+      - TENANCY_MODE=${TENANCY_MODE:-single}
+      - RATE_LIMIT_RPS=${RATE_LIMIT_RPS:-10}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - API_JWT_PUBLIC_KEY_PATH=${API_JWT_PUBLIC_KEY_PATH}
+      - API_JWT_AUDIENCE=${API_JWT_AUDIENCE}
+      # Observability
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-liquid-hive-upgrade}
+      # Provider keys (no secrets in repo; .env for local only)
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_R1_API_KEY=${DEEPSEEK_R1_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - QWEN_API_KEY=${QWEN_API_KEY}
+    # For local CPU-only runs, omit the GPU vLLM service by not enabling the 'gpu' profile.
+    # The app will use VLLM_ENDPOINT from config/secrets; default is http://vllm:8000 if present.
+    depends_on:
+      - prometheus
+      - redis
+      - neo4j
+      - qdrant
+    networks: [fusionnet]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:8000/api/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+      <<: *common-env
+      PYTHONPATH: /app/src:/app
+      HOST: 0.0.0.0
+      PORT: 8000
+    volumes:
+      # Development volume mounts for hot reloading
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+
       <<: *common-env
       PYTHONPATH: /app/src:/app
       HOST: 0.0.0.0
@@ -54,6 +108,7 @@ services:
       retries: 3
       start_period: 60s
     <<: *restart-policy
+        main
 
   # =============================================================================
   # Database Services
@@ -239,6 +294,29 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     ports:
+      - "6379:6379"
+    networks: [fusionnet]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Graph database for the knowledge graph.  Neo4j is used by default; the
+  # NEO4J_AUTH environment variable should be updated for production.
+  neo4j:
+    image: neo4j:5.15
+    environment:
+      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-change_this_password}
+    ports:
+      - "7687:7687"
+    networks: [fusionnet]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD:-change_this_password} 'RETURN 1' || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
       - "${ALERTMANAGER_PORT:-9093}:9093"
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -266,6 +344,7 @@ services:
   # =============================================================================
   # Optional Services
   # =============================================================================
+        main
 
   # VLLM - Local LLM serving (GPU required)
   vllm:
@@ -286,6 +365,45 @@ services:
               count: 1
               capabilities: [gpu]
     healthcheck:
+
+      test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
+  # Qdrant vector database for production-grade RAG capabilities.
+  # Replaces FAISS with a scalable, production-ready vector database.
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./data/qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks: [fusionnet]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:6333/collections || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    networks: [fusionnet]
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+
+  # RAG watcher daemon.  Monitors the ingest directory and automatically
+  # indexes new documents into the vector store.  Uses the same image as
+  # the API since the script resides in this repository.
+
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
       interval: 60s
       timeout: 30s
@@ -294,6 +412,7 @@ services:
     <<: *restart-policy
 
   # RAG Document Watcher - Automated document indexing
+        main
   rag_watcher:
     build: .
     profiles: [rag, full]
@@ -351,6 +470,10 @@ services:
 # =============================================================================
 
 networks:
+
+fusionnet:
+    driver: bridge
+
   liquid-hive-net:
     driver: bridge
     name: liquid-hive-network
@@ -382,3 +505,4 @@ volumes:
     name: liquid_hive_grafana_data
   alertmanager_data:
     name: liquid_hive_alertmanager_data
+        main

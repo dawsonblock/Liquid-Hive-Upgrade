@@ -2,10 +2,137 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule: { interval: "weekly" }
-    
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:00"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "pip"
     directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:10"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Python (src/internet_agent_advanced/requirements.txt)
+  
+    schedule: { interval: "weekly" }
+    
+        main
+  - package-ecosystem: "pip"
+    directory: "/src/internet_agent_advanced"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:15"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:20"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Uncomment one of the following versioning strategies based on your preference:
+    # versioning-strategy: "lockfile-only"  # Minimize package.json churn
+    # versioning-strategy: "widen"         # Keep ranges broad, avoid major bumps
+    # Omit versioning-strategy to use the default "auto"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # JS (frontend)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:20"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # versioning-strategy: "lockfile-only"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # JS SDK (sdks/js)
+  - package-ecosystem: "npm"
+    directory: "/sdks/js"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:25"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # versioning-strategy: "lockfile-only"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "03:30"
+      timezone: "UTC"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      digest-minor-patch:
+        update-types: ["digest", "minor", "patch"]
+
     schedule: { interval: "weekly" }
     ignore:
       - dependency-name: "torch"  # Pin GPU/ML versions manually
@@ -51,3 +178,4 @@ updates:
   - package-ecosystem: "docker"
     directory: "/"
     schedule: { interval: "weekly" }
+        main
