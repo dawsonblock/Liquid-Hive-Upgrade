@@ -1,0 +1,44 @@
+# CODEOWNERS file for Liquid-Hive-Upgrade
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - these users will be requested for review on all PRs
+* @dawsonblock
+
+# Core system components
+/src/unified_runtime/ @dawsonblock
+/src/hivemind/ @dawsonblock
+/src/capsule_brain/ @dawsonblock
+
+# Frontend
+/frontend/ @dawsonblock
+
+# Infrastructure and deployment
+/docker-compose.yml @dawsonblock
+/Dockerfile @dawsonblock
+/helm/ @dawsonblock
+/k8s/ @dawsonblock
+/.github/workflows/ @dawsonblock
+
+# Configuration files
+/pyproject.toml @dawsonblock
+/.pre-commit-config.yaml @dawsonblock
+/requirements.txt @dawsonblock
+
+# Documentation
+/docs/ @dawsonblock
+/README.md @dawsonblock
+/CHANGELOG.md @dawsonblock
+
+# Security and community files
+/SECURITY.md @dawsonblock
+/CODE_OF_CONDUCT.md @dawsonblock
+/.env.example @dawsonblock
+
+# Testing
+/tests/ @dawsonblock
+/pytest.ini @dawsonblock
+
+# Scripts and automation
+/scripts/ @dawsonblock
+/Makefile @dawsonblock
+/health-check.sh @dawsonblock
