@@ -1,9 +1,12 @@
 from __future__ import annotations
-import time, json
-from typing import List, Dict, Any, Optional
+
+import time
+from typing import Any, Optional
+
 from playwright.async_api import async_playwright
-from .schemas import PageContent
+
 from .normalizer import html_to_text
+from .schemas import PageContent
 
 
 def _detect_challenge(html: str) -> str:
@@ -20,7 +23,7 @@ async def fetch_playwright(
     storage_state_path: Optional[str] = None,
 ) -> PageContent:
     t0 = time.time()
-    network_payloads: List[Dict[str, Any]] = []
+    network_payloads: list[dict[str, Any]] = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         ctx = (

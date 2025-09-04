@@ -1,12 +1,11 @@
-"""
-Base classes for the LIQUID-HIVE Tool Framework
+"""Base classes for the LIQUID-HIVE Tool Framework
 ==============================================
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
 from enum import Enum
+from typing import Any, Optional, Union
 
 
 class ToolParameterType(Enum):
@@ -29,7 +28,7 @@ class ToolParameter:
     description: str
     required: bool = True
     default: Any = None
-    choices: Optional[List[Any]] = None
+    choices: Optional[list[Any]] = None
     min_value: Optional[Union[int, float]] = None
     max_value: Optional[Union[int, float]] = None
 
@@ -41,9 +40,9 @@ class ToolResult:
     success: bool
     data: Any = None
     error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert result to dictionary format."""
         return {
             "success": self.success,
@@ -60,19 +59,16 @@ class BaseTool(ABC):
     @abstractmethod
     def name(self) -> str:
         """Unique identifier for the tool."""
-        pass
 
     @property
     @abstractmethod
     def description(self) -> str:
         """Human-readable description of what the tool does."""
-        pass
 
     @property
     @abstractmethod
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         """List of parameters this tool accepts."""
-        pass
 
     @property
     def category(self) -> str:
@@ -94,7 +90,7 @@ class BaseTool(ABC):
         """Risk level: low, medium, high, critical."""
         return "low"
 
-    def validate_parameters(self, parameters: Dict[str, Any]) -> List[str]:
+    def validate_parameters(self, parameters: dict[str, Any]) -> list[str]:
         """Validate parameters against tool specification."""
         errors = []
 
@@ -136,11 +132,10 @@ class BaseTool(ABC):
         return errors
 
     @abstractmethod
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute the tool with given parameters."""
-        pass
 
-    async def safe_execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def safe_execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute tool with validation and error handling."""
         try:
             # Validate parameters
@@ -157,11 +152,11 @@ class BaseTool(ABC):
         except Exception as e:
             return ToolResult(
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
+                error=f"Tool execution failed: {e!s}",
                 metadata={"exception_type": type(e).__name__},
             )
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Get JSON schema for this tool."""
         return {
             "name": self.name,

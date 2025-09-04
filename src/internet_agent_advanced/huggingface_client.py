@@ -1,6 +1,9 @@
 from __future__ import annotations
-import os, time
-from typing import Optional, Dict, Any
+
+import os
+import time
+from typing import Any, Optional
+
 from huggingface_hub import HfApi
 
 
@@ -9,7 +12,7 @@ def get_hf(api_token: Optional[str] = None) -> HfApi:
     return HfApi(token=token)
 
 
-def fetch_model_card(repo_id: str, api_token: Optional[str] = None) -> Dict[str, Any]:
+def fetch_model_card(repo_id: str, api_token: Optional[str] = None) -> dict[str, Any]:
     api = get_hf(api_token)
     info = api.model_info(repo_id)
     card = info.cardData or {}

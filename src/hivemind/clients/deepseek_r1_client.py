@@ -1,5 +1,4 @@
-"""
-DeepSeek R1 Client for LIQUID-HIVE Dreaming State
+"""DeepSeek R1 Client for LIQUID-HIVE Dreaming State
 ================================================
 
 This module replaces GPT-4o with DeepSeek R1 for all training and refinement operations.
@@ -17,7 +16,7 @@ Key Benefits:
 import asyncio
 import logging
 import os
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 try:
     import httpx
@@ -26,8 +25,7 @@ except ImportError:
 
 
 class DeepSeekR1Client:
-    """
-    Enhanced DeepSeek R1 client for LIQUID-HIVE dreaming state.
+    """Enhanced DeepSeek R1 client for LIQUID-HIVE dreaming state.
 
     This completely replaces the GPT-4o client with DeepSeek R1 for:
     - Oracle refinement in training pipeline
@@ -58,13 +56,11 @@ class DeepSeekR1Client:
 
     async def generate(
         self, prompt: str, system_prompt: Optional[str] = None, **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Generate enhanced reasoning response from DeepSeek R1.
+    ) -> dict[str, Any]:
+        """Generate enhanced reasoning response from DeepSeek R1.
 
         This is the primary method that replaces all GPT-4o calls in the dreaming state.
         """
-
         if not self.api_key or not httpx:
             return self._enhanced_stub_response(prompt)
 
@@ -134,7 +130,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
 
                     return {
                         "refined_answer": content,
-                        "correction_analysis": f"Enhanced by DeepSeek R1 reasoning model with superior analysis capabilities",
+                        "correction_analysis": "Enhanced by DeepSeek R1 reasoning model with superior analysis capabilities",
                         "reasoning_trace": reasoning_content if reasoning_content else None,
                         "model_used": self.model,
                         "cost_usd": cost_usd,
@@ -186,7 +182,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
         output_cost = (completion_tokens / 1000) * self.output_cost_per_1k
         return input_cost + output_cost
 
-    def _enhanced_stub_response(self, prompt: str, error: Optional[str] = None) -> Dict[str, Any]:
+    def _enhanced_stub_response(self, prompt: str, error: Optional[str] = None) -> dict[str, Any]:
         """Provide enhanced stub response when API is unavailable."""
         # Extract the original response if this is a refinement prompt
         original_answer = prompt
@@ -211,7 +207,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
             "note": "DeepSeek R1 provides superior reasoning at 70% lower cost than GPT-4o",
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Enhanced health check for DeepSeek R1 client."""
         health_status = {
             "status": "unknown",
@@ -256,7 +252,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
 
         return health_status
 
-    def get_cost_comparison(self) -> Dict[str, Any]:
+    def get_cost_comparison(self) -> dict[str, Any]:
         """Get cost comparison between DeepSeek R1 and GPT-4o."""
         # GPT-4o approximate pricing (much higher)
         gpt4o_input_cost = 0.005  # $5 per 1K input tokens

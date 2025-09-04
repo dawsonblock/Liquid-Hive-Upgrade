@@ -1,5 +1,6 @@
-import httpx, os
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
+
+import httpx
 
 if TYPE_CHECKING:
     from hivemind.adapter_deployment_manager import AdapterDeploymentManager
@@ -15,8 +16,7 @@ class VLLMClient:
         adapter_manager: "AdapterDeploymentManager | None" = None,
         role: str = "implementer",
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         endpoint: str
             The vLLM API base URL.

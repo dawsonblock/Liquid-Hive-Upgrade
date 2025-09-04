@@ -1,4 +1,5 @@
-import os, logging
+import logging
+import os
 
 log = logging.getLogger(__name__)
 

@@ -1,5 +1,4 @@
-"""
-Provider System for LIQUID-HIVE DS-Router
+"""Provider System for LIQUID-HIVE DS-Router
 ========================================
 
 This module implements the provider abstraction for different LLM backends:
@@ -11,8 +10,8 @@ This module implements the provider abstraction for different LLM backends:
 
 from .base_provider import BaseProvider, GenRequest, GenResponse, StreamChunk
 from .deepseek_chat import DeepSeekChatProvider
-from .deepseek_thinking import DeepSeekThinkingProvider
 from .deepseek_r1 import DeepSeekR1Provider
+from .deepseek_thinking import DeepSeekThinkingProvider
 from .hf_qwen_cpu import QwenCPUProvider
 
 __all__ = [

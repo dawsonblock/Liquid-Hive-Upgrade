@@ -1,6 +1,9 @@
 from __future__ import annotations
-import hashlib, os
+
+import hashlib
+
 from sqlitedict import SqliteDict
+
 from .config import CACHE_PATH
 
 

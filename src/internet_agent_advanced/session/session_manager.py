@@ -1,5 +1,8 @@
 from __future__ import annotations
-import os, json, urllib.parse, pathlib
+
+import json
+import os
+import urllib.parse
 
 STORAGE_DIR = os.getenv(
     "PLAYWRIGHT_STORAGE_DIR", os.path.join(os.path.dirname(__file__), "..", "sessions")

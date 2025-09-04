@@ -1,5 +1,4 @@
-"""
-Calculator Tool for LIQUID-HIVE
+"""Calculator Tool for LIQUID-HIVE
 ==============================
 
 A safe mathematical calculation tool with support for basic arithmetic,
@@ -10,9 +9,9 @@ import ast
 import math
 import operator
 import statistics
-from typing import Dict, Any, List
+from typing import Any
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class CalculatorTool(BaseTool):
@@ -27,7 +26,7 @@ class CalculatorTool(BaseTool):
         return "Perform safe mathematical calculations including arithmetic, trigonometry, and statistics"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="expression",
@@ -146,7 +145,7 @@ class CalculatorTool(BaseTool):
         else:
             raise ValueError(f"Unsupported AST node type: {type(node).__name__}")
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute the calculator tool."""
         expression = parameters["expression"]
         precision = parameters.get("precision", 6)
@@ -180,8 +179,8 @@ class CalculatorTool(BaseTool):
         except ZeroDivisionError:
             return ToolResult(success=False, error="Division by zero")
         except ValueError as e:
-            return ToolResult(success=False, error=f"Invalid expression: {str(e)}")
+            return ToolResult(success=False, error=f"Invalid expression: {e!s}")
         except SyntaxError as e:
-            return ToolResult(success=False, error=f"Syntax error in expression: {str(e)}")
+            return ToolResult(success=False, error=f"Syntax error in expression: {e!s}")
         except Exception as e:
-            return ToolResult(success=False, error=f"Calculation error: {str(e)}")
+            return ToolResult(success=False, error=f"Calculation error: {e!s}")

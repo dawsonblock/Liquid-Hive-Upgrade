@@ -1,5 +1,4 @@
-"""
-Swarm Protocol: Distributed State and Task Delegation
+"""Swarm Protocol: Distributed State and Task Delegation
 ====================================================
 
 This module implements the foundational infrastructure for LIQUID-HIVE swarm collaboration:
@@ -18,8 +17,8 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Set
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from typing import Any, Optional
 
 try:
     import redis.asyncio as redis
@@ -33,14 +32,14 @@ class SwarmTask:
 
     task_id: str
     task_type: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     requester_id: str
     priority: int = 1
     timeout_seconds: int = 300
     created_at: float = None
     assigned_to: Optional[str] = None
     status: str = "pending"  # pending, assigned, completed, failed, timeout
-    result: Optional[Dict[str, Any]] = None
+    result: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
         if self.created_at is None:
@@ -53,7 +52,7 @@ class SwarmNode:
 
     node_id: str
     instance_url: str
-    capabilities: List[str]
+    capabilities: list[str]
     load_factor: float = 0.0
     last_heartbeat: float = None
     status: str = "active"  # active, busy, offline
@@ -64,8 +63,7 @@ class SwarmNode:
 
 
 class SwarmCoordinator:
-    """
-    Swarm Protocol coordinator for distributed LIQUID-HIVE instances.
+    """Swarm Protocol coordinator for distributed LIQUID-HIVE instances.
 
     Features:
     - Distributed state management via Redis
@@ -87,7 +85,7 @@ class SwarmCoordinator:
             "reasoning",
             "ethical_analysis",
         ]
-        self.active_tasks: Set[str] = set()
+        self.active_tasks: set[str] = set()
         self.max_concurrent_tasks = 3
 
         # Heartbeat configuration
@@ -138,10 +136,9 @@ class SwarmCoordinator:
             self.logger.error(f"Error during swarm shutdown: {e}")
 
     async def delegate_task(
-        self, task_type: str, payload: Dict[str, Any], priority: int = 1, timeout: int = 300
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Delegate a task to another node in the swarm.
+        self, task_type: str, payload: dict[str, Any], priority: int = 1, timeout: int = 300
+    ) -> Optional[dict[str, Any]]:
+        """Delegate a task to another node in the swarm.
 
         Args:
             task_type: Type of task (e.g., "reasoning", "vision_analysis")
@@ -218,10 +215,9 @@ class SwarmCoordinator:
             self.logger.error(f"Error in process_delegated_tasks: {e}")
 
     async def sync_distributed_state(
-        self, state_key: str, local_state: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Synchronize distributed state across swarm nodes.
+        self, state_key: str, local_state: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Synchronize distributed state across swarm nodes.
 
         Args:
             state_key: Key identifying the state type (e.g., "knowledge_graph", "adapter_state")
@@ -268,7 +264,7 @@ class SwarmCoordinator:
         """Register this node in the swarm."""
         node = SwarmNode(
             node_id=self.node_id,
-            instance_url=f"http://localhost:8001",  # Could be configured
+            instance_url="http://localhost:8001",  # Could be configured
             capabilities=self.capabilities,
         )
 
@@ -368,7 +364,7 @@ class SwarmCoordinator:
             json.dumps({"status": "pending", "created_at": task.created_at}),
         )
 
-    async def _get_pending_tasks(self) -> List[Dict[str, Any]]:
+    async def _get_pending_tasks(self) -> list[dict[str, Any]]:
         """Get pending tasks that this node can handle."""
         tasks = []
 
@@ -440,7 +436,7 @@ class SwarmCoordinator:
 
     async def _wait_for_task_completion(
         self, task_id: str, timeout: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """Wait for a delegated task to complete."""
         start_time = time.time()
 

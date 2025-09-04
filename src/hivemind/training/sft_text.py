@@ -1,22 +1,19 @@
 import argparse
 import os
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import Any, Optional
 
-from datasets import load_dataset, Dataset, concatenate_datasets
-from unsloth import FastLanguageModel
-from peft import LoraConfig
-from trl import SFTTrainer
+from datasets import Dataset, concatenate_datasets, load_dataset
 from transformers import TrainingArguments
-
+from trl import SFTTrainer
+from unsloth import FastLanguageModel
 
 SYSTEM_PREFIX = "### Instruction:\n"
 ASSISTANT_PREFIX = "\n\n### Response:\n"
 
 
-def _format_sample(sample: Dict[str, Any]) -> Optional[str]:
-    """
-    Normalize different HF dataset formats to a single instruction-response text.
+def _format_sample(sample: dict[str, Any]) -> Optional[str]:
+    """Normalize different HF dataset formats to a single instruction-response text.
     Supported patterns:
       - {input, output}
       - {instruction, response/answer}
@@ -64,7 +61,7 @@ def _format_sample(sample: Dict[str, Any]) -> Optional[str]:
 
 @dataclass
 class DataConfig:
-    datasets: List[str]
+    datasets: list[str]
     split: str = "train"
     eval_split: Optional[str] = None
     max_train_samples: Optional[int] = None
@@ -78,8 +75,8 @@ DEFAULT_DATASETS = [
 
 
 def load_mixture(cfg: DataConfig) -> (Dataset, Optional[Dataset]):
-    train_parts: List[Dataset] = []
-    eval_parts: List[Dataset] = []
+    train_parts: list[Dataset] = []
+    eval_parts: list[Dataset] = []
     for ds_name in cfg.datasets:
         try:
             ds = load_dataset(ds_name)
@@ -132,7 +129,7 @@ def load_mixture(cfg: DataConfig) -> (Dataset, Optional[Dataset]):
 def train_sft(
     out_dir: str,
     base_model: str,
-    datasets: List[str] | None = None,
+    datasets: list[str] | None = None,
     max_seq_len: int = 4096,
     learning_rate: float = 2e-4,
     num_epochs: float = 1.0,

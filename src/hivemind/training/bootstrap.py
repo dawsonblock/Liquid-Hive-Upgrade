@@ -1,7 +1,8 @@
+import json
 import os
 import pathlib
-import json
 from datetime import datetime
+
 from . import sft_text
 
 DEFAULT_OUT = pathlib.Path("/app/adapters/foundational/champion_v1")

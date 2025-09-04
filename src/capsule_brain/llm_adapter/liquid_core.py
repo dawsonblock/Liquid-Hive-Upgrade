@@ -1,5 +1,8 @@
-import logging, torch, numpy as np
-from typing import List, Dict, Any
+import logging
+from typing import Any
+
+import numpy as np
+import torch
 
 log = logging.getLogger(__name__)
 INPUT_SIZE = 384
@@ -64,7 +67,7 @@ class LiquidReasoningCore:
             else "[Liquid Thought] Low-level background processing."
         )
 
-    async def process_stream(self, context_snippets: List[str]) -> Dict[str, Any]:
+    async def process_stream(self, context_snippets: list[str]) -> dict[str, Any]:
         try:
             if not self._check_state():
                 pass

@@ -3,9 +3,10 @@ Test Routing Decision Paths
 ==========================
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from unified_runtime.model_router import DSRouter, RouterConfig
 from unified_runtime.providers.base_provider import GenRequest

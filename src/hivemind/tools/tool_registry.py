@@ -1,5 +1,4 @@
-"""
-Tool Registry for LIQUID-HIVE Tool Framework
+"""Tool Registry for LIQUID-HIVE Tool Framework
 ===========================================
 
 Enhanced registry with approval workflows, analytics, and audit capabilities.
@@ -8,13 +7,11 @@ Enhanced registry with approval workflows, analytics, and audit capabilities.
 import importlib
 import inspect
 import logging
-import pkgutil
 import time
-import json
-from pathlib import Path
-from typing import Dict, List, Optional, Type, Any
 from collections import defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Optional
 
 from .base_tool import BaseTool, ToolResult
 
@@ -23,11 +20,11 @@ class ToolRegistry:
     """Enhanced central registry for managing tools in the LIQUID-HIVE system."""
 
     def __init__(self):
-        self.tools: Dict[str, BaseTool] = {}
+        self.tools: dict[str, BaseTool] = {}
         self.logger = logging.getLogger(__name__)
 
         # Analytics and tracking
-        self.execution_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        self.execution_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "total_executions": 0,
                 "successful_executions": 0,
@@ -40,11 +37,11 @@ class ToolRegistry:
         )
 
         # Approval system
-        self.pending_approvals: Dict[str, Dict[str, Any]] = {}
-        self.approval_history: List[Dict[str, Any]] = []
+        self.pending_approvals: dict[str, dict[str, Any]] = {}
+        self.approval_history: list[dict[str, Any]] = []
 
         # Tool usage tracking
-        self.tool_usage_log: List[Dict[str, Any]] = []
+        self.tool_usage_log: list[dict[str, Any]] = []
 
     def register_tool(self, tool: BaseTool) -> bool:
         """Register a tool instance."""
@@ -60,7 +57,7 @@ class ToolRegistry:
             self.logger.error(f"Failed to register tool {getattr(tool, 'name', 'unknown')}: {e}")
             return False
 
-    def register_tool_class(self, tool_class: Type[BaseTool]) -> bool:
+    def register_tool_class(self, tool_class: type[BaseTool]) -> bool:
         """Register a tool class (will instantiate it)."""
         try:
             tool_instance = tool_class()
@@ -71,9 +68,8 @@ class ToolRegistry:
             )
             return False
 
-    def discover_tools(self, search_paths: Optional[List[str]] = None) -> int:
-        """
-        Automatically discover and register tools from specified paths.
+    def discover_tools(self, search_paths: Optional[list[str]] = None) -> int:
+        """Automatically discover and register tools from specified paths.
         Returns number of tools discovered.
         """
         if search_paths is None:
@@ -132,26 +128,26 @@ class ToolRegistry:
         """Get a registered tool by name."""
         return self.tools.get(name)
 
-    def list_tools(self, category: Optional[str] = None) -> List[str]:
+    def list_tools(self, category: Optional[str] = None) -> list[str]:
         """List all registered tool names, optionally filtered by category."""
         if category is None:
             return list(self.tools.keys())
 
         return [name for name, tool in self.tools.items() if tool.category == category]
 
-    def get_tool_schema(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_tool_schema(self, name: str) -> Optional[dict[str, Any]]:
         """Get the schema for a specific tool."""
         tool = self.get_tool(name)
         if tool:
             return tool.get_schema()
         return None
 
-    def get_all_schemas(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_schemas(self) -> dict[str, dict[str, Any]]:
         """Get schemas for all registered tools."""
         return {name: tool.get_schema() for name, tool in self.tools.items()}
 
     async def execute_tool(
-        self, name: str, parameters: Dict[str, Any], operator_id: Optional[str] = None
+        self, name: str, parameters: dict[str, Any], operator_id: Optional[str] = None
     ) -> ToolResult:
         """Enhanced tool execution with approval workflow and analytics."""
         tool = self.get_tool(name)
@@ -211,9 +207,9 @@ class ToolRegistry:
 
         return result
 
-    def get_tools_by_category(self) -> Dict[str, List[str]]:
+    def get_tools_by_category(self) -> dict[str, list[str]]:
         """Group tools by category."""
-        categories: Dict[str, List[str]] = {}
+        categories: dict[str, list[str]] = {}
 
         for name, tool in self.tools.items():
             category = tool.category
@@ -223,18 +219,18 @@ class ToolRegistry:
 
         return categories
 
-    def get_high_risk_tools(self) -> List[str]:
+    def get_high_risk_tools(self) -> list[str]:
         """Get list of tools marked as high risk or critical."""
         return [
             name for name, tool in self.tools.items() if tool.risk_level in ["high", "critical"]
         ]
 
-    def get_approval_required_tools(self) -> List[str]:
+    def get_approval_required_tools(self) -> list[str]:
         """Get list of tools that require operator approval."""
         return [name for name, tool in self.tools.items() if tool.requires_approval]
 
     def _is_approved(
-        self, tool_name: str, parameters: Dict[str, Any], operator_id: Optional[str]
+        self, tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
     ) -> bool:
         """Check if tool execution is approved."""
         # For now, implement simple approval logic
@@ -249,7 +245,7 @@ class ToolRegistry:
         return False
 
     def _create_approval_request(
-        self, tool_name: str, parameters: Dict[str, Any], operator_id: Optional[str]
+        self, tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
     ) -> str:
         """Create an approval request for tool execution."""
         approval_id = f"approval_{tool_name}_{int(time.time())}"
@@ -309,7 +305,7 @@ class ToolRegistry:
 
         return False
 
-    def get_pending_approvals(self) -> List[Dict[str, Any]]:
+    def get_pending_approvals(self) -> list[dict[str, Any]]:
         """Get list of pending approval requests."""
         return [
             approval
@@ -322,7 +318,7 @@ class ToolRegistry:
         tool_name: str,
         result: ToolResult,
         execution_time: float,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         operator_id: Optional[str],
     ):
         """Record detailed execution metrics."""
@@ -347,7 +343,7 @@ class ToolRegistry:
     def _log_tool_usage(
         self,
         tool_name: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         result: ToolResult,
         execution_time: float,
         operator_id: Optional[str],
@@ -373,7 +369,7 @@ class ToolRegistry:
         if len(self.tool_usage_log) > 1000:
             self.tool_usage_log = self.tool_usage_log[-1000:]
 
-    def get_tool_analytics(self, tool_name: Optional[str] = None, days: int = 7) -> Dict[str, Any]:
+    def get_tool_analytics(self, tool_name: Optional[str] = None, days: int = 7) -> dict[str, Any]:
         """Get analytics for tools."""
         if tool_name:
             if tool_name not in self.execution_stats:
@@ -406,7 +402,7 @@ class ToolRegistry:
                 "performance_summary": self._get_performance_summary(),
             }
 
-    def _get_recent_usage(self, tool_name: str, days: int) -> List[Dict[str, Any]]:
+    def _get_recent_usage(self, tool_name: str, days: int) -> list[dict[str, Any]]:
         """Get recent usage for a specific tool."""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 
@@ -421,7 +417,7 @@ class ToolRegistry:
 
         return sorted(recent_usage, key=lambda x: x["timestamp"], reverse=True)[:50]
 
-    def _get_most_used_tools(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def _get_most_used_tools(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get most frequently used tools."""
         tool_usage = [
             {
@@ -437,7 +433,7 @@ class ToolRegistry:
 
         return sorted(tool_usage, key=lambda x: x["total_executions"], reverse=True)[:limit]
 
-    def _get_error_summary(self) -> Dict[str, Any]:
+    def _get_error_summary(self) -> dict[str, Any]:
         """Get summary of errors across all tools."""
         total_errors = 0
         error_types = defaultdict(int)
@@ -459,7 +455,7 @@ class ToolRegistry:
             ),
         }
 
-    def _get_performance_summary(self) -> Dict[str, Any]:
+    def _get_performance_summary(self) -> dict[str, Any]:
         """Get performance summary across all tools."""
         execution_times = []
         total_executions = 0

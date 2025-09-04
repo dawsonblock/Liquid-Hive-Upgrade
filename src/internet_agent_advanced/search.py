@@ -1,7 +1,11 @@
 from __future__ import annotations
-import os, httpx
-from .schemas import FetchResult
+
+import os
+
+import httpx
+
 from .main_tool import internet_fetch
+from .schemas import FetchResult
 
 
 async def internet_search(query: str, max_results: int = 5) -> FetchResult:

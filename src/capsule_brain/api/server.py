@@ -1,9 +1,12 @@
-import asyncio, logging, os
-from typing import Dict, Any
+import logging
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from capsule_brain.core.capsule_engine import CapsuleEngine
-from capsule_brain.observability.metrics import router as metrics_router, MetricsMiddleware
+from capsule_brain.observability.metrics import MetricsMiddleware
+from capsule_brain.observability.metrics import router as metrics_router
 
 log = logging.getLogger(__name__)
 app = FastAPI(title="Capsule Brain Supreme AGI", version="1.0.1")
@@ -38,24 +41,24 @@ async def on_shutdown():
 
 
 @app.get("/healthz")
-async def healthz() -> Dict[str, Any]:
+async def healthz() -> dict[str, Any]:
     return {"ok": True}
 
 
 @app.get("/ready")
-async def ready() -> Dict[str, Any]:
+async def ready() -> dict[str, Any]:
     return {"ready": engine is not None}
 
 
 @app.get("/state/summary")
-async def state_summary() -> Dict[str, Any]:
+async def state_summary() -> dict[str, Any]:
     if not engine:
         raise HTTPException(status_code=503, detail="engine not ready")
     return engine.get_state_summary()
 
 
 @app.post("/ask")
-async def ask(q: str) -> Dict[str, Any]:
+async def ask(q: str) -> dict[str, Any]:
     if not engine:
         raise HTTPException(status_code=503, detail="engine not ready")
     engine.add_memory("user", q)
@@ -64,7 +67,7 @@ async def ask(q: str) -> Dict[str, Any]:
 
 
 @app.post("/graph/edge")
-async def add_edge(source: str, target: str, relation: str = "related_to") -> Dict[str, Any]:
+async def add_edge(source: str, target: str, relation: str = "related_to") -> dict[str, Any]:
     if not engine:
         raise HTTPException(status_code=503, detail="engine not ready")
     engine.add_graph_edge(source, target, relation)

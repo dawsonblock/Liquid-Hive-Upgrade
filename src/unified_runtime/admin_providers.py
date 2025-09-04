@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import signal
-from typing import Any, Dict
-from fastapi import APIRouter, Request, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, Request
 
 from oracle.manager import ProviderManager
 
@@ -22,8 +23,8 @@ except Exception:
         return None
 
 
-_providers_cache: Dict[str, Any] = {}
-_routing: Dict[str, Any] = {}
+_providers_cache: dict[str, Any] = {}
+_routing: dict[str, Any] = {}
 
 
 def _load_providers() -> None:
@@ -31,7 +32,7 @@ def _load_providers() -> None:
     providers, routing = _pm.load()
     _routing = routing
     # Resolve keys from env. Keys are never returned in API.
-    cache: Dict[str, Any] = {}
+    cache: dict[str, Any] = {}
     for name, cfg in providers.items():
         key = _pm.resolve_api_key(cfg)
         prov = None
@@ -60,7 +61,7 @@ def _load_providers() -> None:
 
 
 @router.get("/providers")
-async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
+async def list_providers(dep: Any = Depends(auth_optional)) -> dict[str, Any]:
     if not _providers_cache:
         try:
             _load_providers()
@@ -68,7 +69,7 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
             return {"error": str(e)}
     out = []
     for name, prov in _providers_cache.items():
-        cfg = getattr(prov, "cfg")
+        cfg = prov.cfg
         out.append(
             {
                 "name": name,
@@ -87,7 +88,7 @@ async def list_providers(dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
 
 
 @router.post("/reload-providers")
-async def reload_providers(request: Request, dep: Any = Depends(auth_optional)) -> Dict[str, Any]:
+async def reload_providers(request: Request, dep: Any = Depends(auth_optional)) -> dict[str, Any]:
     # Optional simple admin token check
     admin_token = os.getenv("ADMIN_TOKEN")
     if admin_token:

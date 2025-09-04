@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""
-Comprehensive Backend API Test for Enhanced CI/CD System
+"""Comprehensive Backend API Test for Enhanced CI/CD System
 Tests core functionality, security, observability, and services.
 """
 
+import json
 import os
 import sys
+from typing import Optional
+
 import requests
-import json
-import time
-from datetime import datetime
-from typing import Dict, Any, Tuple, Optional
+
 
 class ComprehensiveBackendTester:
     def __init__(self, base_url="http://localhost:8000"):
@@ -19,9 +18,9 @@ class ComprehensiveBackendTester:
         self.tests_passed = 0
         self.test_results = {}
 
-    def run_test(self, name: str, method: str, endpoint: str, expected_status: int, 
-                 data: Optional[Dict] = None, headers: Optional[Dict] = None, 
-                 form_data: Optional[Dict] = None) -> Tuple[bool, Dict]:
+    def run_test(self, name: str, method: str, endpoint: str, expected_status: int,
+                 data: Optional[dict] = None, headers: Optional[dict] = None,
+                 form_data: Optional[dict] = None) -> tuple[bool, dict]:
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         if headers is None:
@@ -30,7 +29,7 @@ class ComprehensiveBackendTester:
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {method} {url}")
-        
+
         try:
             if method == 'GET':
                 response = requests.get(url, headers=headers, timeout=10)
@@ -66,7 +65,7 @@ class ComprehensiveBackendTester:
             return success, response.json() if success and response.content else {}
 
         except Exception as e:
-            print(f"❌ Failed - Error: {str(e)}")
+            print(f"❌ Failed - Error: {e!s}")
             self.test_results[name] = {
                 'success': False,
                 'error': str(e),
@@ -125,7 +124,7 @@ class ComprehensiveBackendTester:
         data = {
             "task_id": task_id,
             "model_a": "deepseek_r1",
-            "model_b": "qwen_2_5", 
+            "model_b": "qwen_2_5",
             "output_a": "Comprehensive analysis with detailed reasoning and citations.",
             "output_b": "Basic analysis with limited context."
         }
@@ -205,107 +204,107 @@ def main():
     print("🚀 Starting Comprehensive Backend API Tests")
     print("Testing: Core APIs, Configuration, Planner, Arena, Security, Observability, Cache")
     print("=" * 80)
-    
+
     # Set environment variables for services
     os.environ['ENABLE_ARENA'] = 'true'
     os.environ['ENABLE_PLANNER'] = 'true'
-    
+
     tester = ComprehensiveBackendTester()
-    
+
     # Track critical failures
     critical_failures = []
-    
+
     print("\n🔧 === CORE API ENDPOINTS ===")
-    
+
     # Test 1: Health check (critical)
     health_success, _ = tester.test_health_check()
     if not health_success:
         critical_failures.append("Core API Health Check")
         print("❌ CRITICAL: Health check failed - API may not be running")
-    
+
     # Test 2: Ready check
     ready_success, _ = tester.test_ready_check()
-    
+
     # Test 3: State endpoint
     state_success, _ = tester.test_state_endpoint()
-    
+
     print("\n⚙️ === ENHANCED CONFIGURATION ===")
-    
+
     # Test 4: Configuration loading
     config_success, _ = tester.test_configuration_loading()
     if not config_success:
         critical_failures.append("Enhanced Configuration Loading")
-    
+
     # Test 5: Secrets health
     secrets_health_success, _ = tester.test_secrets_health()
-    
+
     print("\n🧠 === PLANNER SERVICE ===")
-    
+
     # Test 6: Planner service
     planner_success, _ = tester.test_planner_service()
-    
+
     print("\n🏟️ === ARENA SERVICE ===")
-    
+
     # Test 7: Arena Submit
     submit_success, task_id = tester.test_arena_submit()
-    
+
     # Test 8: Arena Compare (depends on submit)
     compare_success = False
     if submit_success and task_id:
         compare_success, _ = tester.test_arena_compare(task_id)
-    
+
     # Test 9: Arena Leaderboard
     leaderboard_success, _ = tester.test_arena_leaderboard()
-    
+
     print("\n🔒 === SECURITY FEATURES ===")
-    
+
     # Test 10: Admin endpoints
     admin_success, _ = tester.test_admin_endpoints()
-    
+
     # Test 11: Secrets endpoints
     secrets_success, _ = tester.test_secrets_endpoints()
-    
+
     # Test 12: Trust policy
     trust_success, _ = tester.test_trust_policy()
-    
+
     print("\n📊 === OBSERVABILITY ===")
-    
+
     # Test 13: Metrics endpoints
     metrics_success, _ = tester.test_metrics_endpoints()
-    
+
     # Test 14: Providers status
     providers_success, _ = tester.test_providers_status()
-    
+
     # Test 15: Swarm status
     swarm_success, _ = tester.test_swarm_status()
-    
+
     print("\n🧠 === CACHE OPERATIONS ===")
-    
+
     # Test 16: Cache health
     cache_health_success, _ = tester.test_cache_health()
-    
+
     # Test 17: Cache analytics
     cache_analytics_success, _ = tester.test_cache_analytics()
-    
+
     # Test 18: Cache status
     cache_status_success, _ = tester.test_cache_status()
-    
+
     print("\n🛣️ === CORE ROUTING ===")
-    
+
     # Test 19: Tools endpoint
     tools_success, _ = tester.test_tools_endpoint()
-    
+
     # Test 20: Tools health
     tools_health_success, _ = tester.test_tools_health()
-    
+
     # Test 21: Chat endpoint
     chat_success, _ = tester.test_chat_endpoint()
-    
+
     # Print comprehensive results
     print("\n" + "=" * 80)
     print(f"📊 COMPREHENSIVE TEST RESULTS: {tester.tests_passed}/{tester.tests_run} passed")
     print("=" * 80)
-    
+
     # Categorize results
     core_tests = [health_success, ready_success, state_success]
     config_tests = [config_success, secrets_health_success]
@@ -314,8 +313,8 @@ def main():
     observability_tests = [metrics_success, providers_success, swarm_success]
     cache_tests = [cache_health_success, cache_analytics_success, cache_status_success]
     routing_tests = [tools_success, tools_health_success, chat_success]
-    
-    print(f"\n📈 CATEGORY BREAKDOWN:")
+
+    print("\n📈 CATEGORY BREAKDOWN:")
     print(f"   🔧 Core APIs: {sum(core_tests)}/{len(core_tests)} passed")
     print(f"   ⚙️ Configuration: {sum(config_tests)}/{len(config_tests)} passed")
     print(f"   🧠 Services (Planner/Arena): {sum(service_tests)}/{len(service_tests)} passed")
@@ -323,11 +322,11 @@ def main():
     print(f"   📊 Observability: {sum(observability_tests)}/{len(observability_tests)} passed")
     print(f"   🧠 Cache Operations: {sum(cache_tests)}/{len(cache_tests)} passed")
     print(f"   🛣️ Core Routing: {sum(routing_tests)}/{len(routing_tests)} passed")
-    
+
     if critical_failures:
         print(f"\n❌ CRITICAL FAILURES: {critical_failures}")
         return 1
-    
+
     if tester.tests_passed >= (tester.tests_run * 0.8):  # 80% pass rate
         print("\n🎉 Backend system is production-ready!")
         print("✅ Core functionality verified")

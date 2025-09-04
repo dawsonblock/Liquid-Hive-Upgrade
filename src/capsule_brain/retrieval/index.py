@@ -1,10 +1,12 @@
-import asyncio, time, logging
-from typing import Dict, Any
+import asyncio
+import logging
+import time
+from typing import Any
 
 log = logging.getLogger(__name__)
 
 
-async def retrieve_topk(query: str, k: int = 5) -> Dict[str, Any]:
+async def retrieve_topk(query: str, k: int = 5) -> dict[str, Any]:
     start = time.perf_counter()
     try:
         await asyncio.sleep(0.1)

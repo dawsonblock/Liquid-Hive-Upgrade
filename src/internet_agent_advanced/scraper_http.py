@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import time
-from urllib.parse import urlparse
+
 import httpx
-from .schemas import PageContent
-from .normalizer import html_to_text
+
 from .config import DEFAULT_UA, HTTP_TIMEOUT_S
+from .normalizer import html_to_text
+from .schemas import PageContent
 
 DEFAULT_HEADERS = {
     "User-Agent": DEFAULT_UA,

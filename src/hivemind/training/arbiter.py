@@ -1,5 +1,4 @@
-"""
-The Arbiter: Economic Singularity Version
+"""The Arbiter: Economic Singularity Version
 =========================================
 
 This module replaces the GPT-4o Arbiter with DeepSeek-R1 to solve the "Financial Black Hole"
@@ -13,18 +12,17 @@ cost and latency while maintaining high-quality refinement capabilities.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
 import time
-from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
+from typing import Any, Optional
 
 try:
-    from ..clients.deepseek_client import DeepSeekClient
-    from ...unified_runtime.providers.deepseek_r1 import DeepSeekR1Provider
     from ...unified_runtime.providers import GenRequest
+    from ...unified_runtime.providers.deepseek_r1 import DeepSeekR1Provider
+    from ..clients.deepseek_client import DeepSeekClient
 except ImportError:
     DeepSeekClient = None
     DeepSeekR1Provider = None
@@ -32,8 +30,7 @@ except ImportError:
 
 
 class Arbiter:
-    """
-    Economic Singularity Arbiter using DeepSeek ecosystem.
+    """Economic Singularity Arbiter using DeepSeek ecosystem.
 
     Architecture:
     - Primary Oracle: DeepSeek-V3 (via existing DeepSeekClient)
@@ -75,10 +72,9 @@ class Arbiter:
         self,
         original_prompt: str,
         synthesized_answer: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Refine a synthesized answer using the DeepSeek oracle hierarchy.
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        """Refine a synthesized answer using the DeepSeek oracle hierarchy.
 
         Flow:
         1. Attempt refinement with DeepSeek-V3 (primary)
@@ -145,7 +141,7 @@ class Arbiter:
         )
         return fallback_response
 
-    async def _try_primary_oracle(self, prompt: str) -> Dict[str, Any]:
+    async def _try_primary_oracle(self, prompt: str) -> dict[str, Any]:
         """Try refinement with DeepSeek-V3 primary oracle."""
         if not self.primary_oracle:
             return {"success": False, "error": "primary_oracle_unavailable"}
@@ -178,7 +174,7 @@ Respond in JSON format:
             self.logger.error(f"Primary oracle generation failed: {e}")
             return {"success": False, "error": str(e)}
 
-    async def _try_secondary_oracle(self, prompt: str) -> Dict[str, Any]:
+    async def _try_secondary_oracle(self, prompt: str) -> dict[str, Any]:
         """Try refinement with DeepSeek-R1 secondary oracle (reasoning mode)."""
         if not self.secondary_oracle or not GenRequest:
             return {"success": False, "error": "secondary_oracle_unavailable"}
@@ -234,7 +230,7 @@ Synthesized Answer:
 
 Please analyze and refine this answer, providing a higher-quality version."""
 
-    def _parse_oracle_response(self, response: str) -> Optional[Dict[str, Any]]:
+    def _parse_oracle_response(self, response: str) -> Optional[dict[str, Any]]:
         """Parse and validate oracle response JSON."""
         try:
             parsed = json.loads(response)
@@ -268,7 +264,7 @@ Please analyze and refine this answer, providing a higher-quality version."""
                 pass
             return None
 
-    def _create_fallback_response(self, original_answer: str) -> Dict[str, Any]:
+    def _create_fallback_response(self, original_answer: str) -> dict[str, Any]:
         """Create fallback response when all oracles fail."""
         return {
             "correction_analysis": "Unable to perform refinement due to oracle unavailability. Original answer preserved.",
@@ -281,10 +277,10 @@ Please analyze and refine this answer, providing a higher-quality version."""
         self,
         original_prompt: str,
         synthesized_answer: str,
-        refined_result: Dict[str, Any],
+        refined_result: dict[str, Any],
         corrector_model: str,
         processing_time: float,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         escalated: bool = False,
         failed: bool = False,
     ) -> None:
@@ -320,7 +316,7 @@ Please analyze and refine this answer, providing a higher-quality version."""
         except Exception as e:
             self.logger.error(f"Failed to log refinement result: {e}")
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current arbiter status."""
         return {
             "economic_singularity": True,

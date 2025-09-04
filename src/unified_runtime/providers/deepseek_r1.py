@@ -1,14 +1,13 @@
-"""
-DeepSeek R1 Reasoning Provider
+"""DeepSeek R1 Reasoning Provider
 =============================
 """
 
 from __future__ import annotations
+
 import asyncio
-import json
 import os
 import random
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 from .base_provider import BaseProvider, GenRequest, GenResponse
 
@@ -21,7 +20,7 @@ except ImportError:
 class DeepSeekR1Provider(BaseProvider):
     """DeepSeek R1 reasoning mode provider."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] = None):
         super().__init__("deepseek_r1", config)
         self.api_key = config.get("api_key") or os.getenv("DEEPSEEK_API_KEY")
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
@@ -184,7 +183,7 @@ You are operating in deep reasoning mode. Take time to think through this proble
             metadata={"fallback": True, "error": error, "reasoning_mode": "r1"},
         )
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Quick health check for DeepSeek R1 API (single attempt, short timeout)."""
         if not self.api_key:
             return {"status": "unavailable", "reason": "no_api_key", "provider": self.name}

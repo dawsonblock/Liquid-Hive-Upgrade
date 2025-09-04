@@ -1,5 +1,4 @@
-"""
-Module entry point for the fusion service.
+"""Module entry point for the fusion service.
 
 This allows the application to be run directly using ``python -m fusion``.  It
 imports the FastAPI ``app`` from :mod:`fusion.server` and starts an ASGI
@@ -8,10 +7,11 @@ environment variables ``HOST`` and ``PORT``.
 """
 
 import os
+
 import uvicorn
 
-from .server import app
 from .logging_config import setup_logging
+from .server import app
 
 
 def main() -> None:

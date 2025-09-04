@@ -1,19 +1,18 @@
-"""
-File Operations Tool for LIQUID-HIVE
+"""File Operations Tool for LIQUID-HIVE
 ===================================
 
 A secure file operations tool that can read, write, and manage files
 with proper security restrictions and approval requirements.
 """
 
+import hashlib
 import os
 import pathlib
-import hashlib
-import json
-from typing import Dict, Any, List
+from typing import Any
+
 import aiofiles
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class FileOperationsTool(BaseTool):
@@ -41,7 +40,7 @@ class FileOperationsTool(BaseTool):
         return "Perform secure file operations including read, write, list, and info operations within allowed directories"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="operation",
@@ -108,7 +107,7 @@ class FileOperationsTool(BaseTool):
         except Exception:
             return False
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute file operation."""
         operation = parameters["operation"]
         path = parameters["path"]
@@ -144,11 +143,11 @@ class FileOperationsTool(BaseTool):
                 return ToolResult(success=False, error=f"Unknown operation: {operation}")
 
         except PermissionError as e:
-            return ToolResult(success=False, error=f"Permission denied: {str(e)}")
+            return ToolResult(success=False, error=f"Permission denied: {e!s}")
         except FileNotFoundError as e:
-            return ToolResult(success=False, error=f"File not found: {str(e)}")
+            return ToolResult(success=False, error=f"File not found: {e!s}")
         except Exception as e:
-            return ToolResult(success=False, error=f"File operation failed: {str(e)}")
+            return ToolResult(success=False, error=f"File operation failed: {e!s}")
 
     async def _read_file(self, path: str, encoding: str, max_size_mb: int) -> ToolResult:
         """Read file content."""
@@ -163,7 +162,7 @@ class FileOperationsTool(BaseTool):
                     error=f"File size ({size_mb:.2f} MB) exceeds maximum allowed size ({max_size_mb} MB)",
                 )
 
-        async with aiofiles.open(path, mode="r", encoding=encoding) as f:
+        async with aiofiles.open(path, encoding=encoding) as f:
             content = await f.read()
 
         # Calculate file hash for integrity

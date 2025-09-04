@@ -1,9 +1,10 @@
 from __future__ import annotations
-# Note: redis dependency is optional for tests; we guard its import.
 
+# Note: redis dependency is optional for tests; we guard its import.
 import urllib.parse
-from .robots import is_allowed
+
 from .rate_limit_local import limiter_for_host
+from .robots import is_allowed
 
 # optional redis-based rate limiting (may be unavailable in tests)
 try:
@@ -14,9 +15,9 @@ except Exception:
         return None
 
 
+from .schemas import PageContent
 from .scraper_http import fetch_httpx
 from .scraper_playwright import fetch_playwright
-from .schemas import PageContent
 
 # Optional consent & session modules (overlay)
 try:

@@ -1,5 +1,4 @@
-"""
-Hybrid Retriever for LIQUID-HIVE
+"""Hybrid Retriever for LIQUID-HIVE
 ===============================
 
 A hybrid retriever that can work with both FAISS and Qdrant,
@@ -7,14 +6,16 @@ enabling gradual migration and fallback capabilities.
 """
 
 from __future__ import annotations
-import os
-import logging
+
 import asyncio
-from typing import List, Dict, Any, Optional, Union
+import logging
+import os
 from enum import Enum
+from typing import Any, Optional
 
 from hivemind.config import Settings
-from .retriever import Retriever, Document  # Original FAISS-based retriever
+
+from .retriever import Document, Retriever  # Original FAISS-based retriever
 
 try:
     from .qdrant_retriever import QdrantRetriever
@@ -37,8 +38,7 @@ class RetrievalMode(Enum):
 
 
 class HybridRetriever:
-    """
-    Hybrid retriever supporting both FAISS and Qdrant backends.
+    """Hybrid retriever supporting both FAISS and Qdrant backends.
 
     Features:
     - Automatic fallback between backends
@@ -72,7 +72,6 @@ class HybridRetriever:
 
     def _initialize_retrievers(self, faiss_index_dir: str, embed_model_id: str, qdrant_url: str):
         """Initialize both FAISS and Qdrant retrievers based on availability."""
-
         # Initialize FAISS retriever
         if faiss_index_dir and embed_model_id:
             try:
@@ -129,11 +128,10 @@ class HybridRetriever:
         self,
         query: str,
         k: int = 5,
-        metadata_filter: Optional[Dict[str, Any]] = None,
+        metadata_filter: Optional[dict[str, Any]] = None,
         prefer_qdrant: bool = True,
-    ) -> List[Document]:
-        """
-        Perform hybrid search across available backends.
+    ) -> list[Document]:
+        """Perform hybrid search across available backends.
 
         Args:
             query: Search query
@@ -169,8 +167,8 @@ class HybridRetriever:
             return await self._fallback_search(query, k)
 
     async def _search_qdrant_only(
-        self, query: str, k: int, metadata_filter: Optional[Dict[str, Any]]
-    ) -> List[Document]:
+        self, query: str, k: int, metadata_filter: Optional[dict[str, Any]]
+    ) -> list[Document]:
         """Search using Qdrant only."""
         if not self.qdrant_retriever or not self.qdrant_retriever.is_ready:
             return []
@@ -178,7 +176,7 @@ class HybridRetriever:
         self.retrieval_stats["qdrant_searches"] += 1
         return await self.qdrant_retriever.search(query, k, metadata_filter)
 
-    async def _search_faiss_only(self, query: str, k: int) -> List[Document]:
+    async def _search_faiss_only(self, query: str, k: int) -> list[Document]:
         """Search using FAISS only."""
         if not self.faiss_retriever or not self.faiss_retriever.is_ready:
             return []
@@ -187,8 +185,8 @@ class HybridRetriever:
         return await self.faiss_retriever.search(query, k)
 
     async def _search_hybrid(
-        self, query: str, k: int, metadata_filter: Optional[Dict[str, Any]], prefer_qdrant: bool
-    ) -> List[Document]:
+        self, query: str, k: int, metadata_filter: Optional[dict[str, Any]], prefer_qdrant: bool
+    ) -> list[Document]:
         """Perform hybrid search using both backends."""
         self.retrieval_stats["hybrid_searches"] += 1
 
@@ -228,10 +226,9 @@ class HybridRetriever:
         return self._fuse_results(qdrant_results, faiss_results, k)
 
     def _fuse_results(
-        self, qdrant_results: List[Document], faiss_results: List[Document], k: int
-    ) -> List[Document]:
+        self, qdrant_results: list[Document], faiss_results: list[Document], k: int
+    ) -> list[Document]:
         """Fuse results from multiple backends."""
-
         # Simple fusion: interleave results with deduplication
         fused = []
         seen_content = set()
@@ -268,7 +265,7 @@ class HybridRetriever:
 
         return fused[:k]
 
-    async def _fallback_search(self, query: str, k: int) -> List[Document]:
+    async def _fallback_search(self, query: str, k: int) -> list[Document]:
         """Fallback search when primary methods fail."""
         self.retrieval_stats["fallback_used"] += 1
 
@@ -291,12 +288,11 @@ class HybridRetriever:
 
     async def add_documents(
         self,
-        file_paths: List[str],
-        metadata: Optional[Dict[str, Any]] = None,
+        file_paths: list[str],
+        metadata: Optional[dict[str, Any]] = None,
         use_qdrant: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add documents to the preferred backend."""
-
         if use_qdrant and self.qdrant_retriever and self.qdrant_retriever.is_ready:
             log.info(f"Adding {len(file_paths)} documents to Qdrant")
             return await self.qdrant_retriever.add_documents(file_paths, metadata)
@@ -308,7 +304,7 @@ class HybridRetriever:
         else:
             return {"error": "No backend available for document indexing"}
 
-    def format_context(self, documents: List[Document]) -> str:
+    def format_context(self, documents: list[Document]) -> str:
         """Format context with backend information."""
         if not documents:
             return ""
@@ -331,7 +327,7 @@ class HybridRetriever:
 
             return "\n\n".join(context_lines)
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get comprehensive status of the hybrid retriever."""
         status = {
             "is_ready": self.is_ready,
@@ -353,7 +349,7 @@ class HybridRetriever:
 
         return status
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on all backends."""
         health = {
             "overall_status": "healthy" if self.is_ready else "unhealthy",

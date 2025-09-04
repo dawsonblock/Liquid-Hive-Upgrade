@@ -1,4 +1,3 @@
-import pytest
 from capsule_brain.security.input_sanitizer import sanitize_input, validate_tool_params
 
 

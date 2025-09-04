@@ -2,8 +2,8 @@ try:
     from pydantic_settings import BaseSettings
 except ImportError:
     from pydantic import BaseSettings
-from typing import Optional
 import os
+from typing import Optional
 
 # Import secrets manager with graceful fallback
 try:

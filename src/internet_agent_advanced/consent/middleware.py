@@ -1,15 +1,19 @@
 from __future__ import annotations
-import os, yaml, urllib.parse
-from .manager import ConsentManager
+
+import os
+
+import yaml
+
 from ..config import DEFAULT_UA
 from .determinism import set_determinism
+from .manager import ConsentManager
 
 
 def _load_policy(path: str | None = None) -> dict:
     if not path:
         # resolve next to this overlay's config or fallback to package config if copied inside
         path = os.path.join(os.path.dirname(__file__), "..", "config", "permissions.yaml")
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 

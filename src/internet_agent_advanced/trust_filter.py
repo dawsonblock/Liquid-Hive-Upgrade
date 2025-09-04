@@ -1,13 +1,14 @@
 from __future__ import annotations
-from urllib.parse import urlparse
+
 import tldextract
+
 from .config import (
-    TRUSTED_TLDS,
+    BASE_TRUST_SCORES,
     TRUSTED_DOMAINS_TIER1,
     TRUSTED_DOMAINS_TIER2,
     TRUSTED_DOMAINS_TIER3,
     TRUSTED_DOMAINS_TIER4,
-    BASE_TRUST_SCORES,
+    TRUSTED_TLDS,
 )
 
 

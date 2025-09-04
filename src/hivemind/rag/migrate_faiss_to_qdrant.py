@@ -1,19 +1,17 @@
-"""
-FAISS to Qdrant Migration Utility
+"""FAISS to Qdrant Migration Utility
 ===============================
 
 Utility to migrate existing FAISS indexes to Qdrant vector database
 while preserving document metadata and search functionality.
 """
 
-import os
+import asyncio
 import json
 import logging
-import asyncio
 import pathlib
-from typing import List, Dict, Any, Optional
 import uuid
 from datetime import datetime
+from typing import Any
 
 try:
     import faiss
@@ -24,7 +22,7 @@ try:
 except ImportError:
     FAISS_AVAILABLE = False
 
-from hivemind.rag.qdrant_retriever import QdrantRetriever, Document
+from hivemind.rag.qdrant_retriever import Document, QdrantRetriever
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +35,8 @@ class FaissToQdrantMigrator:
         self.qdrant_retriever = qdrant_retriever
         self.logger = logging.getLogger(__name__)
 
-    async def migrate(self, backup_faiss: bool = True) -> Dict[str, Any]:
-        """
-        Migrate FAISS index to Qdrant.
+    async def migrate(self, backup_faiss: bool = True) -> dict[str, Any]:
+        """Migrate FAISS index to Qdrant.
 
         Args:
             backup_faiss: Whether to create a backup of FAISS index
@@ -94,7 +91,7 @@ class FaissToQdrantMigrator:
             )
 
         except Exception as e:
-            error_msg = f"Migration failed: {str(e)}"
+            error_msg = f"Migration failed: {e!s}"
             results["errors"].append(error_msg)
             results["status"] = "failed"
             self.logger.error(error_msg)
@@ -122,7 +119,7 @@ class FaissToQdrantMigrator:
         except Exception as e:
             self.logger.warning(f"Failed to create FAISS backup: {e}")
 
-    async def _load_faiss_data(self) -> Dict[str, Any]:
+    async def _load_faiss_data(self) -> dict[str, Any]:
         """Load FAISS index and document store."""
         try:
             index_path = self.faiss_index_dir / "faiss_index.bin"
@@ -135,7 +132,7 @@ class FaissToQdrantMigrator:
             faiss_index = faiss.read_index(str(index_path))
 
             # Load document store
-            with open(doc_store_path, "r", encoding="utf-8") as f:
+            with open(doc_store_path, encoding="utf-8") as f:
                 doc_data = json.load(f)
 
             # Convert to Document objects
@@ -174,12 +171,12 @@ class FaissToQdrantMigrator:
             return {"success": False, "error": str(e)}
 
     async def _convert_documents(
-        self, documents: List[Document], vectors: List[np.ndarray]
-    ) -> List[Dict[str, Any]]:
+        self, documents: list[Document], vectors: list[np.ndarray]
+    ) -> list[dict[str, Any]]:
         """Convert FAISS documents to Qdrant format with enhanced metadata."""
         converted_docs = []
 
-        for i, (doc, vector) in enumerate(zip(documents, vectors)):
+        for i, (doc, vector) in enumerate(zip(documents, vectors, strict=False)):
             try:
                 # Enhance metadata with migration info
                 enhanced_metadata = doc.metadata.copy()
@@ -215,7 +212,7 @@ class FaissToQdrantMigrator:
 
         return converted_docs
 
-    async def _upload_to_qdrant(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _upload_to_qdrant(self, documents: list[dict[str, Any]]) -> dict[str, Any]:
         """Upload converted documents to Qdrant."""
         results = {"migrated_documents": 0, "failed_documents": 0, "errors": []}
 
@@ -245,13 +242,13 @@ class FaissToQdrantMigrator:
                 results["qdrant_documents"] = uploaded_count
 
         except Exception as e:
-            error_msg = f"Failed to upload to Qdrant: {str(e)}"
+            error_msg = f"Failed to upload to Qdrant: {e!s}"
             results["errors"].append(error_msg)
             self.logger.error(error_msg)
 
         return results
 
-    async def verify_migration(self, sample_queries: List[str] = None) -> Dict[str, Any]:
+    async def verify_migration(self, sample_queries: list[str] = None) -> dict[str, Any]:
         """Verify migration by comparing search results."""
         if not sample_queries:
             sample_queries = [
@@ -305,9 +302,8 @@ async def run_migration(
     faiss_index_dir: str = "/app/rag_index",
     qdrant_url: str = "http://localhost:6333",
     embed_model: str = "all-MiniLM-L6-v2",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Convenience function to run complete migration."""
-
     # Initialize Qdrant retriever
     qdrant_retriever = QdrantRetriever(
         collection_name="liquid_hive_knowledge", embed_model_id=embed_model, qdrant_url=qdrant_url
@@ -325,7 +321,7 @@ async def run_migration(
     print("🔄 Starting FAISS to Qdrant migration...")
     migration_results = await migrator.migrate(backup_faiss=True)
 
-    print(f"📊 Migration Results:")
+    print("📊 Migration Results:")
     print(f"   - Status: {migration_results['status']}")
     print(f"   - Migrated: {migration_results['migrated_documents']} documents")
     print(f"   - Failed: {migration_results['failed_documents']} documents")

@@ -1,5 +1,7 @@
 from __future__ import annotations
-import os, random
+
+import os
+import random
 
 try:
     import numpy as np

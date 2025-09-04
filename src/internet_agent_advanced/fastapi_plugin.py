@@ -1,15 +1,18 @@
 from __future__ import annotations
+
+from typing import Any, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-from .main_tool import internet_fetch, internet_search, internet_ingest
+
+from .main_tool import internet_fetch, internet_ingest, internet_search
 from .metrics import metrics_app
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
 
 class FetchReq(BaseModel):
-    urls: List[str] = Field(default_factory=list)
+    urls: list[str] = Field(default_factory=list)
     render_js: bool = False
 
 
@@ -37,20 +40,20 @@ class ConsentReq(BaseModel):
 
 
 @router.post("/consent/request")
-async def api_consent_request(req: ConsentReq) -> Dict[str, Any]:
+async def api_consent_request(req: ConsentReq) -> dict[str, Any]:
     # Agent/UI should display this to user; back-end just acknowledges.
     return {"ok": True, "pending": True, "scope": req.scope, "target": req.target}
 
 
 @router.post("/consent/approve")
-async def api_consent_approve(req: ConsentReq) -> Dict[str, Any]:
+async def api_consent_approve(req: ConsentReq) -> dict[str, Any]:
     if not CONSENT:
         raise HTTPException(status_code=400, detail="Consent manager not installed")
     return CONSENT.approve(req.scope, req.target, ttl=req.ttl)
 
 
 @router.post("/consent/revoke")
-async def api_consent_revoke(req: ConsentReq) -> Dict[str, Any]:
+async def api_consent_revoke(req: ConsentReq) -> dict[str, Any]:
     if not CONSENT:
         raise HTTPException(status_code=400, detail="Consent manager not installed")
     return CONSENT.revoke(req.scope, req.target)
@@ -58,7 +61,7 @@ async def api_consent_revoke(req: ConsentReq) -> Dict[str, Any]:
 
 # Session upload/clear
 try:
-    from .session.session_manager import save_storage_state, clear_storage_state
+    from .session.session_manager import clear_storage_state, save_storage_state
 except Exception:
     save_storage_state = clear_storage_state = None
 
@@ -69,7 +72,7 @@ class SessionUpload(BaseModel):
 
 
 @router.post("/consent/upload_session")
-async def api_upload_session(req: SessionUpload) -> Dict[str, Any]:
+async def api_upload_session(req: SessionUpload) -> dict[str, Any]:
     if not save_storage_state:
         raise HTTPException(status_code=400, detail="Session manager not installed")
     path = save_storage_state(req.domain, req.storage_state)
@@ -81,7 +84,7 @@ class SessionClear(BaseModel):
 
 
 @router.post("/consent/clear_session")
-async def api_clear_session(req: SessionClear) -> Dict[str, Any]:
+async def api_clear_session(req: SessionClear) -> dict[str, Any]:
     if not clear_storage_state:
         raise HTTPException(status_code=400, detail="Session manager not installed")
     ok = clear_storage_state(req.domain)
@@ -90,7 +93,7 @@ async def api_clear_session(req: SessionClear) -> Dict[str, Any]:
 
 # === Tools ===
 @router.post("/internet_fetch")
-async def api_internet_fetch(req: FetchReq) -> Dict[str, Any]:
+async def api_internet_fetch(req: FetchReq) -> dict[str, Any]:
     try:
         res = await internet_fetch(req.urls, render_js=req.render_js)
         return res.model_dump()
@@ -99,7 +102,7 @@ async def api_internet_fetch(req: FetchReq) -> Dict[str, Any]:
 
 
 @router.post("/internet_search")
-async def api_internet_search(req: SearchReq) -> Dict[str, Any]:
+async def api_internet_search(req: SearchReq) -> dict[str, Any]:
     try:
         res = await internet_search(req.query, max_results=req.max_results)
         return res.model_dump()
@@ -108,7 +111,7 @@ async def api_internet_search(req: SearchReq) -> Dict[str, Any]:
 
 
 @router.post("/internet_ingest")
-async def api_internet_ingest(req: IngestReq) -> Dict[str, Any]:
+async def api_internet_ingest(req: IngestReq) -> dict[str, Any]:
     try:
         return await internet_ingest(req.url, render_js=req.render_js)
     except Exception as e:

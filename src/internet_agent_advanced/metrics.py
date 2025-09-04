@@ -1,9 +1,9 @@
 from __future__ import annotations
+
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     Counter,
     Histogram,
-    CollectorRegistry,
-    CONTENT_TYPE_LATEST,
     generate_latest,
 )
 from starlette.applications import Starlette

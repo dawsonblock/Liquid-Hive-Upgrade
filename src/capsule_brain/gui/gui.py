@@ -1,9 +1,12 @@
-import asyncio, json, logging
+import asyncio
+import json
+import logging
 from pathlib import Path
-from typing import Set
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
-from fastapi.staticfiles import StaticFiles
+
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from ..security.secrets import SecretManager
 
 log = logging.getLogger(__name__)
@@ -13,7 +16,7 @@ class AdvancedGUI:
     def __init__(self, engine, app: FastAPI):
         self.engine = engine
         self.app = app
-        self._clients: Set[WebSocket] = set()
+        self._clients: set[WebSocket] = set()
         self._setup_routes()
 
     def _setup_routes(self):

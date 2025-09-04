@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from aiolimiter import AsyncLimiter
 
 _limiters: dict[str, AsyncLimiter] = {}

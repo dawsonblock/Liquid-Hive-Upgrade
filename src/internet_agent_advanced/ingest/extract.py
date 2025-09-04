@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import trafilatura
 from bs4 import BeautifulSoup
 from readability import Document
-import trafilatura
 
 
 def extract_readable(html: str):

@@ -1,5 +1,4 @@
-"""
-Confidence Modeler 2.0 (Enhanced Trust Protocol)
+"""Confidence Modeler 2.0 (Enhanced Trust Protocol)
 ================================================
 
 An advanced confidence scoring system that estimates the probability an operator
@@ -12,12 +11,12 @@ would approve a proposed action based on:
 
 from __future__ import annotations
 
-import numpy as np
-from dataclasses import dataclass
-from typing import Dict, Any, Optional, Tuple, List
-import time
-import json
 import hashlib
+import time
+from dataclasses import dataclass
+from typing import Any, Optional
+
+import numpy as np
 
 
 @dataclass
@@ -25,20 +24,20 @@ class TrustPolicy:
     enabled: bool
     threshold: float
     min_samples: int
-    allowlist: Tuple[str, ...]
+    allowlist: tuple[str, ...]
 
 
 class ConfidenceModeler:
     def __init__(self, policy: TrustPolicy) -> None:
         self.policy = policy
         # stats[action_type] = (approvals, total)
-        self.stats: Dict[str, Tuple[int, int]] = {}
+        self.stats: dict[str, tuple[int, int]] = {}
         self.updated_at = 0.0
 
         # Enhanced Phase 2 features
-        self.semantic_cache: Dict[str, np.ndarray] = {}  # text_hash -> embedding
-        self.historical_actions: List[Dict[str, Any]] = []  # Full action history with outcomes
-        self.cost_risk_history: Dict[str, List[float]] = {}  # action_type -> [cost/risk values]
+        self.semantic_cache: dict[str, np.ndarray] = {}  # text_hash -> embedding
+        self.historical_actions: list[dict[str, Any]] = []  # Full action history with outcomes
+        self.cost_risk_history: dict[str, list[float]] = {}  # action_type -> [cost/risk values]
 
         # Initialize embedding model if available
         self.embedding_model = None
@@ -113,7 +112,7 @@ class ConfidenceModeler:
         semantic_score = (avg_approved_sim - avg_denied_sim + 1) / 2
         return max(0.0, min(1.0, semantic_score))
 
-    def _calculate_cost_risk_factor(self, proposal: Dict[str, Any]) -> float:
+    def _calculate_cost_risk_factor(self, proposal: dict[str, Any]) -> float:
         """Calculate cost/risk adjustment factor."""
         action_type = proposal.get("action_type", "generic")
 
@@ -148,7 +147,7 @@ class ConfidenceModeler:
 
     def update_from_events(self, events: list[dict[str, Any]]) -> None:
         """Update confidence model from approval/denial events with enhanced tracking."""
-        approvals: Dict[str, Tuple[int, int]] = {}
+        approvals: dict[str, tuple[int, int]] = {}
 
         for ev in events:
             if ev.get("role") == "approval_feedback":
@@ -185,14 +184,14 @@ class ConfidenceModeler:
         self.stats = approvals
         self.updated_at = time.time()
 
-    def _score(self, action_type: str) -> Tuple[float, int]:
+    def _score(self, action_type: str) -> tuple[float, int]:
         """Calculate base approval probability with Laplace smoothing."""
         a, t = self.stats.get(action_type, (0, 0))
         # Laplace smoothing (1,1)
         p = (a + 1) / (t + 2) if t >= 0 else 0.5
         return p, t
 
-    def decide(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+    def decide(self, proposal: dict[str, Any]) -> dict[str, Any]:
         """Enhanced decision making with semantic similarity and cost/risk factors."""
         action_type = proposal.get("action_type", "generic")
         proposal_text = proposal.get("text", "")
@@ -241,7 +240,7 @@ class ConfidenceModeler:
         """Update trust policy."""
         self.policy = policy
 
-    def get_model_stats(self) -> Dict[str, Any]:
+    def get_model_stats(self) -> dict[str, Any]:
         """Get detailed statistics about the confidence model."""
         return {
             "version": "2.0",

@@ -1,5 +1,4 @@
-"""
-Code Analysis Tool for LIQUID-HIVE
+"""Code Analysis Tool for LIQUID-HIVE
 ==================================
 
 A tool for analyzing code, performing static analysis, and providing insights
@@ -8,11 +7,9 @@ about code structure, complexity, and quality.
 
 import ast
 import re
-import json
-from typing import Dict, Any, List, Optional, Set
-from pathlib import Path
+from typing import Any
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class CodeAnalysisTool(BaseTool):
@@ -27,7 +24,7 @@ class CodeAnalysisTool(BaseTool):
         return "Analyze code for structure, complexity, dependencies, and quality metrics"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="code",
@@ -67,7 +64,7 @@ class CodeAnalysisTool(BaseTool):
     def risk_level(self) -> str:
         return "low"  # Static analysis is safe
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute code analysis."""
         code = parameters["code"]
         language = parameters["language"]
@@ -94,11 +91,11 @@ class CodeAnalysisTool(BaseTool):
             )
 
         except Exception as e:
-            return ToolResult(success=False, error=f"Code analysis failed: {str(e)}")
+            return ToolResult(success=False, error=f"Code analysis failed: {e!s}")
 
     async def _analyze_python_code(
         self, code: str, analysis_type: str, include_suggestions: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze Python code using AST."""
         try:
             tree = ast.parse(code)
@@ -129,7 +126,7 @@ class CodeAnalysisTool(BaseTool):
                 "syntax_error": {"line": e.lineno, "offset": e.offset, "message": str(e)},
             }
 
-    def _analyze_python_structure(self, tree: ast.AST) -> Dict[str, Any]:
+    def _analyze_python_structure(self, tree: ast.AST) -> dict[str, Any]:
         """Analyze Python code structure."""
         structure = {
             "classes": [],
@@ -196,7 +193,7 @@ class CodeAnalysisTool(BaseTool):
 
         return structure
 
-    def _analyze_python_complexity(self, tree: ast.AST) -> Dict[str, Any]:
+    def _analyze_python_complexity(self, tree: ast.AST) -> dict[str, Any]:
         """Analyze Python code complexity."""
         complexity = {
             "cyclomatic_complexity": 1,  # Base complexity
@@ -264,7 +261,7 @@ class CodeAnalysisTool(BaseTool):
 
         return complexity
 
-    def _analyze_python_dependencies(self, tree: ast.AST) -> Dict[str, Any]:
+    def _analyze_python_dependencies(self, tree: ast.AST) -> dict[str, Any]:
         """Analyze Python code dependencies."""
         deps = {
             "stdlib_imports": [],
@@ -324,7 +321,7 @@ class CodeAnalysisTool(BaseTool):
 
         return deps
 
-    def _analyze_python_quality(self, code: str, tree: ast.AST) -> Dict[str, Any]:
+    def _analyze_python_quality(self, code: str, tree: ast.AST) -> dict[str, Any]:
         """Analyze Python code quality."""
         lines = code.splitlines()
         quality = {
@@ -368,8 +365,8 @@ class CodeAnalysisTool(BaseTool):
         return quality
 
     def _generate_python_suggestions(
-        self, code: str, tree: ast.AST, analysis: Dict[str, Any]
-    ) -> List[str]:
+        self, code: str, tree: ast.AST, analysis: dict[str, Any]
+    ) -> list[str]:
         """Generate improvement suggestions for Python code."""
         suggestions = []
 
@@ -409,7 +406,7 @@ class CodeAnalysisTool(BaseTool):
 
     async def _analyze_js_code(
         self, code: str, analysis_type: str, include_suggestions: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze JavaScript/TypeScript code (basic analysis)."""
         analysis = {
             "language": "javascript",
@@ -439,7 +436,7 @@ class CodeAnalysisTool(BaseTool):
 
         return analysis
 
-    def _generate_js_suggestions(self, code: str, analysis: Dict[str, Any]) -> List[str]:
+    def _generate_js_suggestions(self, code: str, analysis: dict[str, Any]) -> list[str]:
         """Generate improvement suggestions for JavaScript code."""
         suggestions = []
 
@@ -460,7 +457,7 @@ class CodeAnalysisTool(BaseTool):
 
     async def _analyze_generic_code(
         self, code: str, analysis_type: str, include_suggestions: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze code in generic way (language-agnostic)."""
         lines = code.splitlines()
 

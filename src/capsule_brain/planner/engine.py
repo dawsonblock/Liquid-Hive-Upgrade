@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import math
-import operator
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple, Callable, Awaitable, Optional
+from typing import Any, Optional
 
 from .schema import Plan, TaskNode
 
-ENABLE_PLANNER = "true" == str(__import__("os").environ.get("ENABLE_PLANNER", "false").lower())
+ENABLE_PLANNER = str(__import__("os").environ.get("ENABLE_PLANNER", "false").lower()) == "true"
 
 
 @dataclass
@@ -25,8 +25,8 @@ class NodeResult:
 class PlanExecutor:
     def __init__(self, plan: Plan):
         self.plan = plan
-        self.results: Dict[str, NodeResult] = {}
-        self._ops: Dict[str, Callable[[TaskNode, Dict[str, NodeResult]], Awaitable[Any]]] = {
+        self.results: dict[str, NodeResult] = {}
+        self._ops: dict[str, Callable[[TaskNode, dict[str, NodeResult]], Awaitable[Any]]] = {
             "local_search": self._op_local_search,
             "calculator": self._op_calculator,
             "flaky": self._op_flaky,
@@ -34,7 +34,7 @@ class PlanExecutor:
         }
 
     # ---------- Built-in Ops (safe, self-contained, no network) ----------
-    async def _op_local_search(self, node: TaskNode, ctx: Dict[str, NodeResult]) -> Any:
+    async def _op_local_search(self, node: TaskNode, ctx: dict[str, NodeResult]) -> Any:
         # Simulate a local search by returning tokens referencing the query.
         q = str(node.params.get("query") or node.params.get("q") or "")
         await asyncio.sleep(min(0.02 + len(q) / 1000.0, 0.2))
@@ -44,7 +44,7 @@ class PlanExecutor:
             "source": "stub/local",
         }
 
-    async def _op_calculator(self, node: TaskNode, ctx: Dict[str, NodeResult]) -> Any:
+    async def _op_calculator(self, node: TaskNode, ctx: dict[str, NodeResult]) -> Any:
         expr = str(node.params.get("expression") or node.params.get("expr") or "0")
         # Extremely restricted evaluator: only numbers and +-*/() and whitespace
         allowed = set("0123456789+-*/(). eE")
@@ -59,12 +59,12 @@ class PlanExecutor:
             "e": math.e,
         }
         try:
-            val = eval(expr, safe_globals, safe_locals)  # noqa: S307 (intentionally constrained)
+            val = eval(expr, safe_globals, safe_locals)
         except Exception as e:
             raise ValueError(f"Bad expression: {e}")
         return {"expression": expr, "value": float(val)}
 
-    async def _op_flaky(self, node: TaskNode, ctx: Dict[str, NodeResult]) -> Any:
+    async def _op_flaky(self, node: TaskNode, ctx: dict[str, NodeResult]) -> Any:
         # Fails the first N times this node is executed; success afterwards
         # We use an in-memory counter on the node via params mutation (ok for tests)
         fail_n = int(node.params.get("fail_first", 0))
@@ -74,7 +74,7 @@ class PlanExecutor:
             raise RuntimeError("flaky failure")
         return {"ok": True, "attempt": current + 1}
 
-    async def _op_sleep(self, node: TaskNode, ctx: Dict[str, NodeResult]) -> Any:
+    async def _op_sleep(self, node: TaskNode, ctx: dict[str, NodeResult]) -> Any:
         ms = float(node.params.get("ms", 10))
         await asyncio.sleep(ms / 1000.0)
         return {"slept_ms": ms}
@@ -82,11 +82,11 @@ class PlanExecutor:
     # ---------- Execution ----------
     async def execute(
         self, *, max_concurrency: int = 8, fail_fast: bool = False
-    ) -> Dict[str, NodeResult]:
+    ) -> dict[str, NodeResult]:
         start = time.perf_counter()
         # Topologically sort and schedule by dependency readiness
-        pending: Dict[str, TaskNode] = dict(self.plan.nodes)
-        in_progress: Dict[str, asyncio.Task] = {}
+        pending: dict[str, TaskNode] = dict(self.plan.nodes)
+        in_progress: dict[str, asyncio.Task] = {}
         sem = asyncio.Semaphore(max_concurrency)
 
         async def run_node(n: TaskNode):
@@ -115,7 +115,7 @@ class PlanExecutor:
                         return
                     except asyncio.TimeoutError:
                         last_err = "timeout"
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         last_err = str(e)
                     if attempts > n.retries:
                         duration = (time.perf_counter() - node_start) * 1000.0
@@ -184,7 +184,7 @@ class PlanExecutor:
     # Convenience: minimal NL plan builder used optionally by the API layer
     @staticmethod
     def plan_from_query(q: str) -> Plan:
-        nodes: Dict[str, TaskNode] = {}
+        nodes: dict[str, TaskNode] = {}
         ql = q.lower()
         # optional search node
         if any(k in ql for k in ["latest", "current", "recent", "news"]):

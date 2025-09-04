@@ -1,13 +1,16 @@
 from __future__ import annotations
-import os, httpx
-from typing import List, Dict, Any
+
+import os
+from typing import Any
+
+import httpx
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "web_corpus")
 
 
 async def index_qdrant(
-    chunks: List[Dict[str, Any]], vectors: List[List[float]], meta: Dict[str, Any]
+    chunks: list[dict[str, Any]], vectors: list[list[float]], meta: dict[str, Any]
 ):
     points = []
     for i, ch in enumerate(chunks):

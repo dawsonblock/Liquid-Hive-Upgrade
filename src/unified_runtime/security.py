@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 import time
-import base64
 from typing import Optional
-from fastapi import Request, HTTPException
+
+from fastapi import HTTPException, Request
 
 # Optional JWT verification using a public key file if provided
 try:

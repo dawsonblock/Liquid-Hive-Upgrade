@@ -1,5 +1,4 @@
-"""
-Fusion server with Autonomy, Trust, Estimator, and Model Routing
+"""Fusion server with Autonomy, Trust, Estimator, and Model Routing
 ===============================================================
 """
 
@@ -7,29 +6,33 @@ Fusion server with Autonomy, Trust, Estimator, and Model Routing
 from __future__ import annotations
 
 import asyncio
-import inspect
-from typing import Optional, List, Any, Dict, cast
-import sys
-import os
-import uuid
 import json
 import json as _json
+import logging
+import os
+import sys
+import time
 import urllib.parse as _u
 import urllib.request as _req
-import httpx
-import time
-import logging
+import uuid
 from datetime import datetime
+from typing import Any, Optional, cast
+
+import httpx
 
 log = logging.getLogger(__name__)
 
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, File, Request, UploadFile
 
 # Integrate internet agent advanced routes and metrics
 try:
     from internet_agent_advanced.fastapi_plugin import (
-        router as internet_tools_router,
         metrics_app as internet_metrics_app,
+    )
+    from internet_agent_advanced.fastapi_plugin import (
+        router as internet_tools_router,
+    )
+    from internet_agent_advanced.fastapi_plugin import (
         test_router as internet_test_router,
     )
 except Exception:
@@ -38,12 +41,14 @@ except Exception:
     internet_test_router = None  # type: ignore
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+
 from capsule_brain.security.input_sanitizer import sanitize_input
 
 try:
-    from capsule_brain.observability.metrics import MetricsMiddleware, router as metrics_router
-    from capsule_brain.planner.plan import plan_once
     from capsule_brain.core.capsule_engine import CapsuleEngine
+    from capsule_brain.observability.metrics import MetricsMiddleware
+    from capsule_brain.observability.metrics import router as metrics_router
+    from capsule_brain.planner.plan import plan_once
 except Exception:
     MetricsMiddleware = None  # type: ignore
     metrics_router = None  # type: ignore
@@ -65,13 +70,13 @@ except Exception as e:
 try:
     from .providers import (
         BaseProvider,
+        DeepSeekChatProvider,
+        DeepSeekR1Provider,
+        DeepSeekThinkingProvider,
         GenRequest,
         GenResponse,
-        StreamChunk,
-        DeepSeekChatProvider,
-        DeepSeekThinkingProvider,
-        DeepSeekR1Provider,
         QwenCPUProvider,
+        StreamChunk,
     )
 except Exception:
     BaseProvider = None  # type: ignore
@@ -180,7 +185,7 @@ except Exception:
     redis = None  # type: ignore
 
 try:
-    from hivemind.cache import SemanticCache, get_semantic_cache, create_cache_manager
+    from hivemind.cache import SemanticCache, create_cache_manager, get_semantic_cache
 except Exception:
     SemanticCache = None
     get_semantic_cache = None
@@ -189,8 +194,10 @@ except Exception:
 # Secrets manager (optional import, endpoints guard against absence)
 try:
     from hivemind.secrets_manager import (
-        secrets_manager as _secrets_manager,
         SecretProvider as _SecretProvider,
+    )
+    from hivemind.secrets_manager import (
+        secrets_manager as _secrets_manager,
     )  # type: ignore
 except Exception:
     _secrets_manager = None  # type: ignore
@@ -386,7 +393,7 @@ async def startup() -> None:
             print(f"🛠️ Enhanced Tool Registry initialized with {tool_count} tools")
             if hasattr(tool_registry, "get_tools_by_category"):
                 try:
-                    cats = getattr(tool_registry, "get_tools_by_category")().keys()
+                    cats = tool_registry.get_tools_by_category().keys()
                     print(f"📊 Tool categories: {', '.join(list(cats))}")
                 except Exception:
                     pass
@@ -432,12 +439,12 @@ async def startup() -> None:
 def _env_write(key: str, value: str) -> None:
     try:
         env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-        lines: List[str] = []
+        lines: list[str] = []
         if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
+            with open(env_path, encoding="utf-8") as f:
                 lines = f.read().splitlines()
         found = False
-        new_lines: List[str] = []
+        new_lines: list[str] = []
         for line in lines:
             if line.strip().startswith(f"{key}="):
                 new_lines.append(f"{key}={value}")
@@ -452,27 +459,27 @@ def _env_write(key: str, value: str) -> None:
         pass
 
 
-def _prom_q(base_url: Optional[str], promql: str) -> Optional[Dict[str, Any]]:
+def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict[str, Any]]:
     if not base_url:
         return None
     try:
         params = _u.urlencode({"query": promql})
         with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
-            data = cast(Dict[str, Any], _json.loads(r.read().decode()))
+            data = cast(dict[str, Any], _json.loads(r.read().decode()))
             if data.get("status") == "success":
-                return cast(Optional[Dict[str, Any]], data.get("data"))
+                return cast(Optional[dict[str, Any]], data.get("data"))
     except Exception:
         return None
     return None
 
 
-def _scalar(data: Optional[Dict[str, Any]]) -> Optional[float]:
+def _scalar(data: Optional[dict[str, Any]]) -> Optional[float]:
     if not data:
         return None
     try:
         res_any: Any = data.get("result", [])
         if isinstance(res_any, list) and res_any and isinstance(res_any[0], dict):
-            first: Dict[str, Any] = cast(Dict[str, Any], res_any[0])
+            first: dict[str, Any] = cast(dict[str, Any], res_any[0])
             v = first.get("value", [None, None])[1]
             return float(v) if v is not None else None
         return None
@@ -480,8 +487,8 @@ def _scalar(data: Optional[Dict[str, Any]]) -> Optional[float]:
         return None
 
 
-async def _broadcast_autonomy_event(event: Dict[str, Any]) -> None:
-    dead: List[WebSocket] = []
+async def _broadcast_autonomy_event(event: dict[str, Any]) -> None:
+    dead: list[WebSocket] = []
     for ws in list(websockets):
         try:
             await ws.send_json({"type": "autonomy_events", "payload": [event]})
@@ -552,7 +559,7 @@ async def healthz() -> dict[str, bool]:
 
 
 @app.get(f"{API_PREFIX}/vllm/models")
-async def vllm_models() -> Dict[str, Any]:
+async def vllm_models() -> dict[str, Any]:
     """Helper endpoint to query vLLM service for loaded models."""
     try:
         if settings is None or settings.vllm_endpoint is None:
@@ -577,7 +584,7 @@ async def secrets_health() -> dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/secrets/exists")
-async def secret_exists(name: str) -> Dict[str, Any]:
+async def secret_exists(name: str) -> dict[str, Any]:
     """Check whether a secret exists (without returning its value)."""
     try:
         if _secrets_manager is None:
@@ -592,7 +599,7 @@ async def secret_exists(name: str) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/secrets/set")
-async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+async def secret_set(payload: dict[str, Any], request: Request) -> dict[str, Any]:
     """Store a secret via the configured secrets provider.
 
     Expected body: { "name": string, "value": string | object }
@@ -655,8 +662,8 @@ async def secret_set(payload: Dict[str, Any], request: Request) -> Dict[str, Any
         return {"error": str(exc)}
 
 
-async def _get_approvals() -> List[Dict[str, Any]]:
-    items: List[Dict[str, Any]] = []
+async def _get_approvals() -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
     if engine is None:
         return items
     try:
@@ -669,12 +676,12 @@ async def _get_approvals() -> List[Dict[str, Any]]:
 
 
 @app.get(f"{API_PREFIX}/approvals")
-async def list_approvals() -> List[Dict[str, Any]]:
+async def list_approvals() -> list[dict[str, Any]]:
     return await _get_approvals()
 
 
 @app.post(f"{API_PREFIX}/approvals/{{idx}}/approve")
-async def approve_proposal(idx: int) -> Dict[str, str]:
+async def approve_proposal(idx: int) -> dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
     try:
@@ -689,7 +696,7 @@ async def approve_proposal(idx: int) -> Dict[str, str]:
 
 
 @app.post(f"{API_PREFIX}/approvals/{{idx}}/deny")
-async def deny_proposal(idx: int) -> Dict[str, str]:
+async def deny_proposal(idx: int) -> dict[str, str]:
     if engine is None:
         return {"error": "Engine not ready"}
     try:
@@ -704,8 +711,8 @@ async def deny_proposal(idx: int) -> Dict[str, str]:
 
 
 @app.get(f"{API_PREFIX}/adapters")
-async def list_adapters() -> List[Dict[str, Any]]:
-    table: List[Dict[str, Any]] = []
+async def list_adapters() -> list[dict[str, Any]]:
+    table: list[dict[str, Any]] = []
     if adapter_manager is None:
         return table
     try:
@@ -723,7 +730,7 @@ async def list_adapters() -> List[Dict[str, Any]]:
 
 
 @app.get(f"{API_PREFIX}/adapters/state")
-async def adapters_state() -> Dict[str, Any]:
+async def adapters_state() -> dict[str, Any]:
     if adapter_manager is None:
         return {"state": {}}
     try:
@@ -733,7 +740,7 @@ async def adapters_state() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/adapters/promote/{{role}}")
-async def promote_adapter(role: str) -> Dict[str, Any]:
+async def promote_adapter(role: str) -> dict[str, Any]:
     if adapter_manager is None:
         return {"error": "Adapter manager unavailable"}
     try:
@@ -744,7 +751,7 @@ async def promote_adapter(role: str) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/config/governor")
-async def get_governor() -> Dict[str, Any]:
+async def get_governor() -> dict[str, Any]:
     if settings is None:
         return {"ENABLE_ORACLE_REFINEMENT": None, "FORCE_DEEPSEEK_R1_ARBITER": None}
     try:
@@ -759,7 +766,7 @@ async def get_governor() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/config/governor")
-async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
+async def update_governor(cfg: dict[str, Any]) -> dict[str, str]:
     global settings
     if settings is None:
         return {"error": "Settings unavailable"}
@@ -785,7 +792,7 @@ async def update_governor(cfg: Dict[str, Any]) -> Dict[str, str]:
 
 
 @app.get(f"{API_PREFIX}/trust/policy")
-async def get_trust_policy() -> Dict[str, Any]:
+async def get_trust_policy() -> dict[str, Any]:
     if settings is None:
         return {"enabled": False}
     allow = getattr(settings, "TRUST_ALLOWLIST", None) or ""
@@ -798,7 +805,7 @@ async def get_trust_policy() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/trust/policy")
-async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
+async def set_trust_policy(cfg: dict[str, Any]) -> dict[str, Any]:
     global settings, confidence_modeler
     if settings is None or ConfidenceModeler is None or TrustPolicy is None:
         return {"error": "Trust module unavailable"}
@@ -837,7 +844,7 @@ async def set_trust_policy(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/trust/score")
-async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
+async def trust_score(proposal: dict[str, Any]) -> dict[str, Any]:
     if confidence_modeler is None:
         return {"enabled": False, "score": None, "bypass": False, "reason": "modeler_unavailable"}
     try:
@@ -854,9 +861,8 @@ async def trust_score(proposal: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/internal/delegate_task")
-async def delegate_task(task_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
+async def delegate_task(task_data: dict[str, Any]) -> dict[str, Any]:
+    """Task Delegation API: Allows one LIQUID-HIVE instance to offload sub-tasks to others.
     Internal-only endpoint for swarm coordination.
     """
     try:
@@ -887,7 +893,7 @@ async def delegate_task(task_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/swarm/status")
-async def swarm_status() -> Dict[str, Any]:
+async def swarm_status() -> dict[str, Any]:
     """Get swarm coordination status and node information."""
     try:
         from hivemind.swarm_protocol import get_swarm_coordinator
@@ -899,22 +905,22 @@ async def swarm_status() -> Dict[str, Any]:
         # Get swarm state
         if swarm.redis_client:
             nodes_data_any: Any = cast(Any, swarm.redis_client).hgetall("swarm:nodes")
-            nodes_data: Dict[str, Any]
+            nodes_data: dict[str, Any]
             if asyncio.iscoroutine(nodes_data_any):  # type: ignore[attr-defined]
                 nodes_data = await nodes_data_any  # type: ignore[assignment]
             else:
-                nodes_data = cast(Dict[str, Any], nodes_data_any)
-            nodes: List[Dict[str, Any]] = []
+                nodes_data = cast(dict[str, Any], nodes_data_any)
+            nodes: list[dict[str, Any]] = []
             for _node_id, node_json in nodes_data.items():
                 try:
                     if isinstance(node_json, str):
                         node_info = json.loads(node_json)
                     elif isinstance(node_json, dict):
-                        node_info = cast(Dict[str, Any], node_json)
+                        node_info = cast(dict[str, Any], node_json)
                     else:
                         continue
                     if isinstance(node_info, dict):
-                        nodes.append(cast(Dict[str, Any], node_info))
+                        nodes.append(cast(dict[str, Any], node_info))
                 except Exception:
                     continue
 
@@ -934,7 +940,7 @@ async def swarm_status() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/providers")
-async def get_providers_status() -> Dict[str, Any]:
+async def get_providers_status() -> dict[str, Any]:
     """Get status of all DS-Router providers."""
     if ds_router is None:
         return {"error": "DS-Router not available"}
@@ -951,7 +957,7 @@ async def get_providers_status() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/admin/budget/reset")
-async def reset_budget() -> Dict[str, Any]:
+async def reset_budget() -> dict[str, Any]:
     """Reset daily budget counters (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
     if not admin_token:
@@ -966,7 +972,7 @@ async def reset_budget() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/admin/router/reload-secrets")
-async def reload_router_secrets(request: Request) -> Dict[str, Any]:
+async def reload_router_secrets(request: Request) -> dict[str, Any]:
     """Reload DS-Router config from environment after secrets update.
 
     Requires x-admin-token header if ADMIN_TOKEN is configured.
@@ -993,7 +999,7 @@ async def reload_router_secrets(request: Request) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/admin/providers/qwen/warm")
-async def warm_qwen_provider(request: Request) -> Dict[str, Any]:
+async def warm_qwen_provider(request: Request) -> dict[str, Any]:
     """Warm the Qwen CPU provider by initializing its local model.
 
     Requires x-admin-token header if ADMIN_TOKEN is configured.
@@ -1050,7 +1056,7 @@ async def warm_qwen_provider(request: Request) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools")
-async def list_tools() -> Dict[str, Any]:
+async def list_tools() -> dict[str, Any]:
     """Get list of all available tools."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1065,7 +1071,7 @@ async def list_tools() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools/{{tool_name}}")
-async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
+async def get_tool_schema(tool_name: str) -> dict[str, Any]:
     """Get schema for a specific tool."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1083,7 +1089,7 @@ async def get_tool_schema(tool_name: str) -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/cache/health")
-async def cache_health() -> Dict[str, Any]:
+async def cache_health() -> dict[str, Any]:
     """Health status for the semantic cache."""
     try:
         if semantic_cache is None:
@@ -1094,7 +1100,7 @@ async def cache_health() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/cache/analytics")
-async def cache_analytics() -> Dict[str, Any]:
+async def cache_analytics() -> dict[str, Any]:
     """Analytics snapshot for the semantic cache."""
     try:
         if semantic_cache is None:
@@ -1105,7 +1111,7 @@ async def cache_analytics() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/clear")
-async def cache_clear(request: Request, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def cache_clear(request: Request, payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Clear semantic cache entries. Optional body: { "pattern": "substring" }
 
     If ADMIN_TOKEN is set, requires X-Admin-Token header.
@@ -1136,8 +1142,8 @@ async def cache_clear(request: Request, payload: Optional[Dict[str, Any]] = None
 
 @app.post(f"{API_PREFIX}/tools/{{tool_name}}/execute")
 async def execute_tool(
-    tool_name: str, parameters: Dict[str, Any], request: Request
-) -> Dict[str, Any]:
+    tool_name: str, parameters: dict[str, Any], request: Request
+) -> dict[str, Any]:
     """Execute a tool with given parameters."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1165,8 +1171,8 @@ async def execute_tool(
 
 
 async def check_tool_approval(
-    tool_name: str, parameters: Dict[str, Any], operator_id: Optional[str]
-) -> Dict[str, Any]:
+    tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+) -> dict[str, Any]:
     """Check tool approval status."""
     # This would integrate with your approval system
     # For now, return mock approval check
@@ -1177,7 +1183,7 @@ async def check_tool_approval(
 
 
 @app.get(f"{API_PREFIX}/tools/analytics")
-async def get_tool_analytics() -> Dict[str, Any]:
+async def get_tool_analytics() -> dict[str, Any]:
     """Get comprehensive tool analytics."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1186,7 +1192,7 @@ async def get_tool_analytics() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools/analytics/{{tool_name}}")
-async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> Dict[str, Any]:
+async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> dict[str, Any]:
     """Get analytics for a specific tool."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1195,7 +1201,7 @@ async def get_tool_analytics_specific(tool_name: str, days: int = 7) -> Dict[str
 
 
 @app.get(f"{API_PREFIX}/tools/approvals")
-async def get_pending_approvals() -> Dict[str, Any]:
+async def get_pending_approvals() -> dict[str, Any]:
     """Get pending tool execution approvals."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1207,7 +1213,7 @@ async def get_pending_approvals() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/approve")
-async def approve_tool_execution(approval_id: str, request: Request) -> Dict[str, Any]:
+async def approve_tool_execution(approval_id: str, request: Request) -> dict[str, Any]:
     """Approve a pending tool execution."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1225,7 +1231,7 @@ async def approve_tool_execution(approval_id: str, request: Request) -> Dict[str
 @app.post(f"{API_PREFIX}/tools/approvals/{{approval_id}}/deny")
 async def deny_tool_execution(
     approval_id: str, request: Request, denial_reason: str = ""
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Deny a pending tool execution."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1241,7 +1247,7 @@ async def deny_tool_execution(
 
 
 @app.get(f"{API_PREFIX}/cache/status")
-async def get_cache_status() -> Dict[str, Any]:
+async def get_cache_status() -> dict[str, Any]:
     """Get semantic cache status and analytics."""
     if not semantic_cache:
         return {"status": "disabled", "reason": "Semantic cache not initialized"}
@@ -1261,7 +1267,7 @@ async def get_cache_status() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/cache/report")
-async def get_cache_report() -> Dict[str, Any]:
+async def get_cache_report() -> dict[str, Any]:
     """Get comprehensive cache performance report."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
@@ -1276,7 +1282,7 @@ async def get_cache_report() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/optimize")
-async def optimize_cache(target_hit_rate: float = 0.5) -> Dict[str, Any]:
+async def optimize_cache(target_hit_rate: float = 0.5) -> dict[str, Any]:
     """Optimize cache settings for better performance."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
@@ -1292,14 +1298,14 @@ async def optimize_cache(target_hit_rate: float = 0.5) -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/warm")
-async def warm_cache() -> Dict[str, Any]:
+async def warm_cache() -> dict[str, Any]:
     """Warm the cache with common queries."""
     if not cache_manager:
         return {"error": "Cache manager not available"}
 
     try:
         # Use some default queries for warming
-        common_queries: List[Dict[str, Any]] = [
+        common_queries: list[dict[str, Any]] = [
             {
                 "query": "What is artificial intelligence?",
                 "response": {
@@ -1332,7 +1338,7 @@ async def warm_cache() -> Dict[str, Any]:
 
 
 @app.get(f"{API_PREFIX}/tools/health")
-async def get_tools_health() -> Dict[str, Any]:
+async def get_tools_health() -> dict[str, Any]:
     """Get health status of all tools."""
     if tool_registry is None:
         return {"error": "Tool registry not available"}
@@ -1364,12 +1370,12 @@ async def get_tools_health() -> Dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/tools/batch_execute")
-async def batch_execute_tools(requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def batch_execute_tools(requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Execute multiple tools in sequence."""
     if tool_registry is None:
         return [{"error": "Tool registry not available"}]
 
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for request in requests:
         tool_name = request.get("tool")
         parameters = request.get("parameters", {})
@@ -1392,7 +1398,7 @@ async def batch_execute_tools(requests: List[Dict[str, Any]]) -> List[Dict[str, 
 
 
 @app.post(f"{API_PREFIX}/admin/router/set-thresholds")
-async def set_router_thresholds(thresholds: Dict[str, float]) -> Dict[str, Any]:
+async def set_router_thresholds(thresholds: dict[str, float]) -> dict[str, Any]:
     """Set router confidence and support thresholds (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
     if not admin_token:
@@ -1429,7 +1435,7 @@ async def autopromote_preview() -> dict[str, Any]:
     base = getattr(settings, "PROMETHEUS_BASE_URL", None)
     window = "5m"
     min_samples = int(getattr(settings, "AUTOPROMOTE_MIN_SAMPLES", 300))
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     # Build a representative prompt from recent user inputs to estimate costs
     representative_prompt = ""
     try:
@@ -1443,7 +1449,7 @@ async def autopromote_preview() -> dict[str, Any]:
         representative_prompt = "Evaluate adapter performance under typical conversational load."
 
     for role, entry in getattr(adapter_manager, "state", {}).items():  # type: ignore
-        entry_map: Dict[str, Any] = cast(Dict[str, Any], (entry or {}))
+        entry_map: dict[str, Any] = cast(dict[str, Any], (entry or {}))
         active = cast(Optional[str], entry_map.get("active"))
         challenger = cast(Optional[str], entry_map.get("challenger"))
         if not (active and challenger and active != challenger):
@@ -1555,7 +1561,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                     # RAG system status
                     if retriever is not None:
-                        rag_status: Dict[str, Any] = {
+                        rag_status: dict[str, Any] = {
                             "is_ready": retriever.is_ready,
                             "doc_count": len(retriever.doc_store) if retriever.doc_store else 0,
                             "embedding_model": retriever.embed_model_id,
@@ -1563,7 +1569,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         await websocket.send_json({"type": "rag_status", "payload": rag_status})
 
                     # Enhanced Oracle/Arbiter system status (DeepSeek R1 ecosystem)
-                    oracle_status: Dict[str, Any] = {
+                    oracle_status: dict[str, Any] = {
                         "deepseek_available": bool(os.getenv("DEEPSEEK_API_KEY")),
                         "deepseek_r1_arbiter": bool(
                             os.getenv("DEEPSEEK_API_KEY")
@@ -1601,7 +1607,9 @@ async def train() -> dict[str, str]:
             build_vl_sft()
         except Exception:
             pass
-        import subprocess, pathlib, uuid as _uuid
+        import pathlib
+        import subprocess
+        import uuid as _uuid
 
         base = pathlib.Path(settings.adapters_dir if settings else "/app/adapters")  # type: ignore
         out_dir = base / "text" / f"adapter_{_uuid.uuid4().hex}"
@@ -1744,7 +1752,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                 runs_dir = getattr(settings, "runs_dir", "/app/data") if settings else "/app/data"
                 snap_path = __pathlib.Path(runs_dir) / "cognitive_map.json"
                 if snap_path.exists():
-                    with open(snap_path, "r", encoding="utf-8") as __f:
+                    with open(snap_path, encoding="utf-8") as __f:
                         ctx["cognitive_map"] = __json.load(__f)
             except Exception:
                 pass
@@ -1779,7 +1787,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                 roles_any = roles_obj  # type: ignore[assignment]
                 judge_any = judge  # type: ignore[assignment]
                 if policy == "committee":
-                    tasks: List[str] = await asyncio.gather(
+                    tasks: list[str] = await asyncio.gather(
                         *[roles_any.implementer(prompt) for _ in range(settings.committee_k)]
                     )
                     rankings = await judge_any.rank(tasks, prompt=prompt)
@@ -1931,8 +1939,8 @@ async def vision(
         critique = rankings.get("critique")
         if grounding_required:
             grounding = vl_any.grounding_validator(question, image_data, answer)
-    except Exception as exc:  # noqa: F841
-        answer = f"Error processing vision request: {str(exc)}"
+    except Exception as exc:
+        answer = f"Error processing vision request: {exc!s}"
     if engine is not None:
         engine.add_memory("assistant", answer)  # type: ignore
     try:
@@ -2018,7 +2026,7 @@ async def websocket_chat_endpoint(websocket: WebSocket):
             except json.JSONDecodeError:
                 await websocket.send_json({"type": "error", "error": "Invalid JSON message"})
             except Exception as e:
-                await websocket.send_json({"type": "error", "error": f"Processing error: {str(e)}"})
+                await websocket.send_json({"type": "error", "error": f"Processing error: {e!s}"})
 
     except WebSocketDisconnect:
         log.info("WebSocket client disconnected from streaming chat")
@@ -2144,7 +2152,7 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
         await websocket.send_json(
             {
                 "type": "error",
-                "error": f"Streaming generation failed: {str(e)}",
+                "error": f"Streaming generation failed: {e!s}",
             }
         )
 
@@ -2176,7 +2184,7 @@ async def _handle_non_streaming_generation(websocket: WebSocket, query: str):
 
     except Exception as e:
         await websocket.send_json(
-            {"type": "error", "error": f"Fallback generation failed: {str(e)}"}
+            {"type": "error", "error": f"Fallback generation failed: {e!s}"}
         )
 
 

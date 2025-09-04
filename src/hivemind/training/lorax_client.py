@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import json
-import os
-from typing import Any, Dict, Optional
-
-import urllib.request as req
 import urllib.error as err
+import urllib.request as req
+from typing import Any, Optional
 
 
 class LoRAXClient:
@@ -20,15 +18,15 @@ class LoRAXClient:
         self.base = base_url.rstrip("/") if base_url else None
         self.api_key = api_key
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         h = {"Content-Type": "application/json"}
         if self.api_key:
             h["Authorization"] = f"Bearer {self.api_key}"
         return h
 
     def online_sft(
-        self, prompt: str, response: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, prompt: str, response: str, metadata: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         if not self.base:
             return {"status": "disabled"}
         url = f"{self.base}/v1/lorax/online_sft"

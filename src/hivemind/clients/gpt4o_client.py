@@ -1,5 +1,4 @@
-"""
-GPT-4o Client
+"""GPT-4o Client
 ==============
 
 This module defines a minimal asynchronous client for the GPT-4o model from
@@ -24,9 +23,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import random
 import logging
+import os
 from typing import Optional
 
 try:
@@ -63,7 +61,7 @@ class GPT4oClient:
             The user prompt containing the original question and
             synthesized answer.
 
-        Returns
+        Returns:
         -------
         str
             The raw string response from the model.  In this stub, we

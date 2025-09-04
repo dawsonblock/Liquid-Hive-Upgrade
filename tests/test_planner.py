@@ -1,10 +1,7 @@
-import asyncio
-import os
-import time
 import pytest
 
-from capsule_brain.planner.schema import Plan, TaskNode
 from capsule_brain.planner.engine import PlanExecutor
+from capsule_brain.planner.schema import Plan, TaskNode
 
 
 @pytest.mark.asyncio

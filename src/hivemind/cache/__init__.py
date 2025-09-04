@@ -1,12 +1,11 @@
-"""
-LIQUID-HIVE Cache Module
+"""LIQUID-HIVE Cache Module
 =======================
 
 Semantic caching system for LIQUID-HIVE with Redis backend.
 """
 
-from .semantic_cache import SemanticCache, CacheStrategy, get_semantic_cache
 from .cache_manager import CacheManager, create_cache_manager
+from .semantic_cache import CacheStrategy, SemanticCache, get_semantic_cache
 
 __all__ = [
     "SemanticCache",

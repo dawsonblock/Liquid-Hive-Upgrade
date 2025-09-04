@@ -1,6 +1,11 @@
 from __future__ import annotations
-import os, time, urllib.parse, redis
-from .config import REDIS_URL, PACE_RPS_DEFAULT
+
+import time
+import urllib.parse
+
+import redis
+
+from .config import PACE_RPS_DEFAULT, REDIS_URL
 
 _r = redis.Redis.from_url(REDIS_URL) if REDIS_URL else None
 

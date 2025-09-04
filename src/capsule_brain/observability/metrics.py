@@ -1,14 +1,15 @@
-from time import time
 import re
-from typing import Callable
+from collections.abc import Callable
+from time import time
+
+from fastapi import APIRouter, Response
 from prometheus_client import (
-    CollectorRegistry,
     CONTENT_TYPE_LATEST,
+    CollectorRegistry,
     Counter,
     Histogram,
     generate_latest,
 )
-from fastapi import APIRouter, Response
 
 registry = CollectorRegistry()
 REQUEST_COUNT = Counter(

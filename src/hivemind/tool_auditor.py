@@ -1,5 +1,4 @@
-"""
-Tool auditor for HiveMind
+"""Tool auditor for HiveMind
 =========================
 
 This module defines a ``ToolAuditor`` class that periodically analyses run
@@ -17,10 +16,8 @@ manually.
 
 from __future__ import annotations
 
-import os
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 class ToolAuditor:
@@ -30,20 +27,20 @@ class ToolAuditor:
         self.runs_dir = Path(runs_dir)
         self.threshold = threshold
 
-    def _iter_logs(self) -> List[Path]:
+    def _iter_logs(self) -> list[Path]:
         """Yield all JSON run logs in the runs directory."""
         if not self.runs_dir.exists():
             return []
         return list(self.runs_dir.glob("*.json"))
 
-    def analyse(self) -> Dict[str, Dict[str, float]]:
+    def analyse(self) -> dict[str, dict[str, float]]:
         """Aggregate tool execution statistics from run logs.
 
         Returns a mapping from tool name to a dict with keys ``success_rate``
         and ``count``.  Tools with a success rate below the threshold may
         require refactoring.
         """
-        stats: Dict[str, Dict[str, float]] = {}
+        stats: dict[str, dict[str, float]] = {}
         logs = self._iter_logs()
         for log_file in logs:
             try:
@@ -56,7 +53,7 @@ class ToolAuditor:
             if not isinstance(data, list):
                 continue
             for record in data:
-                executions: List[Dict[str, any]] = record.get("tool_execution_log", [])
+                executions: list[dict[str, any]] = record.get("tool_execution_log", [])
                 for entry in executions:
                     tool_name = entry.get("tool")
                     success = bool(entry.get("success"))
@@ -73,7 +70,7 @@ class ToolAuditor:
             res["success_rate"] = successes / count if count else 0.0
         return stats
 
-    def flag_underperforming(self) -> List[str]:
+    def flag_underperforming(self) -> list[str]:
         """Return a list of tool names whose success_rate is below the threshold."""
         stats = self.analyse()
         return [

@@ -1,13 +1,14 @@
 from __future__ import annotations
+
+from typing import Any
 from urllib.parse import urlparse
-from typing import Dict, Any
-from .scraper import fetch
+
 from .github_client import fetch_repo_readme
 from .huggingface_client import fetch_model_card
-from .schemas import PageContent
+from .scraper import fetch
 
 
-async def route_fetch(target: str, render_js: bool = False) -> Dict[str, Any]:
+async def route_fetch(target: str, render_js: bool = False) -> dict[str, Any]:
     p = urlparse(target)
     host = p.netloc.lower()
     if "github.com" in host:

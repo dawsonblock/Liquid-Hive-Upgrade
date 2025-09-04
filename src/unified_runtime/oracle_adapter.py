@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .providers.base_provider import BaseProvider, GenRequest, GenResponse
 
@@ -16,7 +16,7 @@ class OracleToBaseAdapter(BaseProvider):
     async def generate(self, request: GenRequest) -> GenResponse:
         start = time.perf_counter()
         try:
-            res: Dict[str, Any] = await self._oracle.generate(
+            res: dict[str, Any] = await self._oracle.generate(
                 request.prompt,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
@@ -36,7 +36,7 @@ class OracleToBaseAdapter(BaseProvider):
         except Exception as e:
             raise e
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         try:
             h = await self._oracle.health()
             return {"status": h.get("status", "unknown")}

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any, Optional
+
 import httpx
-from typing import Any, Dict, Optional
-from .base import OracleProvider, ProviderConfig
+
+from .base import ProviderConfig
 
 
 class DeepSeekProvider:
@@ -11,7 +13,7 @@ class DeepSeekProvider:
         self.cfg = cfg
         self._key = api_key
 
-    async def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+    async def generate(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
         # If no key provided, return a stubbed response for dev environments
         if not self._key:
             return {
@@ -33,5 +35,5 @@ class DeepSeekProvider:
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             return {"provider": self.name, "content": content, "raw": data}
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> dict[str, Any]:
         return {"status": "healthy" if bool(self._key) else "stub"}

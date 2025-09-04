@@ -1,5 +1,5 @@
-from transformers import AutoModelForCausalLM, AutoProcessor
 import torch
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 
 class VLClient:

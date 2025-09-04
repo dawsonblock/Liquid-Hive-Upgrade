@@ -1,19 +1,18 @@
-"""
-Qwen 2.5 7B CPU Provider (Local Fallback)
+"""Qwen 2.5 7B CPU Provider (Local Fallback)
 =========================================
 """
 
 from __future__ import annotations
+
 import asyncio
 import os
-import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 from .base_provider import BaseProvider, GenRequest, GenResponse
 
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
     HF_AVAILABLE = True
 except ImportError:
@@ -27,7 +26,7 @@ except ImportError:
 class QwenCPUProvider(BaseProvider):
     """Qwen 2.5 7B Instruct local CPU provider as fallback."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] = None):
         super().__init__("qwen_cpu", config)
         cfg = config or {}
         # Prefer a much smaller default model for CPU environments to avoid OOM
@@ -230,7 +229,7 @@ class QwenCPUProvider(BaseProvider):
             },
         )
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check Qwen local model health."""
         if not HF_AVAILABLE:
             return {

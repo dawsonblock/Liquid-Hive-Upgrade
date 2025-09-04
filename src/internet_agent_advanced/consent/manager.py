@@ -1,7 +1,11 @@
 from __future__ import annotations
-import os, time, fnmatch, threading
-from typing import Optional, Dict, Any, Tuple
+
+import fnmatch
+import os
+import threading
+import time
 import urllib.parse
+from typing import Optional
 
 try:
     import redis  # optional
@@ -14,7 +18,7 @@ DEFAULT_TTL_S = int(os.getenv("CONSENT_TTL_S", "3600"))
 class InMemoryStore:
     def __init__(self):
         self._lock = threading.Lock()
-        self._data: Dict[str, Tuple[float, dict]] = {}
+        self._data: dict[str, tuple[float, dict]] = {}
 
     def set(self, key: str, value: dict, ttl: int):
         with self._lock:

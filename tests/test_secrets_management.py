@@ -3,11 +3,13 @@ Test suite for production-grade secrets management
 ================================================
 """
 
-import pytest
-import os
 import json
-from unittest.mock import Mock, patch, MagicMock
-from hivemind.secrets_manager import SecretsManager, SecretProvider
+import os
+from unittest.mock import Mock, patch
+
+import pytest
+
+from hivemind.secrets_manager import SecretProvider, SecretsManager
 
 
 class TestSecretsManager:

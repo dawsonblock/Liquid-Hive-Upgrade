@@ -1,5 +1,4 @@
-"""
-System Information Tool for LIQUID-HIVE
+"""System Information Tool for LIQUID-HIVE
 =======================================
 
 A tool to gather system information, monitor resources, and check system health.
@@ -7,13 +6,13 @@ A tool to gather system information, monitor resources, and check system health.
 
 import os
 import platform
-import psutil
-import json
 import time
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+import psutil
+
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class SystemInfoTool(BaseTool):
@@ -28,7 +27,7 @@ class SystemInfoTool(BaseTool):
         return "Get system information, resource usage, and health metrics"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="info_type",
@@ -77,7 +76,7 @@ class SystemInfoTool(BaseTool):
     def risk_level(self) -> str:
         return "medium"  # System info can be sensitive
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute system information gathering."""
         info_type = parameters["info_type"]
         include_sensitive = parameters.get("include_sensitive", False)
@@ -116,9 +115,9 @@ class SystemInfoTool(BaseTool):
             )
 
         except Exception as e:
-            return ToolResult(success=False, error=f"System information gathering failed: {str(e)}")
+            return ToolResult(success=False, error=f"System information gathering failed: {e!s}")
 
-    def _get_basic_info(self) -> Dict[str, Any]:
+    def _get_basic_info(self) -> dict[str, Any]:
         """Get basic system information."""
         return {
             "hostname": platform.node(),
@@ -133,7 +132,7 @@ class SystemInfoTool(BaseTool):
             "uptime_seconds": time.time() - psutil.boot_time(),
         }
 
-    def _get_cpu_info(self) -> Dict[str, Any]:
+    def _get_cpu_info(self) -> dict[str, Any]:
         """Get CPU information and usage."""
         cpu_freq = psutil.cpu_freq()
 
@@ -150,7 +149,7 @@ class SystemInfoTool(BaseTool):
             "cpu_times": psutil.cpu_times()._asdict(),
         }
 
-    def _get_memory_info(self) -> Dict[str, Any]:
+    def _get_memory_info(self) -> dict[str, Any]:
         """Get memory information and usage."""
         virtual_mem = psutil.virtual_memory()
         swap_mem = psutil.swap_memory()
@@ -177,7 +176,7 @@ class SystemInfoTool(BaseTool):
             },
         }
 
-    def _get_disk_info(self) -> Dict[str, Any]:
+    def _get_disk_info(self) -> dict[str, Any]:
         """Get disk information and usage."""
         disk_partitions = []
 
@@ -217,7 +216,7 @@ class SystemInfoTool(BaseTool):
             "io_counters": disk_io._asdict() if disk_io else None,
         }
 
-    def _get_network_info(self) -> Dict[str, Any]:
+    def _get_network_info(self) -> dict[str, Any]:
         """Get network information."""
         network_io = psutil.net_io_counters()
         network_interfaces = {}
@@ -249,7 +248,7 @@ class SystemInfoTool(BaseTool):
             "connection_count": len(connections) if isinstance(connections, list) else 0,
         }
 
-    def _get_process_info(self, count: int) -> Dict[str, Any]:
+    def _get_process_info(self, count: int) -> dict[str, Any]:
         """Get process information."""
         processes = []
 
@@ -270,7 +269,7 @@ class SystemInfoTool(BaseTool):
             "process_count_by_status": self._count_processes_by_status(),
         }
 
-    def _count_processes_by_status(self) -> Dict[str, int]:
+    def _count_processes_by_status(self) -> dict[str, int]:
         """Count processes by status."""
         status_counts = {}
 
@@ -283,7 +282,7 @@ class SystemInfoTool(BaseTool):
 
         return status_counts
 
-    def _get_environment_info(self, include_sensitive: bool) -> Dict[str, Any]:
+    def _get_environment_info(self, include_sensitive: bool) -> dict[str, Any]:
         """Get environment information."""
         env_vars = dict(os.environ)
 
@@ -312,7 +311,7 @@ class SystemInfoTool(BaseTool):
             "timezone": os.environ.get("TZ"),
         }
 
-    def _get_health_info(self) -> Dict[str, Any]:
+    def _get_health_info(self) -> dict[str, Any]:
         """Get system health information."""
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
@@ -387,7 +386,7 @@ class SystemInfoTool(BaseTool):
             },
         }
 
-    def _generate_health_recommendations(self, issues: List[str]) -> List[str]:
+    def _generate_health_recommendations(self, issues: list[str]) -> list[str]:
         """Generate health recommendations based on issues."""
         recommendations = []
 
@@ -409,7 +408,7 @@ class SystemInfoTool(BaseTool):
 
     def _get_comprehensive_info(
         self, include_sensitive: bool, process_count: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get comprehensive system information."""
         return {
             "basic": self._get_basic_info(),

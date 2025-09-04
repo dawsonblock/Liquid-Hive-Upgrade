@@ -1,7 +1,11 @@
 from __future__ import annotations
-import time, urllib.parse
+
+import time
+import urllib.parse
+
 import httpx
 from robotexclusionrulesparser import RobotExclusionRulesParser
+
 from .config import RESPECT_ROBOTS, ROBOTS_TTL_S
 
 _cache: dict[str, tuple[RobotExclusionRulesParser, float]] = {}

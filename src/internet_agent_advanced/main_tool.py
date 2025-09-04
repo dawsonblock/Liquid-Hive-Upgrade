@@ -1,12 +1,12 @@
 from __future__ import annotations
-from typing import List, Dict, Any
-from .schemas import FetchResult, ScoredItem
-from .trust_filter import score_url, is_trusted
+
 from .router import route_fetch
+from .schemas import FetchResult, ScoredItem
 from .search import internet_search as _internet_search
+from .trust_filter import is_trusted, score_url
 
 
-async def internet_fetch(urls: List[str], render_js: bool = False) -> FetchResult:
+async def internet_fetch(urls: list[str], render_js: bool = False) -> FetchResult:
     results = FetchResult()
     for url in urls:
         try:
@@ -69,10 +69,10 @@ async def internet_search(query: str, max_results: int = 5) -> FetchResult:
 
 
 # Ingest: extract→chunk→dedup→embed→Qdrant→lineage
-from .ingest.extract import extract_readable
 from .ingest.chunker import chunk
 from .ingest.dedup import content_hash
 from .ingest.embedder import embed_texts
+from .ingest.extract import extract_readable
 from .ingest.indexers import index_qdrant
 from .ingest.lineage import store_raw
 from .scraper import fetch

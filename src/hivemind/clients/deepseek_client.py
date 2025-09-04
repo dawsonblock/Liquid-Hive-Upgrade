@@ -1,5 +1,4 @@
-"""
-DeepSeek Client
+"""DeepSeek Client
 ================
 
 This module defines a simple asynchronous client for the DeepSeek-V3 API.  The
@@ -21,12 +20,11 @@ DeepSeek.  Downstream modules are responsible for parsing this into JSON.
 
 from __future__ import annotations
 
-import asyncio
 import json
+import logging
 import os
 import random
-import logging
-from typing import Any, Optional
+from typing import Optional
 
 try:
     import httpx
@@ -61,7 +59,7 @@ class DeepSeekClient:
             The user prompt containing the original question and the
             synthesized answer.
 
-        Returns
+        Returns:
         -------
         str
             The raw string response from the model.  If the external API

@@ -1,5 +1,4 @@
-"""
-Enhanced Qdrant-based Retriever for LIQUID-HIVE
+"""Enhanced Qdrant-based Retriever for LIQUID-HIVE
 =============================================
 
 Production-grade vector database retriever using Qdrant with advanced features:
@@ -11,36 +10,36 @@ Production-grade vector database retriever using Qdrant with advanced features:
 """
 
 from __future__ import annotations
-import os
-import logging
-import json
-import time
+
 import hashlib
+import logging
+import os
 import pathlib
+import time
 import uuid
-from typing import List, Dict, Any, Optional, Tuple, Union
 from datetime import datetime
+from typing import Any, Optional
 
 try:
     import numpy as np
-    from sentence_transformers import SentenceTransformer
     from pypdf import PdfReader
     from qdrant_client import QdrantClient
     from qdrant_client.models import (
-        VectorParams,
-        Distance,
-        PointStruct,
-        Filter,
-        FieldCondition,
-        Range,
-        MatchValue,
-        UpdateCollection,
-        OptimizersConfigDiff,
-        CollectionInfo,
-        SearchRequest,
         Batch,
+        CollectionInfo,
+        Distance,
+        FieldCondition,
+        Filter,
+        MatchValue,
+        OptimizersConfigDiff,
+        PointStruct,
+        Range,
+        SearchRequest,
+        UpdateCollection,
         UpdateStatus,
+        VectorParams,
     )
+    from sentence_transformers import SentenceTransformer
 
     DEPS_AVAILABLE = True
 except ImportError as e:
@@ -52,7 +51,6 @@ except ImportError as e:
     DEPS_AVAILABLE = False
     logging.getLogger(__name__).warning(f"Qdrant dependencies not available: {e}")
 
-from hivemind.config import Settings
 from capsule_brain.security.input_sanitizer import sanitize_input
 
 log = logging.getLogger(__name__)
@@ -61,16 +59,16 @@ log = logging.getLogger(__name__)
 class Document:
     """Enhanced document representation with metadata support."""
 
-    def __init__(self, page_content: str, metadata: Dict[str, Any]):
+    def __init__(self, page_content: str, metadata: dict[str, Any]):
         self.page_content = page_content
         self.metadata = metadata
         self.id = metadata.get("id", str(uuid.uuid4()))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "page_content": self.page_content, "metadata": self.metadata}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Document":
+    def from_dict(cls, data: dict[str, Any]) -> Document:
         return cls(data["page_content"], data["metadata"])
 
 
@@ -187,7 +185,7 @@ class QdrantRetriever:
             log.error(f"Failed to ensure collection exists: {e}")
             raise
 
-    def get_collection_info(self) -> Dict[str, Any]:
+    def get_collection_info(self) -> dict[str, Any]:
         """Get detailed collection information."""
         if not self.is_ready or not self.qdrant_client:
             return {"error": "Retriever not ready"}
@@ -212,8 +210,8 @@ class QdrantRetriever:
             return {"error": str(e)}
 
     async def add_documents(
-        self, file_paths: List[str], metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, file_paths: list[str], metadata: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Add documents to Qdrant with enhanced processing and metadata."""
         if not self.is_ready:
             return {"error": "Retriever not ready", "indexed_files": []}
@@ -247,7 +245,7 @@ class QdrantRetriever:
                         results["errors"].append(f"{file_path}: {file_results['error']}")
 
                 except Exception as e:
-                    error_msg = f"Failed to process {file_path}: {str(e)}"
+                    error_msg = f"Failed to process {file_path}: {e!s}"
                     results["failed_files"].append({"file": file_path, "error": error_msg})
                     results["errors"].append(error_msg)
                     log.error(error_msg)
@@ -266,15 +264,15 @@ class QdrantRetriever:
             return results
 
         except Exception as e:
-            error_msg = f"Document indexing failed: {str(e)}"
+            error_msg = f"Document indexing failed: {e!s}"
             results["errors"].append(error_msg)
             results["processing_time"] = time.time() - start_time
             log.error(error_msg)
             return results
 
     async def _process_document(
-        self, file_path: str, base_metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, file_path: str, base_metadata: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """Process a single document into chunks with embeddings."""
         try:
             path = pathlib.Path(file_path)
@@ -376,7 +374,7 @@ class QdrantRetriever:
             log.error(f"Failed to extract content from {path}: {e}")
             return ""
 
-    def _create_chunks(self, content: str) -> List[str]:
+    def _create_chunks(self, content: str) -> list[str]:
         """Create overlapping chunks from content."""
         # Sanitize content
         content = sanitize_input(content)
@@ -437,7 +435,7 @@ class QdrantRetriever:
 
         return detected
 
-    async def _batch_upload_points(self, points: List[PointStruct]) -> int:
+    async def _batch_upload_points(self, points: list[PointStruct]) -> int:
         """Upload points to Qdrant in batches."""
         uploaded_count = 0
 
@@ -467,9 +465,9 @@ class QdrantRetriever:
         self,
         query: str,
         k: int = 5,
-        metadata_filter: Optional[Dict[str, Any]] = None,
+        metadata_filter: Optional[dict[str, Any]] = None,
         score_threshold: float = 0.0,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Enhanced search with metadata filtering and scoring."""
         if not self.is_ready:
             log.warning("Retriever not ready for search")
@@ -523,7 +521,7 @@ class QdrantRetriever:
             log.error(f"Search failed for query '{query[:50]}...': {e}")
             return []
 
-    def _build_filter(self, metadata_filter: Dict[str, Any]) -> Filter:
+    def _build_filter(self, metadata_filter: dict[str, Any]) -> Filter:
         """Build Qdrant filter from metadata conditions."""
         conditions = []
 
@@ -546,7 +544,7 @@ class QdrantRetriever:
 
         return Filter(must=conditions) if conditions else None
 
-    async def hybrid_search(self, query: str, k: int = 5, alpha: float = 0.7) -> List[Document]:
+    async def hybrid_search(self, query: str, k: int = 5, alpha: float = 0.7) -> list[Document]:
         """Hybrid search combining semantic and keyword matching."""
         # This is a simplified implementation
         # In production, you might want to implement full-text search integration
@@ -558,7 +556,7 @@ class QdrantRetriever:
         # TODO: Implement keyword search and fusion
         return semantic_results
 
-    async def delete_by_metadata(self, metadata_filter: Dict[str, Any]) -> Dict[str, Any]:
+    async def delete_by_metadata(self, metadata_filter: dict[str, Any]) -> dict[str, Any]:
         """Delete documents matching metadata criteria."""
         if not self.is_ready:
             return {"error": "Retriever not ready"}
@@ -575,7 +573,7 @@ class QdrantRetriever:
         except Exception as e:
             return {"error": str(e)}
 
-    async def update_collection_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_collection_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """Update collection configuration for optimization."""
         if not self.is_ready:
             return {"error": "Retriever not ready"}
@@ -594,7 +592,7 @@ class QdrantRetriever:
         except Exception as e:
             return {"error": str(e)}
 
-    def format_context(self, documents: List[Document]) -> str:
+    def format_context(self, documents: list[Document]) -> str:
         """Format retrieved documents as context with enhanced metadata."""
         if not documents:
             return ""
@@ -616,7 +614,7 @@ class QdrantRetriever:
 
         return "\n\n".join(context_parts)
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """Get comprehensive health status of the retriever."""
         status = {
             "is_ready": self.is_ready,

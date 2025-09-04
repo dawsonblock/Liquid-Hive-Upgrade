@@ -1,13 +1,13 @@
-import argparse, json, pathlib
+import argparse
+
 from datasets import load_dataset
+from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
     AutoModelForCausalLM,
     AutoProcessor,
     TrainingArguments,
     default_data_collator,
 )
-from peft import LoraConfig, get_peft_model, TaskType
-from torch.utils.data import DataLoader
 
 
 # Minimal SFT for VL: dataset rows: {"image_path": "...", "text": "..."}
@@ -40,7 +40,8 @@ def main():
     model = get_peft_model(model, lora)
 
     def map_fn(e):
-        import PIL.Image as Image, os
+
+        import PIL.Image as Image
 
         img = Image.open(e["image_path"]).convert("RGB")
         out = proc(text=e["text"], images=img, return_tensors="pt")

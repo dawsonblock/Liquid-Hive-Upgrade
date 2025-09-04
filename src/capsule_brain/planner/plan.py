@@ -1,10 +1,12 @@
-import asyncio, time, logging
-from typing import Dict, Any
+import asyncio
+import logging
+import time
+from typing import Any
 
 log = logging.getLogger(__name__)
 
 
-async def plan_once(query: str) -> Dict[str, Any]:
+async def plan_once(query: str) -> dict[str, Any]:
     start = time.perf_counter()
     try:
         tool_hints = []

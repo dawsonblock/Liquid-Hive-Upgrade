@@ -1,6 +1,7 @@
+
 from starlette.testclient import TestClient
+
 from unified_runtime.server import app
-import os
 
 
 def test_arena_submit_compare_leaderboard(monkeypatch):

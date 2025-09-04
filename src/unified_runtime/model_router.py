@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any
 
 from .providers.base_provider import BaseProvider, GenRequest, GenResponse, StreamChunk
 
@@ -17,7 +17,7 @@ class RouterConfig:
     deepseek_api_key: str | None = None
 
     @classmethod
-    def from_env(cls) -> "RouterConfig":
+    def from_env(cls) -> RouterConfig:
         return cls(
             conf_threshold=float(os.getenv("CONF_THRESHOLD", "0.62")),
             support_threshold=float(os.getenv("SUPPORT_THRESHOLD", "0.55")),
@@ -36,7 +36,7 @@ class DSRouter:
     def __init__(self, config: RouterConfig = None) -> None:
         self.config = config or RouterConfig.from_env()
         self.logger = logging.getLogger(__name__)
-        self.providers: Dict[str, BaseProvider] = {}
+        self.providers: dict[str, BaseProvider] = {}
         self._install_defaults()
 
     def _install_defaults(self) -> None:
@@ -45,7 +45,7 @@ class DSRouter:
             async def generate(self, request: GenRequest) -> GenResponse:
                 return GenResponse(content="Simple response", provider=self.name, confidence=0.8)
 
-            async def health_check(self) -> Dict[str, Any]:
+            async def health_check(self) -> dict[str, Any]:
                 return {"status": "healthy"}
 
         self.providers["deepseek_chat"] = _Echo("deepseek_chat")
@@ -61,8 +61,8 @@ class DSRouter:
     async def _assess_confidence(self, resp: GenResponse) -> float:
         return float(resp.confidence or 0.8)
 
-    async def get_provider_status(self) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
+    async def get_provider_status(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
         for name, p in self.providers.items():
             try:
                 h = await p.health_check()

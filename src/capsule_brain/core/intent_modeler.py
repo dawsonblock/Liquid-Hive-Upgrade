@@ -1,5 +1,4 @@
-"""
-Intent modeler
+"""Intent modeler
 ==============
 
 This module defines an ``IntentModeler`` service that periodically analyses
@@ -17,7 +16,7 @@ powerful LLM with a specialised prompt.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 
 class IntentModeler:
@@ -36,7 +35,7 @@ class IntentModeler:
         """
         # Retrieve the last N user memory capsules
         try:
-            memories: List[dict] = self.engine.get_recent_memories(role="user", limit=20)
+            memories: list[dict] = self.engine.get_recent_memories(role="user", limit=20)
         except Exception:
             memories = []
         prompts = [m.get("content", "") for m in memories if isinstance(m, dict)]

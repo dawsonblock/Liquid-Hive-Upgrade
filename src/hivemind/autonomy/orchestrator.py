@@ -5,11 +5,11 @@ import json
 import os
 import pathlib
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 try:
-    from ..training.lorax_client import LoRAXClient
     from ..confidence_modeler import ConfidenceModeler, TrustPolicy
+    from ..training.lorax_client import LoRAXClient
 except Exception:  # pragma: no cover
     LoRAXClient = None  # type: ignore
     ConfidenceModeler = None  # type: ignore
@@ -127,9 +127,9 @@ class AutonomyOrchestrator:
         if not meta_path.exists():
             return
         # Aggregate simple skill confidences
-        skills: Dict[str, Dict[str, float]] = {}
+        skills: dict[str, dict[str, float]] = {}
         try:
-            with open(meta_path, "r", encoding="utf-8") as f:
+            with open(meta_path, encoding="utf-8") as f:
                 for line in f:
                     try:
                         j = json.loads(line)
@@ -145,7 +145,7 @@ class AutonomyOrchestrator:
             skills = {}
 
         # Compute confidence per domain
-        snapshot: Dict[str, float] = {}
+        snapshot: dict[str, float] = {}
         for dom, vals in skills.items():
             cnt = max(1.0, vals["count"])
             err = max(0.0, vals["errors"])
@@ -284,11 +284,11 @@ class AutonomyOrchestrator:
 
     async def _analyze_challenger_performance(
         self, prometheus_url: str, role: str, champion: str, challenger: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform statistical analysis of challenger vs champion performance."""
         try:
+
             import httpx
-            import statistics
 
             async with httpx.AsyncClient(timeout=30) as client:
                 # Query latency metrics
@@ -383,7 +383,7 @@ class AutonomyOrchestrator:
             return None
 
     async def _log_autonomous_decision(
-        self, proposal: Dict[str, Any], decision: Dict[str, Any]
+        self, proposal: dict[str, Any], decision: dict[str, Any]
     ) -> None:
         """Log autonomous decision for audit and learning."""
         try:

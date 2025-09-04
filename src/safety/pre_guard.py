@@ -1,13 +1,13 @@
-"""
-Pre-Guard: Input Sanitization and Risk Assessment
+"""Pre-Guard: Input Sanitization and Risk Assessment
 ================================================
 """
 
 from __future__ import annotations
-import re
+
 import logging
-from typing import List, Dict, Any, Tuple
+import re
 from dataclasses import dataclass
+from typing import Any
 
 from unified_runtime.providers.base_provider import GenRequest
 
@@ -22,8 +22,8 @@ class PreGuardResult:
     reason: str = ""
     status: str = "passed"
     pii_redacted: bool = False
-    pii_types: List[str] = None
-    risk_flags: List[str] = None
+    pii_types: list[str] = None
+    risk_flags: list[str] = None
 
     def __post_init__(self):
         if self.pii_types is None:
@@ -47,7 +47,7 @@ class PreGuard:
         # Prompt injection patterns
         self.injection_patterns = self._compile_injection_patterns()
 
-    def _compile_pii_patterns(self) -> Dict[str, re.Pattern]:
+    def _compile_pii_patterns(self) -> dict[str, re.Pattern]:
         """Compile regex patterns for PII detection."""
         return {
             "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),
@@ -62,7 +62,7 @@ class PreGuard:
             ),
         }
 
-    def _compile_risk_patterns(self) -> Dict[str, re.Pattern]:
+    def _compile_risk_patterns(self) -> dict[str, re.Pattern]:
         """Compile patterns for risk detection."""
         return {
             "violence": re.compile(
@@ -83,7 +83,7 @@ class PreGuard:
             ),
         }
 
-    def _compile_injection_patterns(self) -> List[re.Pattern]:
+    def _compile_injection_patterns(self) -> list[re.Pattern]:
         """Compile patterns for prompt injection detection."""
         patterns = [
             # Direct instruction overrides
@@ -103,9 +103,8 @@ class PreGuard:
 
         return [re.compile(pattern, re.IGNORECASE | re.DOTALL) for pattern in patterns]
 
-    async def process(self, request: GenRequest) -> Tuple[GenRequest, PreGuardResult]:
+    async def process(self, request: GenRequest) -> tuple[GenRequest, PreGuardResult]:
         """Process request through pre-guard filters."""
-
         # Step 1: Detect and handle prompt injections
         injection_detected, injection_reason = self._detect_prompt_injection(request.prompt)
         if injection_detected:
@@ -150,14 +149,14 @@ class PreGuard:
 
         return sanitized_request, result
 
-    def _detect_prompt_injection(self, prompt: str) -> Tuple[bool, str]:
+    def _detect_prompt_injection(self, prompt: str) -> tuple[bool, str]:
         """Detect potential prompt injection attacks."""
         for i, pattern in enumerate(self.injection_patterns):
             if pattern.search(prompt):
                 return True, f"pattern_{i+1}"
         return False, ""
 
-    def _redact_pii(self, text: str) -> Tuple[str, Dict[str, Any]]:
+    def _redact_pii(self, text: str) -> tuple[str, dict[str, Any]]:
         """Detect and redact PII from text."""
         if not text:
             return text, {"redacted": False, "types": []}
@@ -174,7 +173,7 @@ class PreGuard:
 
         return redacted_text, {"redacted": len(detected_types) > 0, "types": detected_types}
 
-    def _assess_risks(self, text: str) -> List[str]:
+    def _assess_risks(self, text: str) -> list[str]:
         """Assess risk categories in the text."""
         risk_flags = []
 
@@ -184,9 +183,8 @@ class PreGuard:
 
         return risk_flags
 
-    def _should_block_request(self, risk_flags: List[str]) -> bool:
+    def _should_block_request(self, risk_flags: list[str]) -> bool:
         """Determine if request should be blocked based on risk assessment."""
-
         # Block high-risk categories immediately
         high_risk_categories = {"violence", "self_harm", "illegal"}
 

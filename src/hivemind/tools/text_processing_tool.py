@@ -1,5 +1,4 @@
-"""
-Text Processing Tool for LIQUID-HIVE
+"""Text Processing Tool for LIQUID-HIVE
 ====================================
 
 Advanced text processing capabilities including analysis, transformation,
@@ -7,13 +6,11 @@ and natural language processing features.
 """
 
 import re
-import json
-import hashlib
-from typing import Dict, Any, List, Optional, Tuple
-from collections import Counter
 import statistics
+from collections import Counter
+from typing import Any
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class TextProcessingTool(BaseTool):
@@ -28,7 +25,7 @@ class TextProcessingTool(BaseTool):
         return "Perform advanced text processing including analysis, transformation, and NLP operations"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="operation",
@@ -95,7 +92,7 @@ class TextProcessingTool(BaseTool):
     def risk_level(self) -> str:
         return "low"
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute text processing operation."""
         operation = parameters["operation"]
         text = parameters["text"]
@@ -151,9 +148,9 @@ class TextProcessingTool(BaseTool):
             )
 
         except Exception as e:
-            return ToolResult(success=False, error=f"Text processing failed: {str(e)}")
+            return ToolResult(success=False, error=f"Text processing failed: {e!s}")
 
-    def _analyze_text(self, text: str) -> Dict[str, Any]:
+    def _analyze_text(self, text: str) -> dict[str, Any]:
         """Comprehensive text analysis."""
         words = text.split()
         sentences = re.split(r"[.!?]+", text)
@@ -216,7 +213,7 @@ class TextProcessingTool(BaseTool):
 
         return max(0, min(1, complexity))
 
-    def _summarize_text(self, text: str) -> Dict[str, Any]:
+    def _summarize_text(self, text: str) -> dict[str, Any]:
         """Basic extractive summarization."""
         sentences = re.split(r"[.!?]+", text)
         sentences = [s.strip() for s in sentences if s.strip()]
@@ -252,7 +249,7 @@ class TextProcessingTool(BaseTool):
             "method": "extractive_frequency_based",
         }
 
-    def _extract_entities(self, text: str) -> Dict[str, Any]:
+    def _extract_entities(self, text: str) -> dict[str, Any]:
         """Simple entity extraction using patterns."""
         entities = {
             "emails": re.findall(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text),
@@ -276,7 +273,7 @@ class TextProcessingTool(BaseTool):
             "total_entities": sum(len(values) for values in entities.values()),
         }
 
-    def _analyze_sentiment(self, text: str) -> Dict[str, Any]:
+    def _analyze_sentiment(self, text: str) -> dict[str, Any]:
         """Basic sentiment analysis using word patterns."""
         # Simple word lists (in production, use proper sentiment analysis library)
         positive_words = {
@@ -379,11 +376,11 @@ class TextProcessingTool(BaseTool):
 
         return normalized.strip()
 
-    def _tokenize_text(self, text: str) -> List[str]:
+    def _tokenize_text(self, text: str) -> list[str]:
         """Tokenize text into words."""
         return re.findall(r"\b\w+\b", text.lower())
 
-    def _extract_ngrams(self, text: str, n: int) -> List[Tuple[str, ...]]:
+    def _extract_ngrams(self, text: str, n: int) -> list[tuple[str, ...]]:
         """Extract n-grams from text."""
         tokens = self._tokenize_text(text)
 
@@ -402,7 +399,7 @@ class TextProcessingTool(BaseTool):
             for ngram, count in ngram_counts.most_common(20)
         ]
 
-    def _calculate_similarity(self, text1: str, text2: str) -> Dict[str, Any]:
+    def _calculate_similarity(self, text1: str, text2: str) -> dict[str, Any]:
         """Calculate similarity between two texts."""
         tokens1 = set(self._tokenize_text(text1))
         tokens2 = set(self._tokenize_text(text2))
@@ -467,7 +464,7 @@ class TextProcessingTool(BaseTool):
         else:
             return text
 
-    def _extract_patterns(self, text: str, pattern: str) -> List[Dict[str, Any]]:
+    def _extract_patterns(self, text: str, pattern: str) -> list[dict[str, Any]]:
         """Extract patterns using regex."""
         matches = []
         for match in re.finditer(pattern, text):
@@ -482,7 +479,7 @@ class TextProcessingTool(BaseTool):
 
         return matches
 
-    def _word_frequency(self, text: str, top_n: int) -> List[Dict[str, Any]]:
+    def _word_frequency(self, text: str, top_n: int) -> list[dict[str, Any]]:
         """Calculate word frequency."""
         words = self._tokenize_text(text)
         word_counts = Counter(words)

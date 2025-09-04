@@ -1,13 +1,13 @@
-"""
-Post-Guard: Output Verification and Safety Checks
+"""Post-Guard: Output Verification and Safety Checks
 ===============================================
 """
 
 from __future__ import annotations
-import re
+
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+import re
 from dataclasses import dataclass
+from typing import Optional
 
 from unified_runtime.providers.base_provider import GenRequest, GenResponse
 
@@ -22,7 +22,7 @@ class PostGuardResult:
     reason: str = ""
     status: str = "passed"
     toxicity_score: Optional[float] = None
-    safety_violations: List[str] = None
+    safety_violations: list[str] = None
     citations_added: bool = False
 
     def __post_init__(self):
@@ -42,7 +42,7 @@ class PostGuard:
         # Factual claim patterns for RAG verification
         self.fact_patterns = self._compile_fact_patterns()
 
-    def _compile_safety_patterns(self) -> Dict[str, re.Pattern]:
+    def _compile_safety_patterns(self) -> dict[str, re.Pattern]:
         """Compile patterns for detecting unsafe output."""
         return {
             "explicit_violence": re.compile(
@@ -71,7 +71,7 @@ class PostGuard:
             ),
         }
 
-    def _compile_fact_patterns(self) -> List[re.Pattern]:
+    def _compile_fact_patterns(self) -> list[re.Pattern]:
         """Compile patterns for detecting factual claims that need verification."""
         patterns = [
             r"\b(?:according to|studies show|research indicates|data reveals)\b",
@@ -85,9 +85,8 @@ class PostGuard:
 
     async def process(
         self, response: GenResponse, request: GenRequest
-    ) -> Tuple[GenResponse, PostGuardResult]:
+    ) -> tuple[GenResponse, PostGuardResult]:
         """Process response through post-guard filters."""
-
         # Step 1: Safety violation detection
         safety_violations = self._detect_safety_violations(response.content)
 
@@ -137,7 +136,7 @@ class PostGuard:
 
         return modified_response, result
 
-    def _detect_safety_violations(self, content: str) -> List[str]:
+    def _detect_safety_violations(self, content: str) -> list[str]:
         """Detect safety violations in the generated content."""
         violations = []
 
@@ -168,9 +167,8 @@ class PostGuard:
         # Normalize to 0-1 scale
         return min(1.0, score)
 
-    async def _verify_and_cite_facts(self, content: str) -> Tuple[str, bool]:
+    async def _verify_and_cite_facts(self, content: str) -> tuple[str, bool]:
         """Verify factual claims and add citations if available."""
-
         # Check if content contains factual claims
         has_facts = any(pattern.search(content) for pattern in self.fact_patterns)
 
@@ -192,9 +190,8 @@ class PostGuard:
 
         return content, False
 
-    def _should_block_response(self, safety_violations: List[str], toxicity_score: float) -> bool:
+    def _should_block_response(self, safety_violations: list[str], toxicity_score: float) -> bool:
         """Determine if response should be blocked."""
-
         # Block if any serious safety violations
         serious_violations = {
             "explicit_violence",
@@ -222,7 +219,6 @@ class PostGuard:
 
     def _generate_safe_alternative(self, request: GenRequest) -> str:
         """Generate a safe alternative response for blocked content."""
-
         alternatives = [
             "I understand you're looking for information, but I'm not able to provide a response to that particular request. Could you rephrase your question or ask about something else I can help with?",
             "I'd be happy to help, but I need to ensure my responses are helpful and appropriate. Could you provide more context about what you're trying to learn or accomplish?",

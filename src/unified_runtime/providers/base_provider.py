@@ -1,17 +1,17 @@
-"""
-Base Provider Interface for DS-Router
+"""Base Provider Interface for DS-Router
 ====================================
 
 Enhanced with streaming support for real-time response generation.
 """
 
 from __future__ import annotations
+
+import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, AsyncGenerator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
-import logging
-import time
+from typing import Any, Optional
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class GenRequest:
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     cot_budget: Optional[int] = None  # For reasoning modes
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
     stream: bool = False  # Enable streaming mode
 
     def __post_init__(self):
@@ -44,8 +44,8 @@ class GenResponse:
     latency_ms: float = 0.0
     cost_usd: float = 0.0
     confidence: Optional[float] = None
-    logprobs: Optional[List[float]] = None
-    metadata: Dict[str, Any] = None
+    logprobs: Optional[list[float]] = None
+    metadata: dict[str, Any] = None
     is_complete: bool = True  # For streaming responses
 
     def __post_init__(self):
@@ -61,7 +61,7 @@ class StreamChunk:
     chunk_id: int = 0
     is_final: bool = False
     provider: str = ""
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -71,7 +71,7 @@ class StreamChunk:
 class BaseProvider(ABC):
     """Abstract base class for all LLM providers with streaming support."""
 
-    def __init__(self, name: str, config: Dict[str, Any] = None):
+    def __init__(self, name: str, config: dict[str, Any] = None):
         self.name = name
         self.config = config or {}
         self.logger = logging.getLogger(f"{__name__}.{name}")
@@ -79,11 +79,9 @@ class BaseProvider(ABC):
     @abstractmethod
     async def generate(self, request: GenRequest) -> GenResponse:
         """Generate response from the provider."""
-        pass
 
     async def generate_stream(self, request: GenRequest) -> AsyncGenerator[StreamChunk, None]:
-        """
-        Generate streaming response from the provider.
+        """Generate streaming response from the provider.
         Default implementation falls back to non-streaming.
         Subclasses should override this for true streaming support.
         """
@@ -103,9 +101,8 @@ class BaseProvider(ABC):
         )
 
     @abstractmethod
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check provider health status."""
-        pass
 
     def supports_streaming(self) -> bool:
         """Check if this provider supports native streaming."""

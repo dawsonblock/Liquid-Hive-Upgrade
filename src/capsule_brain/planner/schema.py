@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Literal, Any
-from pydantic import BaseModel, Field, model_validator
+from typing import Any, Literal, Optional
 
+from pydantic import BaseModel, Field, model_validator
 
 OpKind = Literal[
     "local_search",  # stubbed local search
@@ -15,21 +15,21 @@ OpKind = Literal[
 class TaskNode(BaseModel):
     id: str = Field(..., description="Unique node id")
     op: OpKind = Field(..., description="Operation kind")
-    params: Dict[str, Any] = Field(default_factory=dict)
-    depends_on: List[str] = Field(default_factory=list)
+    params: dict[str, Any] = Field(default_factory=dict)
+    depends_on: list[str] = Field(default_factory=list)
     retries: int = Field(0, ge=0, le=5)
     timeout_sec: Optional[float] = Field(None, ge=0.01, description="Per-node timeout")
 
 
 class Plan(BaseModel):
-    nodes: Dict[str, TaskNode] = Field(default_factory=dict)
+    nodes: dict[str, TaskNode] = Field(default_factory=dict)
     description: Optional[str] = None
 
     @model_validator(mode="after")
-    def _validate_dag(self) -> "Plan":
+    def _validate_dag(self) -> Plan:
         # Simple cycle detection using DFS
-        visited: Dict[str, int] = {}
-        stack: List[str] = []
+        visited: dict[str, int] = {}
+        stack: list[str] = []
 
         def dfs(u: str):
             visited[u] = 1

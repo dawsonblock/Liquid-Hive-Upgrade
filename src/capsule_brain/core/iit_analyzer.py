@@ -1,5 +1,9 @@
-import asyncio, logging, random, time
-from typing import Dict, Any
+import asyncio
+import logging
+import random
+import time
+from typing import Any
+
 import networkx as nx
 
 log = logging.getLogger(__name__)
@@ -29,7 +33,7 @@ class IITAnalyzer:
     def get_initial_graph(self):
         return self.graph
 
-    def get_latest_metrics(self) -> Dict[str, Any]:
+    def get_latest_metrics(self) -> dict[str, Any]:
         return {
             "phi": float(self.current_phi),
             "glyphs": list(self.current_glyphs),

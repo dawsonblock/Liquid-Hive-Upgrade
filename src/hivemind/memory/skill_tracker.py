@@ -1,4 +1,5 @@
-import json, pathlib, math
+import json
+import pathlib
 
 
 class SkillTracker:

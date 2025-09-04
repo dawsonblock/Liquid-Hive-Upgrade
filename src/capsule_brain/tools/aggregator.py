@@ -1,7 +1,12 @@
-import asyncio, time, logging, ast, operator as op
-from typing import List, Dict, Any, Tuple
-from ..security.input_sanitizer import validate_tool_params
+import ast
+import asyncio
+import logging
+import operator as op
+import time
+from typing import Any
+
 from ..retrieval.index import retrieve_topk
+from ..security.input_sanitizer import validate_tool_params
 
 log = logging.getLogger(__name__)
 ALLOWED_OPS = {
@@ -32,7 +37,7 @@ class ToolAggregator:
         self.tools = {}
         self.results_cache = {}
 
-    async def maybe_batch(self, tool_hints: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], float]:
+    async def maybe_batch(self, tool_hints: list[dict[str, Any]]) -> tuple[dict[str, Any], float]:
         start = time.perf_counter()
         if not tool_hints:
             return {"results": []}, 0.0
@@ -46,7 +51,7 @@ class ToolAggregator:
                 results.append({"error": str(e), "tool": hint.get("tool", "unknown")})
         return {"results": results}, (time.perf_counter() - start) * 1000
 
-    async def _execute_tool(self, hint: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_tool(self, hint: dict[str, Any]) -> dict[str, Any]:
         name = hint.get("tool", "unknown")
         await asyncio.sleep(0.05)
         if name == "local_search":

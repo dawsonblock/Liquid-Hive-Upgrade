@@ -1,5 +1,4 @@
-"""
-LAVA Client
+"""LAVA Client
 ===========
 
 This module provides a minimal client class for interacting with the LiquidAI
@@ -39,8 +38,7 @@ class LAVAClient:
                 self._fallback = None
 
     def generate(self, prompt: str, image: Any) -> str:
-        """
-        Generate a critique or answer given a prompt and an image.
+        """Generate a critique or answer given a prompt and an image.
 
         Parameters
         ----------
@@ -49,7 +47,7 @@ class LAVAClient:
         image: Any
             Image data to process.
 
-        Returns
+        Returns:
         -------
         str
             The model's generated response.  Uses the fallback VLClient when

@@ -3,14 +3,15 @@ Tests for DS-Router System
 ==========================
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-from unified_runtime.model_router import DSRouter, RouterConfig, RoutingDecision
+import pytest
+
+from safety.post_guard import PostGuard
+from safety.pre_guard import PreGuard
+from unified_runtime.model_router import DSRouter, RouterConfig
 from unified_runtime.providers.base_provider import GenRequest, GenResponse
-from safety.pre_guard import PreGuard, PreGuardResult
-from safety.post_guard import PostGuard, PostGuardResult
 
 
 class TestDSRouter:

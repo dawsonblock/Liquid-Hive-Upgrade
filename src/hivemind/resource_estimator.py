@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -31,7 +30,7 @@ class ResourceEstimator:
 
     def estimate_cost(
         self, role: str = "implementer", tier: str = "auto", prompt: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         predicted_tokens = None
         if prompt:
             predicted_tokens = self._estimate_tokens(prompt)

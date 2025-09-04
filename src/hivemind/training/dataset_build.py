@@ -1,5 +1,4 @@
-"""
-Dataset build utilities for text and vision‑language (VL)
+"""Dataset build utilities for text and vision‑language (VL)
 =======================================================
 
 This module extends the dataset build to also extract VL supervision from run logs.
@@ -11,15 +10,16 @@ It produces two datasets by default under datasets/:
 
 from __future__ import annotations
 
-import json, os
+import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Dict, Any
+from typing import Any
 
 DS_DIR = Path("datasets")
 DS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def iter_run_logs(runs_dir: str) -> Iterable[Dict[str, Any]]:
+def iter_run_logs(runs_dir: str) -> Iterable[dict[str, Any]]:
     p = Path(runs_dir)
     for f in p.glob("*.jsonl"):
         try:

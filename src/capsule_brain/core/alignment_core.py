@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import List
 
 log = logging.getLogger(__name__)
 
@@ -10,7 +9,7 @@ class AlignmentCore:
 
     def __init__(self, principles_file: str = "core_principles/alignment_core.txt"):
         self.principles_file = Path(principles_file)
-        self.principles: List[str] = []
+        self.principles: list[str] = []
         self.load()
 
     def load(self) -> None:
@@ -28,5 +27,5 @@ class AlignmentCore:
             log.error("Failed to load alignment principles: %s", e)
             self.principles = []
 
-    def list(self) -> List[str]:
+    def list(self) -> list[str]:
         return list(self.principles)

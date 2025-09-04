@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 try:
     from .resource_estimator import ResourceEstimator
@@ -35,7 +35,7 @@ class StrategySelector:
         self.client = client
         self.estimator = ResourceEstimator() if ResourceEstimator else None
 
-    async def decide(self, prompt: str, ctx: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def decide(self, prompt: str, ctx: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         ctx = ctx or {}
 
         # Ethical Synthesizer: Check for ethical dilemmas first
@@ -102,7 +102,7 @@ class StrategySelector:
             "reason": reason,
         }
 
-    async def _analyze_ethical_content(self, prompt: str) -> Dict[str, Any]:
+    async def _analyze_ethical_content(self, prompt: str) -> dict[str, Any]:
         """Ethical Synthesizer: Analyze prompt for ethical dilemmas."""
         # Define ethical dilemma patterns
         ethical_patterns = {

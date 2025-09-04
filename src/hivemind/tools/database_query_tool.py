@@ -1,16 +1,13 @@
-"""
-Database Query Tool for LIQUID-HIVE
+"""Database Query Tool for LIQUID-HIVE
 ===================================
 
 A secure database query tool that can interact with the Neo4j knowledge graph
 and other configured databases with proper security restrictions.
 """
 
-import json
-from typing import Dict, Any, List, Optional
-import asyncio
+from typing import Any, Optional
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 try:
     import neo4j
@@ -52,7 +49,7 @@ class DatabaseQueryTool(BaseTool):
         return "Execute safe database queries against Neo4j knowledge graph and other configured databases"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="database",
@@ -104,7 +101,7 @@ class DatabaseQueryTool(BaseTool):
     def risk_level(self) -> str:
         return "high"  # Database queries can be dangerous
 
-    def _validate_cypher_query(self, query: str, read_only: bool) -> List[str]:
+    def _validate_cypher_query(self, query: str, read_only: bool) -> list[str]:
         """Validate Cypher query for safety."""
         errors = []
         query_lower = query.lower().strip()
@@ -143,7 +140,7 @@ class DatabaseQueryTool(BaseTool):
 
         return errors
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute database query."""
         database = parameters["database"]
         query = parameters["query"]
@@ -160,12 +157,12 @@ class DatabaseQueryTool(BaseTool):
         except Exception as e:
             return ToolResult(
                 success=False,
-                error=f"Database query failed: {str(e)}",
+                error=f"Database query failed: {e!s}",
                 metadata={"database": database, "query_preview": query[:100]},
             )
 
     async def _execute_neo4j_query(
-        self, query: str, params: Dict[str, Any], limit: int, read_only: bool
+        self, query: str, params: dict[str, Any], limit: int, read_only: bool
     ) -> ToolResult:
         """Execute Neo4j Cypher query."""
         if not NEO4J_AVAILABLE:
@@ -246,13 +243,13 @@ class DatabaseQueryTool(BaseTool):
             )
 
         except neo4j.CypherSyntaxError as e:
-            return ToolResult(success=False, error=f"Cypher syntax error: {str(e)}")
+            return ToolResult(success=False, error=f"Cypher syntax error: {e!s}")
         except neo4j.CypherTypeError as e:
-            return ToolResult(success=False, error=f"Cypher type error: {str(e)}")
+            return ToolResult(success=False, error=f"Cypher type error: {e!s}")
         except neo4j.ServiceUnavailable as e:
-            return ToolResult(success=False, error=f"Neo4j service unavailable: {str(e)}")
+            return ToolResult(success=False, error=f"Neo4j service unavailable: {e!s}")
         except Exception as e:
-            return ToolResult(success=False, error=f"Neo4j query execution failed: {str(e)}")
+            return ToolResult(success=False, error=f"Neo4j query execution failed: {e!s}")
 
     def __del__(self):
         """Clean up database connections."""

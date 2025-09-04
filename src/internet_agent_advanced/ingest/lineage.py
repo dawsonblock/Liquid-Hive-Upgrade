@@ -1,5 +1,9 @@
 from __future__ import annotations
-import os, time, boto3
+
+import os
+import time
+
+import boto3
 from botocore.client import Config
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9000")

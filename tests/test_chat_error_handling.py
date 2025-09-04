@@ -1,10 +1,9 @@
-import asyncio
 import types
+
 import httpx
-import pytest
+from fastapi.testclient import TestClient
 
 from unified_runtime.server import app
-from fastapi.testclient import TestClient
 
 client = TestClient(app)
 

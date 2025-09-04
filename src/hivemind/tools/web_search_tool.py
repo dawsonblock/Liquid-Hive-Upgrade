@@ -1,5 +1,4 @@
-"""
-Web Search Tool for LIQUID-HIVE
+"""Web Search Tool for LIQUID-HIVE
 ==============================
 
 A web search tool that can perform internet searches and return results.
@@ -7,11 +6,11 @@ This tool requires approval due to external network access.
 """
 
 import asyncio
-from typing import Dict, Any, List
-import aiohttp
-import json
+from typing import Any
 
-from .base_tool import BaseTool, ToolResult, ToolParameter, ToolParameterType
+import aiohttp
+
+from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
 class WebSearchTool(BaseTool):
@@ -26,7 +25,7 @@ class WebSearchTool(BaseTool):
         return "Search the web for information using DuckDuckGo search engine"
 
     @property
-    def parameters(self) -> List[ToolParameter]:
+    def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
                 name="query",
@@ -72,7 +71,7 @@ class WebSearchTool(BaseTool):
     def risk_level(self) -> str:
         return "medium"  # Network access has moderate risk
 
-    async def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+    async def execute(self, parameters: dict[str, Any]) -> ToolResult:
         """Execute web search."""
         query = parameters["query"]
         max_results = parameters.get("max_results", 5)
@@ -107,15 +106,15 @@ class WebSearchTool(BaseTool):
             )
 
         except aiohttp.ClientError as e:
-            return ToolResult(success=False, error=f"Network error during search: {str(e)}")
+            return ToolResult(success=False, error=f"Network error during search: {e!s}")
         except asyncio.TimeoutError:
             return ToolResult(success=False, error="Search request timed out")
         except Exception as e:
-            return ToolResult(success=False, error=f"Search failed: {str(e)}")
+            return ToolResult(success=False, error=f"Search failed: {e!s}")
 
     async def _duckduckgo_search(
         self, query: str, max_results: int, region: str, safe_search: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform DuckDuckGo search."""
         timeout = aiohttp.ClientTimeout(total=30)
 
@@ -177,7 +176,7 @@ class WebSearchTool(BaseTool):
 
     async def _duckduckgo_web_search(
         self, session: aiohttp.ClientSession, query: str, max_results: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Attempt to get web search results (may not always work due to rate limiting)."""
         try:
             # This is a simplified approach - DuckDuckGo's web search API is more complex

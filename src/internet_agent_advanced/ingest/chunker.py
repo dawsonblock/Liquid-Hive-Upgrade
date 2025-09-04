@@ -1,8 +1,7 @@
 from __future__ import annotations
-from typing import Dict, List
 
 
-def chunk(text: str, meta: Dict, max_len: int = 900, overlap: int = 120) -> List[dict]:
+def chunk(text: str, meta: dict, max_len: int = 900, overlap: int = 120) -> list[dict]:
     chunks = []
     i = 0
     while i < len(text):

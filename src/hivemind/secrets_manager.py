@@ -1,15 +1,14 @@
-"""
-Production-Grade Secrets Management Service
+"""Production-Grade Secrets Management Service
 ==========================================
 Supports HashiCorp Vault (local dev) and AWS Secrets Manager (production)
 with intelligent fallback to environment variables.
 """
 
-import os
 import json
 import logging
-from typing import Optional, Dict, Any, Union
+import os
 from enum import Enum
+from typing import Any, Optional, Union
 
 # Third-party imports with graceful handling
 try:
@@ -42,8 +41,7 @@ class SecretProvider(Enum):
 
 
 class SecretsManager:
-    """
-    Production-grade secrets manager with multi-provider support.
+    """Production-grade secrets manager with multi-provider support.
 
     Priority order:
     1. HashiCorp Vault (if configured and available)
@@ -54,7 +52,7 @@ class SecretsManager:
     def __init__(self):
         self._vault_client: Optional[Any] = None
         self._aws_client: Optional[Any] = None
-        self._cache: Dict[str, Any] = {}
+        self._cache: dict[str, Any] = {}
         self._provider: Optional[SecretProvider] = None
 
         # Initialize providers
@@ -62,7 +60,6 @@ class SecretsManager:
 
     def _init_providers(self) -> None:
         """Initialize available secret providers in priority order."""
-
         # Try HashiCorp Vault first
         if self._init_vault():
             self._provider = SecretProvider.VAULT
@@ -139,8 +136,7 @@ class SecretsManager:
             return False
 
     def get_secret(self, secret_path: str, default: Optional[Any] = None) -> Optional[Any]:
-        """
-        Retrieve a secret from the configured provider.
+        """Retrieve a secret from the configured provider.
 
         Args:
             secret_path: Path/key for the secret
@@ -255,7 +251,7 @@ class SecretsManager:
                 return str(url)
         return None
 
-    def get_vllm_config(self) -> Dict[str, Optional[str]]:
+    def get_vllm_config(self) -> dict[str, Optional[str]]:
         """Get vLLM configuration."""
         config = {}
 
@@ -297,9 +293,8 @@ class SecretsManager:
                 return str(url)
         return None
 
-    def store_secret(self, secret_path: str, value: Union[str, Dict[str, Any]]) -> bool:
-        """
-        Store a secret (only supported by Vault and environment in dev).
+    def store_secret(self, secret_path: str, value: Union[str, dict[str, Any]]) -> bool:
+        """Store a secret (only supported by Vault and environment in dev).
 
         Args:
             secret_path: Path/key for the secret
@@ -345,7 +340,7 @@ class SecretsManager:
         """Get the current active provider."""
         return self._provider
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Check health of all configured providers."""
         health = {
             "active_provider": self._provider.value if self._provider else None,

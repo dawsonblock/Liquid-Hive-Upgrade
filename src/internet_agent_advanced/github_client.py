@@ -1,6 +1,9 @@
 from __future__ import annotations
-import os, time
-from typing import Optional, Dict, Any
+
+import os
+import time
+from typing import Any, Optional
+
 from github import Github
 
 
@@ -9,7 +12,7 @@ def get_github(token: Optional[str] = None) -> Github:
     return Github(login_or_token=token) if token else Github()
 
 
-def fetch_repo_readme(full_name: str, token: Optional[str] = None) -> Dict[str, Any]:
+def fetch_repo_readme(full_name: str, token: Optional[str] = None) -> dict[str, Any]:
     gh = get_github(token)
     repo = gh.get_repo(full_name)
     try:

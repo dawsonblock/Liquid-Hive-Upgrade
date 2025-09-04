@@ -1,5 +1,8 @@
-import asyncio, logging, time
-from typing import Any, Dict, List, Optional
+import asyncio
+import logging
+import time
+from typing import Any, Optional
+
 from .alignment_core import AlignmentCore
 from .belief_state_manager import BeliefStateManager
 from .iit_analyzer import IITAnalyzer
@@ -15,10 +18,10 @@ class CapsuleEngine:
         self.belief_state_manager = BeliefStateManager(self)
         self.iit_analyzer = IITAnalyzer(self)
         self.self_wirer = SelfWirer(self)
-        self.memory: List[Dict[str, Any]] = []
+        self.memory: list[dict[str, Any]] = []
         self.knowledge_graph = self.iit_analyzer.get_initial_graph()
         self.bus: Optional[asyncio.Queue] = None
-        self._background_tasks: List[asyncio.Task] = []
+        self._background_tasks: list[asyncio.Task] = []
         self._shutdown_event = asyncio.Event()
 
     async def start_background_tasks(self):
@@ -43,7 +46,7 @@ class CapsuleEngine:
         self.knowledge_graph.add_node(target)
         self.knowledge_graph.add_edge(source, target, relation=relation)
 
-    def get_state_summary(self) -> Dict[str, Any]:
+    def get_state_summary(self) -> dict[str, Any]:
         phi = self.iit_analyzer.get_latest_metrics()
         return {
             "uptime_s": int(time.time() - self.start_time),

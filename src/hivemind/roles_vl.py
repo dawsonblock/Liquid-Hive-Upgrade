@@ -1,5 +1,6 @@
 import json
 from typing import Any
+
 from .utils import clamp_json
 
 PERCEPTOR_SYS = (
@@ -49,8 +50,7 @@ class VisionRoles:
             return {"winner_id": 0, "winner_text": candidates[0], "critique": txt}
 
     def grounding_validator(self, question: str, image: Any, answer: str) -> dict[str, any]:
-        """
-        Validate that the answer is grounded in the contents of the image.
+        """Validate that the answer is grounded in the contents of the image.
 
         This is a simplistic implementation of the grounding validator.  It
         attempts to extract textual content from the image using the
@@ -68,7 +68,7 @@ class VisionRoles:
         answer: str
             The generated answer to validate.
 
-        Returns
+        Returns:
         -------
         dict
             A JSON object with ``status`` set to ``pass`` or ``fail`` and

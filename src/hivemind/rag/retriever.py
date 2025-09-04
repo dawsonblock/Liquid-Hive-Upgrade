@@ -1,18 +1,18 @@
 # LIQUID-HIVE-main/hivemind/rag/retriever.py
 
 from __future__ import annotations
-import os
-import logging
+
 import json
-import time
+import logging
 import pathlib
-from typing import List, Dict, Any, Optional, Tuple
+import time
+from typing import Any, Optional
 
 try:
-    import numpy as np
     import faiss  # FAISS for vector indexing
-    from sentence_transformers import SentenceTransformer  # For embedding
+    import numpy as np
     from pypdf import PdfReader  # For PDF parsing (if installed)
+    from sentence_transformers import SentenceTransformer  # For embedding
 
     DEPS_AVAILABLE = True
 except ImportError as e:
@@ -27,7 +27,6 @@ except ImportError as e:
 
 
 # Assuming you have a settings object available
-from hivemind.config import Settings  # Assuming Settings can be imported here
 from capsule_brain.security.input_sanitizer import sanitize_input  # To clean document content
 
 log = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ log = logging.getLogger(__name__)
 
 # Mock document structure for internal use
 class Document:
-    def __init__(self, page_content: str, metadata: Dict[str, Any]):
+    def __init__(self, page_content: str, metadata: dict[str, Any]):
         self.page_content = page_content
         self.metadata = metadata
 
@@ -43,7 +42,7 @@ class Document:
         return {"page_content": self.page_content, "metadata": self.metadata}
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]):
+    def from_dict(data: dict[str, Any]):
         return Document(data["page_content"], data["metadata"])
 
 
@@ -56,7 +55,7 @@ class Retriever:
         self.embed_model_id = embed_model_id
         self.embedding_model: Optional[SentenceTransformer] = None
         self.faiss_index: Optional[faiss.IndexFlatL2] = None  # Using L2 for simplicity
-        self.doc_store: List[Document] = []
+        self.doc_store: list[Document] = []
         self.is_ready = False
 
         if self.embed_model_id and DEPS_AVAILABLE:
@@ -83,7 +82,7 @@ class Retriever:
         if index_path.exists() and doc_store_path.exists():
             try:
                 self.faiss_index = faiss.read_index(str(index_path))
-                with open(doc_store_path, "r", encoding="utf-8") as f:
+                with open(doc_store_path, encoding="utf-8") as f:
                     raw_docs = json.load(f)
                     self.doc_store = [Document.from_dict(d) for d in raw_docs]
                 log.info(f"Loaded existing FAISS index with {len(self.doc_store)} documents.")
@@ -114,7 +113,7 @@ class Retriever:
                 json.dump([doc.to_dict() for doc in self.doc_store], f, indent=2)
             log.debug(f"Saved FAISS index with {len(self.doc_store)} documents.")
 
-    async def add_documents(self, file_paths: List[str]) -> List[str]:
+    async def add_documents(self, file_paths: list[str]) -> list[str]:
         if not self.is_ready or not self.embedding_model or not self.faiss_index:
             log.warning(
                 "Retriever not ready to add documents. Embedding model or index not initialized."
@@ -178,7 +177,7 @@ class Retriever:
 
         return indexed_files
 
-    async def search(self, query: str, k: int = 5) -> List[Document]:
+    async def search(self, query: str, k: int = 5) -> list[Document]:
         if (
             not self.is_ready
             or not self.embedding_model
@@ -196,7 +195,7 @@ class Retriever:
 
             D, I = self.faiss_index.search(query_embedding, k)  # D is distances, I is indices
 
-            results: List[Document] = []
+            results: list[Document] = []
             for idx in I[0]:
                 if idx < len(self.doc_store):  # Ensure index is valid
                     results.append(self.doc_store[idx])
@@ -208,7 +207,7 @@ class Retriever:
 
     # Placeholder for format_context (can be kept separate or moved here)
     # LIQUID-HIVE-main/hivemind/rag/citations.py (or add this to retriever)
-    def format_context(self, documents: List[Document]) -> str:
+    def format_context(self, documents: list[Document]) -> str:
         if not documents:
             return ""
 

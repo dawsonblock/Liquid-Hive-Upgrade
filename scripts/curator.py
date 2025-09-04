@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os, asyncio, json
+
+import asyncio
+import json
+import os
+
 import httpx
 
 BASE_URL = (os.getenv('BASE_URL') or 'http://localhost:8000').rstrip('/')
@@ -17,7 +21,7 @@ async def main():
         print(f"No seeds at {seeds_path}")
         return
     ok = 0
-    with open(seeds_path, 'r', encoding='utf-8') as f:
+    with open(seeds_path, encoding='utf-8') as f:
         for line in f:
             if not line.strip():
                 continue

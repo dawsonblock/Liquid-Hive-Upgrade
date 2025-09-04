@@ -1,19 +1,17 @@
-"""
-Cache Management for LIQUID-HIVE
+"""Cache Management for LIQUID-HIVE
 ===============================
 
 Cache management utilities for monitoring, warming, and optimizing
 the semantic cache system.
 """
 
-import asyncio
 import json
 import logging
 import time
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Any, Optional
 
-from .semantic_cache import SemanticCache, CacheStrategy
+from .semantic_cache import CacheStrategy, SemanticCache
 
 log = logging.getLogger(__name__)
 
@@ -39,9 +37,8 @@ class CacheManager:
             "How to optimize performance?",
         ]
 
-    async def warm_cache(self, queries_and_responses: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Warm the cache with common query-response pairs.
+    async def warm_cache(self, queries_and_responses: list[dict[str, Any]]) -> dict[str, Any]:
+        """Warm the cache with common query-response pairs.
 
         Args:
             queries_and_responses: List of dicts with 'query' and 'response' keys
@@ -82,15 +79,14 @@ class CacheManager:
             )
 
         except Exception as e:
-            error_msg = f"Cache warming failed: {str(e)}"
+            error_msg = f"Cache warming failed: {e!s}"
             results["errors"].append(error_msg)
             self.logger.error(error_msg)
 
         return results
 
-    async def analyze_cache_performance(self, hours: int = 24) -> Dict[str, Any]:
-        """
-        Analyze cache performance over a time period.
+    async def analyze_cache_performance(self, hours: int = 24) -> dict[str, Any]:
+        """Analyze cache performance over a time period.
 
         Args:
             hours: Number of hours to analyze
@@ -129,9 +125,9 @@ class CacheManager:
             return analysis
 
         except Exception as e:
-            return {"error": f"Performance analysis failed: {str(e)}"}
+            return {"error": f"Performance analysis failed: {e!s}"}
 
-    def _generate_recommendations(self, analysis: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, analysis: dict[str, Any]) -> list[str]:
         """Generate performance optimization recommendations."""
         recommendations = []
 
@@ -179,9 +175,8 @@ class CacheManager:
 
         return recommendations
 
-    async def optimize_cache_settings(self, target_hit_rate: float = 0.5) -> Dict[str, Any]:
-        """
-        Automatically optimize cache settings based on performance.
+    async def optimize_cache_settings(self, target_hit_rate: float = 0.5) -> dict[str, Any]:
+        """Automatically optimize cache settings based on performance.
 
         Args:
             target_hit_rate: Target cache hit rate to optimize for
@@ -254,11 +249,11 @@ class CacheManager:
             )
 
         except Exception as e:
-            results["error"] = f"Optimization failed: {str(e)}"
+            results["error"] = f"Optimization failed: {e!s}"
 
         return results
 
-    async def export_cache_data(self, format: str = "json") -> Dict[str, Any]:
+    async def export_cache_data(self, format: str = "json") -> dict[str, Any]:
         """Export cache data for backup or analysis."""
         try:
             # Get all cache entries (be careful with large caches)
@@ -290,9 +285,9 @@ class CacheManager:
             return export_data
 
         except Exception as e:
-            return {"error": f"Export failed: {str(e)}"}
+            return {"error": f"Export failed: {e!s}"}
 
-    async def import_cache_data(self, import_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def import_cache_data(self, import_data: dict[str, Any]) -> dict[str, Any]:
         """Import cache data from backup."""
         results = {"imported_entries": 0, "failed_entries": 0, "errors": []}
 
@@ -323,7 +318,7 @@ class CacheManager:
             )
 
         except Exception as e:
-            results["errors"].append(f"Import failed: {str(e)}")
+            results["errors"].append(f"Import failed: {e!s}")
 
         return results
 
@@ -364,7 +359,7 @@ class CacheManager:
             return report
 
         except Exception as e:
-            return f"Failed to generate report: {str(e)}"
+            return f"Failed to generate report: {e!s}"
 
 
 async def create_cache_manager(redis_url: str = "redis://localhost:6379") -> Optional[CacheManager]:

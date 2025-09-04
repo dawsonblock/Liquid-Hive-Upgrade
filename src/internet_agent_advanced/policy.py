@@ -1,5 +1,10 @@
 from __future__ import annotations
-import os, yaml, urllib.parse
+
+import os
+import urllib.parse
+
+import yaml
+
 from .config import DOMAIN_POLICY_PATH
 
 
@@ -10,7 +15,7 @@ def _policy_path() -> str:
 
 
 def load_policy() -> dict:
-    with open(_policy_path(), "r", encoding="utf-8") as f:
+    with open(_policy_path(), encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
