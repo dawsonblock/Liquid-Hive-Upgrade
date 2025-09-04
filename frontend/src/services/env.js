@@ -29,3 +29,4 @@ export function getBackendWsBase() {
     }
     return 'ws://localhost:8000';
 }
+//# sourceMappingURL=env.js.map

@@ -63,3 +63,4 @@ export const setRouterThresholds = (params, adminToken) => api.post('/admin/rout
 }).then(r => r.data);
 // Swarm status
 export const getSwarmStatus = () => api.get('/swarm/status').then(r => r.data);
+//# sourceMappingURL=api.js.map
