@@ -121,4 +121,7 @@ docs/_build/
 *.exe
 *.dll
 *.so
-*.dylib
+*.dylib-e 
+# Environment files
+*.env
+*.env.*
