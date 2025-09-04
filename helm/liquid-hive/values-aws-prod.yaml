@@ -106,10 +106,26 @@ externalSecrets:
       key: liquid-hive/prod/VLLM_ENDPOINT_LARGE
     VLLM_API_KEY:
       key: liquid-hive/prod/VLLM_API_KEY
+    DEEPSEEK_API_KEY:
+      key: liquid-hive/prod/DEEPSEEK_API_KEY
+    DEEPSEEK_R1_API_KEY:
+      key: liquid-hive/prod/DEEPSEEK_R1_API_KEY
+    OPENAI_API_KEY:
+      key: liquid-hive/prod/OPENAI_API_KEY
+    ANTHROPIC_API_KEY:
+      key: liquid-hive/prod/ANTHROPIC_API_KEY
+    QWEN_API_KEY:
+      key: liquid-hive/prod/QWEN_API_KEY
     PROMETHEUS_BASE_URL:
       key: liquid-hive/prod/PROMETHEUS_BASE_URL
     ADMIN_TOKEN:
       key: liquid-hive/prod/ADMIN_TOKEN
+    API_JWT_PUBLIC_KEY_PATH:
+      key: liquid-hive/prod/API_JWT_PUBLIC_KEY_PATH
+    API_JWT_AUDIENCE:
+      key: liquid-hive/prod/API_JWT_AUDIENCE
+    OTEL_EXPORTER_OTLP_ENDPOINT:
+      key: liquid-hive/prod/OTEL_EXPORTER_OTLP_ENDPOINT
 
 pdb:
   enabled: true

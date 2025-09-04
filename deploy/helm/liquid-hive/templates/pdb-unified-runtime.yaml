@@ -1,0 +1,12 @@
+{{- if .Values.unifiedRuntime.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: liquid-hive-unified-runtime
+  namespace: {{ .Values.namespace }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: unified-runtime
+{{- end }}
