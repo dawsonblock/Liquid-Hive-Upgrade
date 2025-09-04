@@ -14,10 +14,10 @@ RUN set -eux; \
 WORKDIR /opt/app
 USER app
 
-# Copy minimal placeholder app interface. Replace with your app in downstream Dockerfiles.
-COPY --chown=app:app requirements.txt /opt/app/requirements.txt
-RUN --mount=type=cache,target=/home/app/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt || true
+# Previously copied requirements.txt from build context; remove to avoid build failures
+# COPY --chown=app:app requirements.txt /opt/app/requirements.txt
+# RUN --mount=type=cache,target=/home/app/.cache/pip \
+#     pip install --no-cache-dir -r requirements.txt || true
 
 # Example runtime command (override in downstream images)
 EXPOSE 8000

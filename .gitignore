@@ -51,6 +51,24 @@ out/
 .next/
 coverage/
 
+# Build tool caches
+.vite/
+frontend/.vite/
+.parcel-cache/
+frontend/.parcel-cache/
+.turbo/
+
+# Coverage (broader)
+coverage*/
+.nyc_output/
+
+# Extra temp outputs
+test_result.md
+flake.out
+
+# Package manager cache
+.pnpm-store/
+
 # IDE / Editors
 .vscode/
 .idea/
