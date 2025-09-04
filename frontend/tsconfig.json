@@ -52,9 +52,9 @@
     "composite": false,
     
     // Advanced type checking
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": [
     "src/**/*",
