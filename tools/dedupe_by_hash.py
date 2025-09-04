@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse, hashlib, json, os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / "reports"
