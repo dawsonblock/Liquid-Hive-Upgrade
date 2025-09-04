@@ -5,8 +5,6 @@
 /.github/ @liquid-hive/devops-team
 /helm/ @liquid-hive/devops-team
 /k8s/ @liquid-hive/devops-team
-/prometheus/ @liquid-hive/devops-team
-/grafana/ @liquid-hive/devops-team
 /docker-compose.yml @liquid-hive/devops-team
 /Dockerfile @liquid-hive/devops-team
 /Makefile @liquid-hive/devops-team
@@ -14,37 +12,17 @@
 # Security and Configuration
 /config/ @liquid-hive/security-team
 SECURITY.md @liquid-hive/security-team
-.secrets.baseline @liquid-hive/security-team
-/src/unified_runtime/security.py @liquid-hive/security-team
-/src/safety/ @liquid-hive/security-team
 
-# Core Runtime and Routing
-/src/unified_runtime/ @liquid-hive/backend-team
-/src/oracle/ @liquid-hive/backend-team
-
-# Planner and Arena Services  
-/src/capsule_brain/planner/ @liquid-hive/algorithms-team
-/src/unified_runtime/arena.py @liquid-hive/algorithms-team
+# Core Runtime and Source
+/src/ @liquid-hive/backend-team
 
 # Documentation
 /docs/ @liquid-hive/docs-team
 README.md @liquid-hive/docs-team
 CONTRIBUTING.md @liquid-hive/docs-team
 
-# Frontend (if applicable)
+# Frontend
 /frontend/ @liquid-hive/frontend-team
 
-# Tests require review from relevant domain experts
-/tests/test_planner.py @liquid-hive/algorithms-team
-/tests/test_arena.py @liquid-hive/algorithms-team
-/tests/test_ds_router.py @liquid-hive/backend-team
-/tests/test_secrets_management.py @liquid-hive/security-team
-/tests/test_admin_guards.py @liquid-hive/security-team
-
-# Package configuration
-requirements.txt @liquid-hive/backend-team
-pyproject.toml @liquid-hive/devops-team
-/frontend/package.json @liquid-hive/frontend-team
-
-# SDKs
-/sdks/ @liquid-hive/sdk-team
+# Tests
+/tests/ @liquid-hive/qa-team
