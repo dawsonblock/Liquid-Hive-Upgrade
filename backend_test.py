@@ -20,7 +20,8 @@ class ComprehensiveBackendTester:
         self.test_results = {}
 
     def run_test(self, name: str, method: str, endpoint: str, expected_status: int, 
-                 data: Optional[Dict] = None, headers: Optional[Dict] = None) -> Tuple[bool, Dict]:
+                 data: Optional[Dict] = None, headers: Optional[Dict] = None, 
+                 form_data: Optional[Dict] = None) -> Tuple[bool, Dict]:
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         if headers is None:
@@ -34,7 +35,10 @@ class ComprehensiveBackendTester:
             if method == 'GET':
                 response = requests.get(url, headers=headers, timeout=10)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=10)
+                if form_data:
+                    response = requests.post(url, data=form_data, timeout=10)
+                else:
+                    response = requests.post(url, json=data, headers=headers, timeout=10)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
