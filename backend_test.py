@@ -192,8 +192,7 @@ class ComprehensiveBackendTester:
 
     def test_chat_endpoint(self):
         """Test core chat endpoint"""
-        data = {"q": "What is artificial intelligence?"}
-        return self.run_test("Chat Endpoint", "POST", "api/chat", 200, data)
+        return self.run_test("Chat Endpoint", "POST", "api/chat?q=What is artificial intelligence?", 200)
 
 def main():
     """Main comprehensive test runner"""
