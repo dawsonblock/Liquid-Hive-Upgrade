@@ -63,10 +63,9 @@ ruff==0.6.8
 mypy==1.11.2
 black==24.8.0
 isort==5.13.2
-bandit==1.7.9  # Security vulnerability scanner
+bandit[toml]==1.7.9  # Security vulnerability scanner
 vulture==2.11  # Dead code detection
 pydocstyle==6.3.0  # Documentation style checker
-flake8-bugbear==24.8.19  # Additional bug detection
 safety==3.3.0  # Known security vulnerabilities
 pylint==3.3.4  # Comprehensive code analysis
 
