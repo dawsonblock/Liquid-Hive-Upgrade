@@ -33,8 +33,15 @@ except Exception:
     internet_tools_router = None  # type: ignore
     internet_metrics_app = None  # type: ignore
     internet_test_router = None  # type: ignore
+import os
+
+# Add src to Python path for imports
+import sys
+
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "src"))
 
 from capsule_brain.security.input_sanitizer import sanitize_input
 

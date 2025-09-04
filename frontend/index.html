@@ -9,26 +9,7 @@
 
 <body>
   <div id="root"></div>
-  <script type="module">
-    (async () => {
-      // Load runtime config, then bootstrap the app
-      const def = { backendUrl: '' };
-      try {
-        const res = await fetch('/app-config.json', { cache: 'no-store' });
-        if (res.ok) {
-          // @ts-ignore
-          window.__APP_CONFIG__ = await res.json();
-        } else {
-          // @ts-ignore
-          window.__APP_CONFIG__ = def;
-        }
-      } catch (e) {
-        // @ts-ignore
-        window.__APP_CONFIG__ = def;
-      }
-      await import('/src/main.tsx');
-    })();
-  </script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 
 </html>

@@ -146,7 +146,8 @@ const ChatPanel = () => {
                         gutterBottom: true,
                         sx: { fontWeight: 700 },
                         children: [
-                          'Welcome to ',
+                          'Welcome to',
+                          ' ',
                           _jsx(Box, {
                             component: 'span',
                             sx: { color: 'primary.main' },

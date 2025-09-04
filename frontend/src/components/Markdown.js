@@ -74,7 +74,12 @@ export default function Markdown({ children }) {
                 }),
               }),
               _jsx('pre', {
-                style: { margin: 0, padding: '14px 16px', fontSize: '0.875rem', overflow: 'auto' },
+                style: {
+                  margin: 0,
+                  padding: '14px 16px',
+                  fontSize: '0.875rem',
+                  overflow: 'auto',
+                },
                 children: _jsx('code', { children: code }),
               }),
             ],

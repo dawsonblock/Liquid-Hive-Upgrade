@@ -133,7 +133,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
         setCurrentStreamingMessage(prev => prev + data.content);
 
         // Update the last assistant message in real-time
-        if (history.length > 0 && history[history.length - 1].role === 'assistant') {
+        if (history.length > 0 && history[history.length - 1]?.role === 'assistant') {
           dispatch(updateLastMessage(currentStreamingMessage + data.content));
         }
         break;

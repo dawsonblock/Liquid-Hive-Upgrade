@@ -45,7 +45,7 @@ const appSlice = createSlice({
     updateLastMessage(state, action: PayloadAction<string>) {
       if (state.chatHistory.length > 0) {
         const lastMessage = state.chatHistory[state.chatHistory.length - 1];
-        if (lastMessage.role === 'assistant') {
+        if (lastMessage && lastMessage.role === 'assistant') {
           lastMessage.content = action.payload;
         }
       }
@@ -59,7 +59,7 @@ const appSlice = createSlice({
     finalizeStreamingMessage(state, action: PayloadAction<{ content: string; metadata?: any }>) {
       if (state.chatHistory.length > 0) {
         const lastMessage = state.chatHistory[state.chatHistory.length - 1];
-        if (lastMessage.role === 'assistant' && lastMessage.isStreaming) {
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.isStreaming) {
           lastMessage.content = action.payload.content;
           lastMessage.isStreaming = false;
           lastMessage.metadata = action.payload.metadata;
