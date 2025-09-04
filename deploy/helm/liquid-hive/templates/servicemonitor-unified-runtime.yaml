@@ -1,3 +1,4 @@
+{{- if and .Values.unifiedRuntime.enabled .Values.monitoring.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -9,5 +10,6 @@ spec:
       app: unified-runtime
   endpoints:
     - port: metrics
-      interval: 15s
-      path: /metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval | default "15s" }}
+      path: {{ .Values.monitoring.serviceMonitor.path | default "/metrics" }}
+{{- end }}

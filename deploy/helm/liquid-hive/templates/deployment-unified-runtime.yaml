@@ -18,9 +18,11 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.unifiedRuntime.service.metricsPort }}"
-        prometheus.io/path: "/metrics"
+        prometheus.io/path: '{{ default "/metrics" .Values.monitoring.serviceMonitor.path }}'
     spec:
+      {{- if .Values.rbac.create }}
       serviceAccountName: liquid-hive-sa
+      {{- end }}
       securityContext:
         fsGroup: {{ .Values.unifiedRuntime.securityContext.fsGroup }}
       containers:
@@ -68,6 +70,7 @@ spec:
             httpGet:
               path: {{ .Values.unifiedRuntime.probes.path }}
               port: http
+            initialDelaySeconds: {{ .Values.unifiedRuntime.probes.startupSeconds }}
             failureThreshold: {{ .Values.unifiedRuntime.probes.failureThreshold }}
             periodSeconds: {{ .Values.unifiedRuntime.probes.periodSeconds }}
           resources:

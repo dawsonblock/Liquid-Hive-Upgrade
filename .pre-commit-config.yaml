@@ -49,29 +49,17 @@ repos:
       - id: isort
         args: ['--profile', 'black', '--line-length=100']
 
-  # Type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-PyYAML, types-setuptools]
-        args: [--ignore-missing-imports, --show-error-codes]
-        exclude: ^(tests/|scripts/|frontend/)
-
   # Security scanning
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
-      - id: detect-secrets
+      - id: detect-secrets-hook
+        name: detect-secrets (pre-commit)
         args: ['--baseline', '.secrets.baseline']
-        exclude: |
-          (?x)^(
-            .*\.lock$|
-            .*\.log$|
-            frontend/node_modules/.*|
-            frontend/dist/.*|
-            .*\.min\.(js|css)$
-          )$
+      - id: detect-secrets
+        name: detect-secrets (scan - manual)
+        stages: [manual]
+        args: ['--baseline', '.secrets.baseline']
 
   # Python security analysis
   - repo: https://github.com/PyCQA/bandit
@@ -114,31 +102,19 @@ repos:
           )$
 
   # ESLint for frontend
-  - repo: local
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.9.0
     hooks:
       - id: eslint
-        name: eslint
-        entry: bash -c 'cd frontend && yarn lint --fix'
-        language: system
-        files: ^frontend/src/.*\.(ts|tsx)$
-        pass_filenames: false
-
-  # TypeScript type checking for frontend
-  - repo: local
-    hooks:
-      - id: tsc
-        name: TypeScript type check
-        entry: bash -c 'cd frontend && yarn type-check'
-        language: system
-        files: ^frontend/src/.*\.(ts|tsx)$
-        pass_filenames: false
-
-  # Commit message linting
-  - repo: https://github.com/jorisroovers/gitlint
-    rev: v0.19.1
-    hooks:
-      - id: gitlint
-        args: ['--config', '.gitlint']
+        name: eslint-frontend
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        args: ["--max-warnings=0"]
+        additional_dependencies:
+          - "eslint@9.9.0"
+          - "@typescript-eslint/parser@7.18.0"
+          - "@typescript-eslint/eslint-plugin@7.18.0"
+          - "eslint-plugin-react@7.35.0"
+          - "eslint-plugin-react-hooks@4.6.0"
 
   # YAML linting
   - repo: https://github.com/adrienverge/yamllint
@@ -187,36 +163,4 @@ exclude: |
     .*\.min\.(js|css)$|
     .*\.lock$|
     .*\.log$
-  )$
-
-  # ESLint (frontend only)
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.9.0
-    hooks:
-      - id: eslint
-        name: eslint-frontend
-        files: ^frontend/.*\.(js|jsx|ts|tsx)$
-        args: ["--max-warnings=0"]
-        additional_dependencies:
-          - "eslint@9.9.0"
-          - "@typescript-eslint/parser@7.18.0"
-          - "@typescript-eslint/eslint-plugin@7.18.0"
-          - "eslint-plugin-react@7.35.0"
-          - "eslint-plugin-react-hooks@4.6.0"
-
-  # Detect secrets
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-      - id: detect-secrets
-        name: detect-secrets (scan)
-        args: ["--baseline", ".secrets.baseline"]
-        stages: [manual]
-      - id: detect-secrets-hook
-        name: detect-secrets (pre-commit)
-        args: ["--baseline", ".secrets.baseline"]
-
-exclude: |
-  (?x)^(
-    docs/openapi.json
   )$

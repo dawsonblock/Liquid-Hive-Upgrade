@@ -34,11 +34,6 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
 
-  # Python (src/internet_agent_advanced/requirements.txt)
-  
-    schedule: { interval: "weekly" }
-    
-        main
   - package-ecosystem: "pip"
     directory: "/src/internet_agent_advanced"
     schedule:
@@ -58,7 +53,6 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/"
-    
     schedule:
       interval: "weekly"
       day: "sunday"
@@ -70,15 +64,10 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
-    # Uncomment one of the following versioning strategies based on your preference:
-    # versioning-strategy: "lockfile-only"  # Minimize package.json churn
-    # versioning-strategy: "widen"         # Keep ranges broad, avoid major bumps
-    # Omit versioning-strategy to use the default "auto"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
 
-  # JS (frontend)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
@@ -92,12 +81,17 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
-    # versioning-strategy: "lockfile-only"
+    versioning-strategy: "increase"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+      react-ecosystem:
+        patterns: ["react*", "@types/react*"]
+      testing-tools:
+        patterns: ["@testing-library/*", "jest*", "@types/jest"]
+      build-tools:
+        patterns: ["vite*", "@vitejs/*", "typescript", "eslint*", "@typescript-eslint/*"]
 
-  # JS SDK (sdks/js)
   - package-ecosystem: "npm"
     directory: "/sdks/js"
     schedule:
@@ -111,7 +105,6 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
-    # versioning-strategy: "lockfile-only"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
@@ -132,11 +125,9 @@ updates:
     groups:
       digest-minor-patch:
         update-types: ["digest", "minor", "patch"]
-
-    schedule: { interval: "weekly" }
     ignore:
-      - dependency-name: "torch"  # Pin GPU/ML versions manually
-      - dependency-name: "numpy"  # Pin for compatibility
+      - dependency-name: "torch"
+      - dependency-name: "numpy"
     groups:
       ml-dependencies:
         patterns:
@@ -152,30 +143,3 @@ updates:
           - "black"
           - "isort"
           - "bandit"
-
-  - package-ecosystem: "npm"
-    directory: "/frontend"
-    schedule: { interval: "weekly" }
-    versioning-strategy: "increase"
-    groups:
-      react-ecosystem:
-        patterns:
-          - "react*"
-          - "@types/react*"
-      testing-tools:
-        patterns:
-          - "@testing-library/*"
-          - "jest*"
-          - "@types/jest"
-      build-tools:
-        patterns:
-          - "vite*"
-          - "@vitejs/*"
-          - "typescript"
-          - "eslint*"
-          - "@typescript-eslint/*"
-
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule: { interval: "weekly" }
-        main

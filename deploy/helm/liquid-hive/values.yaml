@@ -1,4 +1,5 @@
 namespace: liquid-hive
+namespaceCreate: false
 
 global:
   otel:
@@ -82,6 +83,12 @@ networkPolicy:
           protocol: TCP
         - port: 80
           protocol: TCP
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    path: /metrics
 
 otelCollector:
   enabled: true

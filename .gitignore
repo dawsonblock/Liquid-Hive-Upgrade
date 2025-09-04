@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# Reports/artifacts
+reports/
+
 # Logs, temp, maps
 *.log
 *.tmp
@@ -10,13 +13,9 @@ Thumbs.db
 *.orig
 *.map
 
-# Reports/artifacts
-reports/
-
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
 .pytest_cache/
 .mypy_cache/
 .pyre/
@@ -49,6 +48,8 @@ build/
 out/
 .eslintcache
 *.tsbuildinfo
+.next/
+coverage/
 
 # IDE / Editors
 .vscode/
@@ -58,131 +59,32 @@ out/
 # Docker overrides
 docker-compose.override.yml
 
-# Logs / temp
-*.log
-*.tmp
-*.swp
-
-# Build + caches
-build/
-dist/
+# Binaries and libs
 bin/
 obj/
-.out/
-.cache/
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.ipynb_checkpoints/
-
-# Python
-.venv/
-venv/
-.env
-.env.*
-*.pyc
-*.pyo
-*.pyd
-pip-wheel-metadata/
-
-# C/C++ toolchains
-CMakeFiles/
-CMakeCache.txt
-cmake-build-*/
-compile_commands.json
-.vscode/settings.json
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-store/
-.next/
-.out/
-coverage/
-*.tsbuildinfo
-
-# Rust/Go/Java (if present)
-target/
-vendor/
-.gradle/
-build.gradle.kts
-.gradle/
-.idea/
-
-# Artifacts
-*.apk
-*.ipa
 *.a
 *.lib
 *.dll
 *.dylib
 *.so
+*.exe
 
-# Model/data (prefer Releases/LFS)
+# Data/models (prefer Releases/LFS)
 data/
 datasets/
 artifacts/
 checkpoints/
 models/
 
-# Package manager lockfiles - enforce yarn only for Node.js
+# Package managers
 package-lock.json
 pnpm-lock.yaml
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment files
-.env
-.env.*
-
-# Compressed files
+# Archives
 *.zip
 *.tar.gz
 *.rar
 
-# Test coverage
-.coverage
-htmlcov/
-coverage/
-.nyc_output/
-
-# Temporary files
-*.tmp
-*.temp
-.tmp/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Local storage
-.local/
-.npm/
-.cache/
-.config/
-
 # Documentation build
 /site
 docs/_build/
-
-# Binaries
-*.exe
-*.dll
-*.so
-*.dylib-e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-        main

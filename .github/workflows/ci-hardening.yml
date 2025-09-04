@@ -53,6 +53,9 @@ jobs:
     needs: [prepare]
     steps:
       - uses: actions/checkout@v4
+      - name: Setup tools
+        run: |
+          bash scripts/ci/install-tools.sh
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Buildx
@@ -115,6 +118,9 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
+      - name: Setup tools
+        run: |
+          bash scripts/ci/install-tools.sh
       - uses: actions/download-artifact@v4
         with:
           name: built-images
@@ -136,6 +142,9 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_to_kind == 'true' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Setup tools
+        run: |
+          bash scripts/ci/install-tools.sh
       - name: Create kind cluster
         run: |
           kind create cluster --name lh-ci --image kindest/node:v1.30.0
