@@ -106,7 +106,8 @@ class ComprehensiveBackendTester:
         """Test Planner (DAG execution) service"""
         # Test if planner is available through chat endpoint with planner enabled
         os.environ['ENABLE_PLANNER'] = 'true'
-        return self.run_test("Planner Service", "POST", "api/chat?q=Create a simple plan to analyze data", 200)
+        form_data = {"q": "Create a simple plan to analyze data"}
+        return self.run_test("Planner Service", "POST", "api/chat", 200, form_data=form_data)
 
     # ===== ARENA SERVICE =====
     def test_arena_submit(self):
