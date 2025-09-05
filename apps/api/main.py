@@ -74,6 +74,12 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": config.version}
 
 
+@app.get("/healthz")
+async def healthz_check() -> dict[str, str]:
+    """Kubernetes-style health check endpoint."""
+    return {"status": "healthy", "version": config.version}
+
+
 @app.get("/version")
 async def version_info() -> dict[str, str]:
     """Version information endpoint."""
