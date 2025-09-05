@@ -13,6 +13,10 @@ except ImportError:
 
 logger = structlog.get_logger(__name__)
 
+def _now() -> int:
+    """Get current timestamp."""
+    return int(time.time())
+
 # Configuration from environment
 HOST = os.getenv("REDIS_HOST", "redis")
 PORT = int(os.getenv("REDIS_PORT", "6379"))
