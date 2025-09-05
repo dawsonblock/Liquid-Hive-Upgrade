@@ -41,7 +41,7 @@ class GPT4oClient:
     fallback logic for environments without API access.
     """
 
-    def __init__(self, api_key: str | None | None = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.base_url = "https://api.openai.com/v1/chat/completions"  # Standard OpenAI endpoint
         # A simple backoff strategy for retrying requests.
