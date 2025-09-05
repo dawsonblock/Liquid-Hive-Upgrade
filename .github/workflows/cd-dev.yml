@@ -37,9 +37,9 @@ jobs:
 
       - name: Helm upgrade (dev)
         run: |
-          helm upgrade --install liquid-hive helm/liquid-hive \
+          helm upgrade --install liquid-hive infra/helm/liquid-hive \
             -n liquid-hive-dev --create-namespace \
-            -f helm/liquid-hive/values.yaml \
-            -f helm/liquid-hive/values-dev.yaml \
+            -f infra/helm/liquid-hive/values.yaml \
+            -f infra/helm/liquid-hive/values-dev.yaml \
             --set image.repository=ghcr.io/${{ github.repository_owner }}/liquid-hive \
             --set image.tag=${{ github.sha }}

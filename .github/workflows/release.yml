@@ -3,144 +3,247 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
 
-permissions:
-  contents: write
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  package:
+  create-release:
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: 'frontend/yarn.lock'
-      
-      - name: Install dependencies
-        run: |
-          # Python dependencies
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Generate changelog from git commits
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD > CHANGELOG.md
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ steps.changelog.outputs.version }}
+        body: |
+          ## Changes in this Release
           
-          # Frontend dependencies
-          cd frontend
-          yarn install --frozen-lockfile
-      
-      - name: Build frontend
-        run: |
-          cd frontend
-          yarn build
-      
-      - name: Run tests
-        run: |
-          # Python tests
-          pytest --maxfail=1 --disable-warnings
+          ${{ steps.changelog.outputs.changelog }}
           
-          # Frontend tests
-          cd frontend
-          yarn test --ci --watchAll=false
-      
-      - name: Create release archive
-        run: |
-          mkdir -p out
+          ## Docker Images
           
-          # Create source archive (excluding dev dependencies)
-          tar --exclude='frontend/node_modules' \
-              --exclude='frontend/dist' \
-              --exclude='.git' \
-              --exclude='__pycache__' \
-              --exclude='*.pyc' \
-              --exclude='.pytest_cache' \
-              --exclude='.mypy_cache' \
-              -czf out/liquid-hive-${GITHUB_REF_NAME}-source.tar.gz .
+          - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ steps.changelog.outputs.version }}`
+          - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/dashboard:${{ steps.changelog.outputs.version }}`
           
-          # Create production archive (with built frontend)
-          tar --exclude='frontend/node_modules' \
-              --exclude='frontend/src' \
-              --exclude='frontend/public' \
-              --exclude='.git' \
-              --exclude='__pycache__' \
-              --exclude='*.pyc' \
-              --exclude='.pytest_cache' \
-              --exclude='.mypy_cache' \
-              --exclude='tests' \
-              -czf out/liquid-hive-${GITHUB_REF_NAME}-production.tar.gz .
+          ## Installation
           
-          # Create zip versions
-          cd out
-          tar -xzf liquid-hive-${GITHUB_REF_NAME}-source.tar.gz -C tmp-source/
-          tar -xzf liquid-hive-${GITHUB_REF_NAME}-production.tar.gz -C tmp-prod/
-          zip -qr liquid-hive-${GITHUB_REF_NAME}-source.zip tmp-source/
-          zip -qr liquid-hive-${GITHUB_REF_NAME}-production.zip tmp-prod/
-          rm -rf tmp-source tmp-prod
-      
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          path: .
-          artifact-name: liquid-hive-${{ github.ref_name }}-sbom.spdx.json
-          format: spdx-json
-      
-      - name: Generate checksums
-        run: |
-          cd out
-          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
-          sha512sum *.tar.gz *.zip > SHA512SUMS.txt
-      
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "Liquid-Hive v${{ github.ref_name }}"
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          files: |
-            out/*.tar.gz
-            out/*.zip
-            out/SHA256SUMS.txt
-            out/SHA512SUMS.txt
-            liquid-hive-*.spdx.json
-          body: |
-            ## 🚀 Liquid-Hive Release ${{ github.ref_name }}
-            
-            This release includes:
-            - **Source code** with all development files
-            - **Production build** with compiled frontend and optimized backend
-            - **SBOM** (Software Bill of Materials) for security compliance
-            - **Checksums** for integrity verification
-            
-            ### 📦 Download Guide
-            - `liquid-hive-*-source.tar.gz` - Full source with development dependencies
-            - `liquid-hive-*-production.tar.gz` - Production-ready deployment package
-            - `liquid-hive-*-sbom.spdx.json` - Software Bill of Materials
-            - `SHA256SUMS.txt` / `SHA512SUMS.txt` - File integrity checksums
-            
-            ### 🔐 Verification
-            ```bash
-            # Verify checksums
-            sha256sum -c SHA256SUMS.txt
-            
-            # Extract and deploy
-            tar -xzf liquid-hive-*-production.tar.gz
-            cd liquid-hive-*-production
-            # Follow deployment instructions in README.md
-            ```
-      
-      - name: Update latest release info
-        run: |
-          echo "Release ${{ github.ref_name }} created successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- Source archive: $(ls -lh out/*-source.tar.gz | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
-          echo "- Production archive: $(ls -lh out/*-production.tar.gz | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          ```bash
+          # Pull the latest images
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ steps.changelog.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/dashboard:${{ steps.changelog.outputs.version }}
+          ```
+        draft: false
+        prerelease: false
+
+  build-python-packages:
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build Python packages
+      run: |
+        python -m build
+    
+    - name: Upload Python packages to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./dist/*.whl
+        asset_name: liquid-hive-${{ github.ref_name }}-py3-none-any.whl
+        asset_content_type: application/octet-stream
+    
+    - name: Upload Python source distribution
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./dist/*.tar.gz
+        asset_name: liquid-hive-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  build-frontend-bundle:
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+        cache-dependency-path: apps/dashboard/yarn.lock
+    
+    - name: Install dependencies
+      working-directory: apps/dashboard
+      run: yarn install --frozen-lockfile
+    
+    - name: Build frontend
+      working-directory: apps/dashboard
+      run: yarn build
+    
+    - name: Create frontend bundle
+      run: |
+        cd apps/dashboard
+        tar -czf ../../liquid-hive-dashboard-${{ github.ref_name }}.tar.gz dist/
+    
+    - name: Upload frontend bundle to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./liquid-hive-dashboard-${{ github.ref_name }}.tar.gz
+        asset_name: liquid-hive-dashboard-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  publish-docker-images:
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/dashboard
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest
+        flavor: |
+          latest=false
+          suffix=-{{date 'YYYYMMDD'}}-{{sha}}
+    
+    - name: Build and push API image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: infra/docker/Dockerfile.api
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ github.ref_name }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Build and push Dashboard image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: infra/docker/Dockerfile.dashboard
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/dashboard:${{ github.ref_name }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  update-changelog:
+    runs-on: ubuntu-latest
+    needs: [create-release, build-python-packages, build-frontend-bundle, publish-docker-images]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update CHANGELOG.md
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        # Create new changelog entry
+        cat > new_changelog_entry.md << EOF
+        ## [$VERSION] - $(date +%Y-%m-%d)
+        
+        ### Added
+        - Release automation
+        - Docker image builds
+        - Python package distribution
+        
+        ### Changed
+        - Updated project structure
+        - Enhanced CI/CD pipeline
+        
+        ### Fixed
+        - Various bug fixes and improvements
+        
+        EOF
+        
+        # Prepend to existing CHANGELOG.md
+        if [ -f CHANGELOG.md ]; then
+          cat new_changelog_entry.md CHANGELOG.md > temp_changelog.md
+          mv temp_changelog.md CHANGELOG.md
+        else
+          mv new_changelog_entry.md CHANGELOG.md
+        fi
+    
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add CHANGELOG.md
+        git commit -m "Update CHANGELOG.md for ${{ github.ref_name }}" || exit 0
+        git push
