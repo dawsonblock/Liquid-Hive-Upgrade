@@ -305,16 +305,12 @@ export default function App() {
 
 function HeaderPollingChip() {
   // Lightweight consumer for header; safe because ProvidersProvider wraps App
-  try {
-    const { autoRefresh, intervalMs } = useProviders();
-    const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
-    const color: any = autoRefresh ? 'info' : 'default';
-    return (
-      <Tooltip title='Providers status polling'>
-        <Chip size='small' label={label} color={color} variant='outlined' sx={{ mr: 1 }} />
-      </Tooltip>
-    );
-  } catch {
-    return null;
-  }
+  const { autoRefresh, intervalMs } = useProviders();
+  const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
+  const color: any = autoRefresh ? 'info' : 'default';
+  return (
+    <Tooltip title='Providers status polling'>
+      <Chip size='small' label={label} color={color} variant='outlined' sx={{ mr: 1 }} />
+    </Tooltip>
+  );
 }

@@ -40,7 +40,7 @@ test('sends an image when a file is selected', async () => {
 });
 
 test('copy and regenerate actions work for assistant messages', async () => {
-  const { postChat } = require('../services/api');
+  const { postChat } = await import('../services/api');
   renderWithProviders(<ChatPanel />);
   const input = screen.getByPlaceholderText(/type a message/i);
   fireEvent.change(input, { target: { value: 'Hello' } });

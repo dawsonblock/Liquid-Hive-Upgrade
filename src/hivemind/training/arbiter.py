@@ -261,7 +261,9 @@ Please analyze and refine this answer, providing a higher-quality version."""
                     if all(field in parsed for field in required_fields):
                         return parsed
             except Exception as e:
-                self.logger.error(f"Error while attempting to extract embedded JSON from oracle response: {e}")
+                self.logger.error(
+                    f"Error while attempting to extract embedded JSON from oracle response: {e}"
+                )
             return None
 
     def _create_fallback_response(self, original_answer: str) -> dict[str, Any]:

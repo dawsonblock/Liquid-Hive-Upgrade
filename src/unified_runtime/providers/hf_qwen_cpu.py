@@ -5,9 +5,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from typing import Any
-import logging
+
 from .base_provider import BaseProvider, GenRequest, GenResponse
 
 try:
@@ -24,6 +25,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
 
 class QwenCPUProvider(BaseProvider):
     """Qwen 2.5 7B Instruct local CPU provider as fallback."""
@@ -273,9 +275,7 @@ class QwenCPUProvider(BaseProvider):
                         0
                     ).total_memory // (1024**2)
                 except Exception as exc:
-                    logger.warning(
-                        "Failed to fetch GPU memory info during health check: %r", exc
-                    )
+                    logger.warning("Failed to fetch GPU memory info during health check: %r", exc)
 
             return health_status
 

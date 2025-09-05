@@ -4,6 +4,7 @@
 A tool to gather system information, monitor resources, and check system health.
 """
 
+import logging
 import os
 import platform
 import time
@@ -11,7 +12,7 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-import logging
+
 from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
