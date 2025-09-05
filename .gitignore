@@ -153,4 +153,7 @@ sbom.spdx.json
 
 # Environment-specific
 .dockerignore
-!.env.example
+!.env.example-e 
+# Environment files
+*.env
+*.env.*
