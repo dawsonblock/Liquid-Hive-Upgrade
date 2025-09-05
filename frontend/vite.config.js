@@ -15,19 +15,19 @@ export default defineConfig({
     },
     server: {
         host: '0.0.0.0',
-        port: 3000,
+        port: 5173,
         proxy: {
             '/api': {
                 target: process.env.VITE_BACKEND_URL ||
                     process.env.REACT_APP_BACKEND_URL ||
-                    'http://localhost:8000',
+                    'http://localhost:8001',
                 changeOrigin: true,
-                rewrite: path => path.replace(/^\/api/, '/api'),
+                rewrite: path => path.replace(/^\/api/, ''),
             },
             '/ws': {
                 target: (process.env.VITE_BACKEND_URL ||
                     process.env.REACT_APP_BACKEND_URL ||
-                    'http://localhost:8000').replace('http', 'ws'),
+                    'http://localhost:8001').replace('http', 'ws'),
                 ws: true,
                 changeOrigin: true,
             },

@@ -164,30 +164,11 @@ assets_large/
 .emergent/
 *.swp
 *.swo
--e 
-# Environment files
+
+# Environment files (allow .env.example)
 *.env
 *.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+!.env.example
 
 # Binary artifacts and indices
 *.bin
