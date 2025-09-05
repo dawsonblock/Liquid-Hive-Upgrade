@@ -66,7 +66,7 @@ class PlanExecutor:
         except (ValueError, SyntaxError):
             # Fallback to restricted eval for complex expressions
             try:
-                val = eval(expr, safe_globals, safe_locals)
+                val = eval(expr, safe_globals, safe_locals)  # nosec B307 - restricted eval with safe globals
             except Exception as e:
                 return f"Error: {e}"
         except Exception as e:

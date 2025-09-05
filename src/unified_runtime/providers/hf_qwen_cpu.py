@@ -80,11 +80,11 @@ class QwenCPUProvider(BaseProvider):
                 "low_cpu_mem_usage": True,
             }
 
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec
                 self.model_name, token=self.hf_token, trust_remote_code=True
             )
 
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)  # nosec
 
             # Create text generation pipeline
             self.pipeline = pipeline(

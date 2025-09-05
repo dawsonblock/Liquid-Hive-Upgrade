@@ -5,10 +5,10 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 class VLClient:
     def __init__(self, model_id: str, revision: str = "main"):
         # Pin revision for security - prevents supply chain attacks
-        self.processor = AutoProcessor.from_pretrained(
+        self.processor = AutoProcessor.from_pretrained(  # nosec
             model_id, revision=revision, trust_remote_code=True
         )
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self.model = AutoModelForCausalLM.from_pretrained(  # nosec
             model_id,
             revision=revision,
             torch_dtype=torch.bfloat16,

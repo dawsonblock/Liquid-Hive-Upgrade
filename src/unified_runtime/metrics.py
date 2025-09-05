@@ -29,7 +29,7 @@ else:  # pragma: no cover
 def _tenant_label(tenant: str | None) -> str:
     t = tenant or "global"
     try:
-        h = hashlib.sha1(t.encode()).hexdigest()[:8]
+        h = hashlib.sha256(t.encode()).hexdigest()[:8]
         return f"t-{h}"
     except Exception:
         return "t-unknown"

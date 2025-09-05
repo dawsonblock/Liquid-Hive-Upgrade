@@ -35,7 +35,7 @@ class LoRAXClient:
         ).encode()
         try:
             r = req.Request(url, data=body, headers=self._headers(), method="POST")
-            with req.urlopen(r, timeout=30) as resp:
+            with req.urlopen(r, timeout=30) as resp:  # nosec B310 - controlled LoRAX endpoint
                 return json.loads(resp.read().decode())
         except err.HTTPError as e:
             return {"status": "error", "detail": f"HTTP {e.code}: {e.reason}"}

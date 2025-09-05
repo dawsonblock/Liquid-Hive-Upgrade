@@ -599,7 +599,7 @@ def _prom_q(base_url: str | None, promql: str) -> dict[str, Any] | None:
         return None
     try:
         params = _u.urlencode({"query": promql})
-        with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
+        with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:  # nosec B310 - controlled prometheus URL
             data = cast(dict[str, Any], _json.loads(r.read().decode()))
             if data.get("status") == "success":
                 return cast(dict[str, Any] | None, data.get("data"))
@@ -700,7 +700,7 @@ async def vllm_models() -> dict[str, Any]:
         if settings is None or settings.vllm_endpoint is None:
             return {"error": "vLLM endpoint not configured"}
         url = settings.vllm_endpoint.rstrip("/") + "/v1/models"
-        with _req.urlopen(url, timeout=5) as r:
+        with _req.urlopen(url, timeout=5) as r:  # nosec B310 - controlled vLLM endpoint URL
             data = _json.loads(r.read().decode())
             return data
     except Exception as exc:

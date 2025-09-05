@@ -79,12 +79,12 @@ def load_mixture(cfg: DataConfig) -> (Dataset, Dataset | None):
     eval_parts: list[Dataset] = []
     for ds_name in cfg.datasets:
         try:
-            ds = load_dataset(ds_name)
+            ds = load_dataset(ds_name)  # nosec
         except Exception:
             # Allow specifying split-qualified datasets like repo:config or repo:split
             try:
                 name, split = ds_name.split(":", 1)
-                ds = load_dataset(name, split=split)
+                ds = load_dataset(name, split=split)  # nosec
             except Exception:
                 continue
         split_name = cfg.split

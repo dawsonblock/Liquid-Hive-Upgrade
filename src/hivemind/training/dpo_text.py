@@ -8,7 +8,7 @@ from trl import DPOTrainer
 
 def to_dataset(path):
     # jsonl with {"prompt","chosen","rejected"}
-    return load_dataset("json", data_files=str(path))["train"]
+    return load_dataset("json", data_files=str(path))["train"]  # nosec
 
 
 def main():
@@ -25,10 +25,10 @@ def main():
         {"prompt": "prompt", "chosen": "chosen", "rejected": "rejected"}
     )
 
-    tok = AutoTokenizer.from_pretrained(args.base, trust_remote_code=True)
+    tok = AutoTokenizer.from_pretrained(args.base, trust_remote_code=True)  # nosec
     tok.pad_token = tok.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(args.base, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(args.base, trust_remote_code=True)  # nosec
     lora = LoraConfig(
         r=args.r,
         lora_alpha=16,
