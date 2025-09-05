@@ -80,9 +80,11 @@ jobs:
       - name: Format check (ruff)
         run: ruff format --check .
       - name: Type check (mypy)
-        run: mypy src/ || true  # Allow failure for now
+        run: mypy src/
+        continue-on-error: true
       - name: Security scan (bandit)
-        run: bandit -r src/ -f json -o bandit-report.json || true
+        run: bandit -r src/ -f json -o bandit-report.json
+        continue-on-error: true
       - name: Tests
         run: pytest -q --maxfail=1 --disable-warnings --cov --cov-report=xml
       - uses: actions/upload-artifact@v4

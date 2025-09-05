@@ -57,7 +57,7 @@ class ConfidenceModeler:
         if not self.embedding_model:
             return None
 
-        text_hash = hashlib.md5(text.encode()).hexdigest()
+        text_hash = hashlib.sha256(text.encode()).hexdigest()
 
         if text_hash in self.semantic_cache:
             return self.semantic_cache[text_hash]
