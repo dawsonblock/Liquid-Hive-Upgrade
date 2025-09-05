@@ -120,6 +120,14 @@ async def config_info() -> dict[str, Any]:
     }
 
 
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint."""
+    # Update component health before serving metrics
+    check_and_update_component_health()
+    return get_metrics_response()
+
+
 if __name__ == "__main__":
     import uvicorn
     
