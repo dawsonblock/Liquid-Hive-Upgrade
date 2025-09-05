@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # ============================================================================
 # Build stage 2: Frontend assets
 # ============================================================================
-FROM node:20-alpine as frontend-builder
+FROM node:24-alpine as frontend-builder
 LABEL stage=frontend-builder
 
 # Set up Node.js environment for security
