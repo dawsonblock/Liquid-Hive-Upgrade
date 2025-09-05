@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liquid-hive"
-version = "0.1.0"
+version = "1.0.0"
 description = "Liquid Hive - Advanced AI Agent Platform"
 authors = [
     {name = "Liquid Hive Team", email = "team@liquidhive.ai"}
