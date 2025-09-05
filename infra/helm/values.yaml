@@ -1,0 +1,348 @@
+# =============================================================================
+# Liquid-Hive-Upgrade Helm Chart Values
+# Production-ready configuration with comprehensive settings
+# =============================================================================
+
+# =============================================================================
+# Image Configuration
+# =============================================================================
+image:
+  repository: ghcr.io/liquid-hive/liquid-hive-upgrade
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# =============================================================================
+# Deployment Configuration
+# =============================================================================
+replicaCount: 3
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: api.liquid-hive.dev
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: liquid-hive.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: liquid-hive-tls
+      hosts:
+        - api.liquid-hive.dev
+
+# =============================================================================
+# Application Environment Configuration
+# =============================================================================
+env:
+  # Core toggles
+  ENABLE_PLANNER: "true"
+  ENABLE_ARENA: "true"
+  ENABLE_INTERNET_AGENT: "false"
+
+  # Environment
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+
+  # Server settings
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  WORKERS: "4"
+
+  # Rate limiting
+  RATE_LIMIT_RPS: "50"
+  RATE_LIMIT_BURST: "100"
+
+  # Routing
+  ROUTING_PROFILE: "balanced"
+
+  # Observability
+  OTEL_SERVICE_NAME: "liquid-hive-upgrade"
+  OTEL_SERVICE_VERSION: "2.0.0"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  OTEL_TRACES_SAMPLER: "parentbased_always_on"
+  PROMETHEUS_ENABLED: "true"
+
+  # Logging
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+
+  # Tenancy
+  TENANCY_MODE: "multi"
+  MAX_TENANTS: "1000"
+
+# =============================================================================
+# Secrets Configuration
+# =============================================================================
+secrets:
+  # JWT Configuration
+  API_JWT_PUBLIC_KEY_PATH: "/run/secrets/api_jwt_pub"
+  API_JWT_AUDIENCE: "liquid-hive"
+  JWT_ALGORITHM: "RS256"
+
+  # External secret references (will be created separately)
+  externalSecrets:
+    - name: "liquid-hive-secrets"
+      keys:
+        - ADMIN_TOKEN
+        - DEEPSEEK_API_KEY
+        - OPENAI_API_KEY
+        - ANTHROPIC_API_KEY
+        - GEMINI_API_KEY
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+databases:
+  mongodb:
+    enabled: true
+    connectionString: "mongodb://mongodb:27017/liquid_hive"
+    secretRef: "mongodb-credentials"
+
+  redis:
+    enabled: true
+    url: "redis://redis:6379/0"
+    passwordSecretRef: "redis-credentials"
+
+  neo4j:
+    enabled: true
+    uri: "bolt://neo4j:7687"
+    user: "neo4j"
+    passwordSecretName: "neo4j-credentials"
+
+  qdrant:
+    enabled: true
+    url: "http://qdrant:6333"
+    apiKeySecretRef: "qdrant-credentials"
+
+# =============================================================================
+# Resource Configuration
+# =============================================================================
+resources:
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+
+# =============================================================================
+# Auto-scaling Configuration
+# =============================================================================
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# =============================================================================
+# Health Checks Configuration
+# =============================================================================
+healthChecks:
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
+
+  readinessProbe:
+    httpGet:
+      path: /api/ready
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+  startupProbe:
+    httpGet:
+      path: /api/health
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
+
+# =============================================================================
+# Persistence Configuration
+# =============================================================================
+persistence:
+  enabled: true
+  storageClass: "fast-ssd"
+  size: "10Gi"
+  accessMode: "ReadWriteOnce"
+
+volumes:
+  - name: app-data
+    size: "10Gi"
+    storageClass: "fast-ssd"
+  - name: logs
+    size: "5Gi"
+    storageClass: "standard"
+
+# =============================================================================
+# Network Policies
+# =============================================================================
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: liquid-hive-system
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nginx-ingress
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+# =============================================================================
+# Pod Disruption Budget
+# =============================================================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# =============================================================================
+# Service Monitor (Prometheus)
+# =============================================================================
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    app: liquid-hive-upgrade
+  endpoints:
+    - port: http
+      path: /metrics
+
+# =============================================================================
+# Node Configuration
+# =============================================================================
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - liquid-hive-upgrade
+          topologyKey: kubernetes.io/hostname
+
+# =============================================================================
+# Additional Configuration
+# =============================================================================
+annotations: {}
+labels: {}
+
+configMaps: {}
+
+# Enable Pod Security Standards
+podSecurityStandards:
+  enforce: "restricted"
+  audit: "restricted"
+  warn: "restricted"

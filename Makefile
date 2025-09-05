@@ -1,268 +1,250 @@
+# Liquid Hive Development Makefile
 
-# Liquid Hive Upgrade - Makefile
-
-SHELL := /bin/bash
-PY := python
-PIP := pip
-IMAGE ?= liquid-hive:dev
-IMAGE_REPO ?= ghcr.io/OWNER/REPO/liquid-hive
-IMAGE_TAG ?= latest
-RELEASE ?= lh
-
-.PHONY: help
-help:
-	@echo "Common targets:"
-	@echo "  make install            # install Python deps"
-	@echo "  make test               # run fast unit tests (planner + arena)"
-	@echo "  make test-all           # run full test suite"
-	@echo "  make openapi            # export OpenAPI to docs/openapi.json"
-	@echo "  make docker-build       # build Docker image"
-	@echo "  make docker-run         # run Docker image locally"
-	@echo "  make helm-install       # install Helm chart"
-	@echo "  make helm-uninstall     # uninstall Helm release"
-	@echo "  make precommit-install  # install pre-commit git hooks"
-	@echo "  make lint               # run ruff checks"
-	@echo "  make format             # run formatters (ruff, black, isort if available)"
-	@echo "  make audit              # inventory + duplicate analysis (dry-run)"
-	@echo "  make clean              # remove artifacts (safe apply)"
-	@echo "  make distclean          # deep clean (node_modules, caches, reports)"
-
-.PHONY: install
-install:
-	$(PIP) install -U pip wheel
-	@if [ -f requirements.txt ]; then $(PIP) install -r requirements.txt; fi
-	@echo "Install complete"
-
-.PHONY: test
-test:
-	ENABLE_ARENA=true pytest -q tests/test_planner.py tests/test_arena.py
-
-.PHONY: test-all
-test-all:
-	pytest -q
-
-.PHONY: openapi
-openapi:
-	$(PY) scripts/export_openapi.py
-
-.PHONY: docker-build
-docker-build:
-	docker build -t $(IMAGE) .
-
-.PHONY: docker-run
-docker-run:
-	docker run --rm -p 8000:8000 $(IMAGE)
-
-.PHONY: helm-install
-helm-install:
-	helm upgrade --install $(RELEASE) ./helm \
-	  --set image.repository=$(IMAGE_REPO) \
-	  --set image.tag=$(IMAGE_TAG)
-
-.PHONY: helm-uninstall
-helm-uninstall:
-	helm uninstall $(RELEASE) || true
-
-.PHONY: precommit-install
-precommit-install:
-	pre-commit install || true
-
-.PHONY: lint
-lint:
-	ruff check . || true
-
-.PHONY: format
-format:
-	ruff format . || true
-	black . || true
-	isort . || true
-
-.PHONY: audit
-audit:
-	@mkdir -p reports
-	$(PY) tools/audit_repo.py
-	$(PY) tools/dedupe_by_hash.py  # dry-run by default
-
-.PHONY: clean
-clean:
-	$(PY) tools/clean_repo.py --apply
-
-.PHONY: distclean
-distclean:
-	$(PY) tools/clean_repo.py --apply --deep
-
-.PHONY: help dev-setup install test lint format security-scan type-check clean docs docker-build docker-run docker-clean
+.PHONY: help install dev test lint format clean build docker up down logs shell
 
 # Default target
 help: ## Show this help message
-	@echo "🧠 Liquid-Hive Development Commands"
-	@echo ""
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo "Liquid Hive Development Commands"
+	@echo "================================="
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Development setup
-dev-setup: ## Full development environment setup
-	@echo "🚀 Setting up development environment..."
-	@python -m venv .venv || python3 -m venv .venv
-	@echo "📦 Installing Python dependencies..."
-	@. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt
-	@echo "📦 Installing frontend dependencies..."
-	@cd frontend && yarn install --frozen-lockfile
-	@echo "🏗️  Building frontend..."
-	@cd frontend && yarn build
-	@echo "✅ Development setup complete!"
-	@echo ""
-	@echo "🎯 Next steps:"
-	@echo "  1. Activate virtual environment: source .venv/bin/activate"
-	@echo "  2. Start services: docker-compose up --build"
-	@echo "  3. Visit: http://localhost:3000 (frontend) or http://localhost:8000/docs (API)"
-
+# Installation
 install: ## Install all dependencies
-	@echo "📦 Installing dependencies..."
-	@. .venv/bin/activate && pip install -r requirements.txt
-	@cd frontend && yarn install --frozen-lockfile
+	@echo "Installing Python dependencies..."
+	pip install -e .[dev,test,docs]
+	@echo "Installing Node.js dependencies..."
+	cd apps/dashboard && yarn install
+	@echo "Installing pre-commit hooks..."
+	pre-commit install
+
+install-prod: ## Install production dependencies
+	@echo "Installing production dependencies..."
+	pip install -e .
+
+# Development
+dev: ## Start development environment
+	@echo "Starting development environment..."
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+	@echo "Development environment started!"
+	@echo "API: http://localhost:8000"
+	@echo "Dashboard: http://localhost:3000"
+	@echo "Grafana: http://localhost:3001"
+
+dev-api: ## Start API in development mode
+	@echo "Starting API in development mode..."
+	uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
+
+dev-dashboard: ## Start dashboard in development mode
+	@echo "Starting dashboard in development mode..."
+	cd apps/dashboard && yarn dev
 
 # Testing
-test: ## Run all tests (Python + Node.js)
-	@echo "🧪 Running all tests..."
-	@echo "Backend tests:"
-	@. .venv/bin/activate && pytest tests/ -v --cov=src --cov-report=term-missing
-	@echo ""
-	@echo "Frontend tests:"
-	@cd frontend && yarn test --ci --watchAll=false
+test: ## Run all tests
+	@echo "Running Python tests..."
+	pytest tests/unit tests/integration -v --cov=libs --cov=apps --cov-report=html --cov-report=term-missing
+	@echo "Running TypeScript tests..."
+	cd apps/dashboard && yarn test --coverage --watchAll=false
 
-test-python: ## Run Python tests only
-	@. .venv/bin/activate && pytest tests/ -v --cov=src --cov-report=term-missing
+test-unit: ## Run unit tests only
+	@echo "Running unit tests..."
+	pytest tests/unit -v
 
-test-frontend: ## Run frontend tests only
-	@cd frontend && yarn test --ci --watchAll=false
+test-integration: ## Run integration tests only
+	@echo "Running integration tests..."
+	pytest tests/integration -v
 
-test-smoke: ## Run smoke tests
-	@. .venv/bin/activate && python tests/test_smoke.py
+test-e2e: ## Run end-to-end tests
+	@echo "Running E2E tests..."
+	docker-compose -f docker-compose.yml -f docker-compose.test.yml up --build
+	docker-compose -f docker-compose.yml -f docker-compose.test.yml exec api pytest tests/e2e -v
+	docker-compose -f docker-compose.yml -f docker-compose.test.yml down -v
 
-# Code quality
+test-coverage: ## Run tests with coverage report
+	@echo "Running tests with coverage..."
+	pytest tests/ --cov=libs --cov=apps --cov-report=html --cov-report=xml --cov-report=term-missing
+
+# Code Quality
 lint: ## Run all linters
-	@echo "🔍 Running linters..."
-	@echo "Python (ruff):"
-	@. .venv/bin/activate && ruff check src/ tests/
-	@echo ""
-	@echo "Frontend (eslint):"
-	@cd frontend && yarn lint
+	@echo "Running Python linters..."
+	ruff check libs apps
+	black --check libs apps
+	isort --check-only libs apps
+	mypy libs apps
+	bandit -r libs apps
+	safety check
+	@echo "Running TypeScript linters..."
+	cd apps/dashboard && yarn lint
+	cd apps/dashboard && yarn type-check
 
-lint-fix: ## Auto-fix linting issues
-	@echo "🔧 Auto-fixing linting issues..."
-	@. .venv/bin/activate && ruff check --fix src/ tests/
-	@cd frontend && yarn lint:fix
-
-format: ## Auto-format all code
-	@echo "🎨 Formatting code..."
-	@. .venv/bin/activate && ruff format src/ tests/
-	@cd frontend && yarn format
+format: ## Format all code
+	@echo "Formatting Python code..."
+	ruff format libs apps
+	black libs apps
+	isort libs apps
+	@echo "Formatting TypeScript code..."
+	cd apps/dashboard && yarn format
 
 format-check: ## Check code formatting
-	@echo "🎨 Checking code formatting..."
-	@. .venv/bin/activate && ruff format --check src/ tests/
-	@cd frontend && yarn format:check
-
-type-check: ## Run type checking (mypy)
-	@echo "🔍 Type checking..."
-	@. .venv/bin/activate && mypy src/
-
-# Security
-security-scan: ## Run security analysis (bandit)
-	@echo "🛡️  Running security scan..."
-	@. .venv/bin/activate && bandit -r src/ -f json -o bandit-report.json
-	@echo "Security report generated: bandit-report.json"
-	@cd frontend && yarn audit
-
-# Cleanup
-clean: ## Clean build artifacts
-	@echo "🧹 Cleaning build artifacts..."
-	@rm -rf build/ dist/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/
-	@rm -rf frontend/dist/ frontend/.next/ frontend/coverage/ frontend/node_modules/.cache/
-	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	@find . -name "*.pyc" -delete
-	@find . -name "*.pyo" -delete
-	@find . -name "*.pyd" -delete
-	@find . -name "*.db" -delete
-	@find . -name "*.log" -delete
-	@find . -name "*.tmp" -delete
-	@echo "✅ Cleanup complete!"
-
-# Documentation
-docs: ## Build documentation
-	@echo "📚 Building documentation..."
-	@. .venv/bin/activate && mkdocs build --clean
-
-docs-serve: ## Serve documentation locally
-	@echo "📚 Serving documentation at http://localhost:8080..."
-	@. .venv/bin/activate && mkdocs serve
+	@echo "Checking Python formatting..."
+	ruff format --check libs apps
+	black --check libs apps
+	isort --check-only libs apps
+	@echo "Checking TypeScript formatting..."
+	cd apps/dashboard && yarn format:check
 
 # Docker
-docker-build: ## Build production Docker image
-	@echo "🐳 Building Docker image..."
-	@docker build -t liquid-hive:latest .
-	@docker build -t liquid-hive:dev -f Dockerfile.dev .
+build: ## Build all Docker images
+	@echo "Building Docker images..."
+	docker-compose build
 
-docker-run: ## Run in Docker
-	@echo "🐳 Running Docker container..."
-	@docker-compose up --build
+build-api: ## Build API Docker image
+	@echo "Building API Docker image..."
+	docker build -f infra/docker/Dockerfile.api -t liquid-hive-api .
 
-docker-clean: ## Clean Docker resources
-	@echo "🐳 Cleaning Docker resources..."
-	@docker-compose down --volumes --remove-orphans
-	@docker system prune -f
+build-dashboard: ## Build dashboard Docker image
+	@echo "Building dashboard Docker image..."
+	docker build -f infra/docker/Dockerfile.dashboard -t liquid-hive-dashboard .
+
+# Docker Compose
+up: ## Start all services
+	@echo "Starting all services..."
+	docker-compose up -d
+
+up-dev: ## Start development services
+	@echo "Starting development services..."
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+up-prod: ## Start production services
+	@echo "Starting production services..."
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+down: ## Stop all services
+	@echo "Stopping all services..."
+	docker-compose down
+
+down-volumes: ## Stop all services and remove volumes
+	@echo "Stopping all services and removing volumes..."
+	docker-compose down -v
+
+logs: ## Show logs for all services
+	@echo "Showing logs for all services..."
+	docker-compose logs -f
+
+logs-api: ## Show API logs
+	@echo "Showing API logs..."
+	docker-compose logs -f api
+
+logs-dashboard: ## Show dashboard logs
+	@echo "Showing dashboard logs..."
+	docker-compose logs -f dashboard
 
 # Database
 db-migrate: ## Run database migrations
-	@echo "💾 Running database migrations..."
-	@. .venv/bin/activate && python scripts/migrate.py
+	@echo "Running database migrations..."
+	alembic upgrade head
 
-db-seed: ## Seed database with sample data
-	@echo "🌱 Seeding database..."
-	@. .venv/bin/activate && python scripts/seed_data.py
+db-migration: ## Create new database migration
+	@echo "Creating new database migration..."
+	@read -p "Enter migration message: " msg; \
+	alembic revision --autogenerate -m "$$msg"
 
-# Development utilities
-start-backend: ## Start backend development server
-	@echo "🚀 Starting backend server..."
-	@. .venv/bin/activate && cd src && python -m uvicorn unified_runtime.server:app --reload --host 0.0.0.0 --port 8000
+db-reset: ## Reset database
+	@echo "Resetting database..."
+	docker-compose down postgres
+	docker volume rm liquid-hive_postgres_data || true
+	docker-compose up -d postgres
+	sleep 5
+	make db-migrate
 
-start-frontend: ## Start frontend development server
-	@echo "🚀 Starting frontend server..."
-	@cd frontend && yarn dev
+# Shell access
+shell-api: ## Access API container shell
+	@echo "Accessing API container shell..."
+	docker-compose exec api bash
 
-start-services: ## Start all supporting services (Redis, Neo4j, etc.)
-	@echo "🚀 Starting supporting services..."
-	@docker-compose up redis neo4j qdrant prometheus grafana
+shell-db: ## Access database shell
+	@echo "Accessing database shell..."
+	docker-compose exec postgres psql -U liquid_hive liquid_hive
 
-# Deployment
-build-prod: ## Build production artifacts
-	@echo "🏭 Building production artifacts..."
-	@cd frontend && yarn build
-	@. .venv/bin/activate && python -m build
+shell-redis: ## Access Redis shell
+	@echo "Accessing Redis shell..."
+	docker-compose exec redis redis-cli
 
-release-check: ## Check if ready for release
-	@echo "✅ Checking release readiness..."
-	@make test
-	@make lint
-	@make security-scan
-	@make type-check
-	@echo "🎉 Ready for release!"
+# Cleanup
+clean: ## Clean up temporary files
+	@echo "Cleaning up temporary files..."
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -delete
+	find . -type d -name ".pytest_cache" -delete
+	find . -type d -name ".mypy_cache" -delete
+	find . -type d -name ".ruff_cache" -delete
+	find . -type d -name "htmlcov" -delete
+	find . -type f -name "coverage.xml" -delete
+	find . -type f -name ".coverage" -delete
+	cd apps/dashboard && yarn clean || true
 
-# Quick development commands
-quick-start: ## Quick start for development
-	@echo "⚡ Quick starting development environment..."
-	@docker-compose up -d redis neo4j qdrant
-	@sleep 5
-	@make start-backend &
-	@make start-frontend &
-	@echo "🎯 Development servers started!"
-	@echo "  Frontend: http://localhost:3000"
-	@echo "  Backend:  http://localhost:8000"
-	@echo "  API Docs: http://localhost:8000/docs"
+clean-docker: ## Clean up Docker resources
+	@echo "Cleaning up Docker resources..."
+	docker-compose down -v
+	docker system prune -f
+	docker volume prune -f
 
-stop: ## Stop all development servers
-	@echo "🛑 Stopping development servers..."
-	@docker-compose down
-	@pkill -f "uvicorn" || true
-	@pkill -f "vite" || true
-	@echo "✅ All servers stopped!"
+# Security
+security: ## Run security checks
+	@echo "Running security checks..."
+	bandit -r libs apps -f json -o bandit-report.json
+	bandit -r libs apps
+	safety check --json --output safety-report.json
+	safety check
+	@echo "Security checks completed!"
+
+# Documentation
+docs: ## Generate documentation
+	@echo "Generating documentation..."
+	pdoc --html libs --output-dir docs/api
+	@echo "Documentation generated in docs/api/"
+
+docs-serve: ## Serve documentation locally
+	@echo "Serving documentation..."
+	cd docs && python -m http.server 8001
+
+# Release
+release: ## Create a new release
+	@echo "Creating new release..."
+	@read -p "Enter version (e.g., v1.0.0): " version; \
+	git tag -a $$version -m "Release $$version"; \
+	git push origin $$version
+
+# Health checks
+health: ## Check service health
+	@echo "Checking service health..."
+	@echo "API Health:"
+	@curl -s http://localhost:8000/health | jq . || echo "API not responding"
+	@echo "Dashboard Health:"
+	@curl -s http://localhost:3000/health || echo "Dashboard not responding"
+	@echo "Database Health:"
+	@docker-compose exec postgres pg_isready -U liquid_hive || echo "Database not responding"
+	@echo "Redis Health:"
+	@docker-compose exec redis redis-cli ping || echo "Redis not responding"
+
+# Development workflow
+dev-setup: install dev ## Complete development setup
+	@echo "Development setup complete!"
+	@echo "Run 'make dev' to start the development environment"
+
+ci: lint test security ## Run CI pipeline locally
+	@echo "CI pipeline completed successfully!"
+
+# Environment management
+env-dev: ## Set development environment
+	@echo "Setting development environment..."
+	export APP_ENV=development
+	export DEBUG=true
+	export DATABASE_URL=sqlite:///./dev_liquid_hive.db
+	export REDIS_URL=redis://localhost:6379/0
+
+env-prod: ## Set production environment
+	@echo "Setting production environment..."
+	export APP_ENV=production
+	export DEBUG=false
+	export DATABASE_URL=postgresql://liquid_hive:password@localhost:5432/liquid_hive
+	export REDIS_URL=redis://localhost:6379/0

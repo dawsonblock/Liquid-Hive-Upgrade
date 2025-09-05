@@ -1,0 +1,24 @@
+# Development environment overrides
+app:
+  debug: true
+  environment: "development"
+
+api:
+  reload: true
+  log_level: "debug"
+
+database:
+  echo: true
+  url: "sqlite:///./dev_liquid_hive.db"
+
+logging:
+  level: "DEBUG"
+  format: "text"
+
+security:
+  secret_key: "dev-secret-key-not-for-production"
+  access_token_expire_minutes: 1440  # 24 hours for dev
+
+features:
+  debug_mode: true
+  mock_external_services: true

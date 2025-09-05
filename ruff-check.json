@@ -1,9 +1,0 @@
-ruff failed
-  Cause: Failed to load configuration `/workspace/ruff.toml`
-  Cause: Failed to parse /workspace/ruff.toml
-  Cause: TOML parse error at line 1, column 1
-  |
-1 | [tool.ruff]
-  | ^
-unknown field `tool`
-

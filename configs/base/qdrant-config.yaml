@@ -1,0 +1,57 @@
+# Qdrant Configuration for Liquid-Hive-Upgrade
+# Production-ready vector database configuration
+
+service:
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+  max_request_size_mb: 32
+  max_workers: 0  # Auto-detect based on CPU cores
+
+storage:
+  # Storage optimized for production workloads
+  storage_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+  temp_path: /qdrant/storage/tmp
+
+  # Performance settings
+  write_consistency_factor: 0.9
+  optimizers:
+    # Auto-optimize indexes and segments
+    deleted_threshold: 0.2
+    vacuum_min_vector_number: 1000
+    default_segment_number: 0
+    max_segment_size_kb: 0
+    memmap_threshold_kb: 0
+    indexing_threshold_kb: 20000
+    flush_interval_sec: 5
+    max_optimization_threads: 1
+
+# Resource limits and performance
+cluster:
+  enabled: false  # Single node deployment
+
+telemetry:
+  disabled: false
+
+# Logging configuration
+log_level: INFO
+
+# API and security settings
+service:
+  # CORS settings for web clients
+  enable_cors: true
+  cors_allow_credentials: false
+
+# Collection defaults
+collections:
+  # Default settings for new collections
+  default_segment_number: 2
+  on_disk_payload: true
+
+# Quantization settings for better performance
+quantization:
+  # Enable scalar quantization by default
+  scalar:
+    type: int8
+    always_ram: false

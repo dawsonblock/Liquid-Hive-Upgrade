@@ -1,0 +1,62 @@
+version: 1
+routing:
+  default_provider: deepseek_v3
+  fallback_chain: [deepseek_r1, openai_gpt4o_mini, qwen_7b_instruct]
+  # circuit breaker policy per provider
+  circuit_breakers:
+    default:
+      failure_threshold: 5 # trip after 5 consecutive failures
+      reset_timeout_sec: 30 # half-open after 30s
+      rolling_window_sec: 60
+      sample_min_requests: 20
+providers:
+  deepseek_v3:
+    kind: deepseek
+    base_url: https://api.deepseek.com/v3
+    api_key_env: DEEPSEEK_API_KEY # read from env or Vault at runtime
+    model: deepseek-chat
+    max_tokens: 4096
+    cost_profile: quality
+  deepseek_r1:
+    kind: deepseek
+    base_url: https://api.deepseek.com/r1
+    api_key_env: DEEPSEEK_R1_API_KEY
+    model: deepseek-reasoner
+    max_tokens: 8192
+    role: "reasoner"
+  openai_gpt4o_mini:
+    kind: openai
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4o-mini
+    max_tokens: 4096
+  anthropic_sonnet:
+    kind: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+    model: claude-3-5-sonnet
+  qwen_7b_instruct:
+    kind: qwen
+    base_url: https://api.qwen.ai/v1
+    api_key_env: QWEN_API_KEY
+    model: qwen2.5-7b-instruct
+    quant: "4-bit"
+policies:
+  # Token/$ guardrails and dynamic demotion/promotion
+  profiles:
+    cheap: { max_tokens: 1024, max_cost_usd_per_req: 0.002 }
+    balanced: { max_tokens: 2048, max_cost_usd_per_req: 0.01 }
+    quality: { max_tokens: 4096, max_cost_usd_per_req: 0.05 }
+  demote_on:
+    - reason: "low_confidence"
+      threshold: 0.35
+      action: "fallback"
+  promote_on:
+    - reason: "arena_win_rate"
+      threshold: 0.62
+      action: "prefer"
+admin:
+  hot_reload:
+    enabled: true
+    endpoint: /admin/reload-providers
+    auth_required: true
