@@ -93,10 +93,6 @@ coverage/
 docs/_build/
 
 # Models & Large Data (use Git LFS or Releases)
-data/
-datasets/
-artifacts/
-checkpoints/
 models/
 *.pkl
 *.h5
@@ -153,10 +149,21 @@ sbom.spdx.json
 
 # Environment-specific
 .dockerignore
-!.env.example-e 
-# Environment files
-*.env
-*.env.*
+!.env.example
+
+# Feedback Loop + Oracle System temporary files
+services/adapters/memory/
+services/adapters/models/
+services/event_bus/storage/
+services/adapters/templates/cache/
+
+# Large assets (moved to assets_large/)
+assets_large/
+
+# System-specific files
+.emergent/
+*.swp
+*.swo
 -e 
 # Environment files
 *.env
