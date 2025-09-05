@@ -144,9 +144,9 @@ deploy_kubernetes() {
     kubectl create namespace liquid-hive --dry-run=client -o yaml | kubectl apply -f -
 
     # Deploy with Helm
-    helm upgrade --install liquid-hive ./helm/liquid-hive \
+    helm upgrade --install liquid-hive ./infra/helm/liquid-hive \
         --namespace liquid-hive \
-        --values ./helm/liquid-hive/values-dev.yaml \
+        --values ./infra/helm/liquid-hive/values-dev.yaml \
         --wait
 
     print_success "Kubernetes deployment completed."

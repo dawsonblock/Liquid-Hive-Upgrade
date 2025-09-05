@@ -24,11 +24,12 @@ install-prod: ## Install production dependencies
 # Development
 dev: ## Start development environment
 	@echo "Starting development environment..."
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+	docker-compose up -d
 	@echo "Development environment started!"
 	@echo "API: http://localhost:8000"
 	@echo "Dashboard: http://localhost:3000"
 	@echo "Grafana: http://localhost:3001"
+	@echo "Prometheus: http://localhost:9090"
 
 dev-api: ## Start API in development mode
 	@echo "Starting API in development mode..."
@@ -41,7 +42,7 @@ dev-dashboard: ## Start dashboard in development mode
 # Testing
 test: ## Run all tests
 	@echo "Running Python tests..."
-	pytest tests/unit tests/integration -v --cov=libs --cov=apps --cov-report=html --cov-report=term-missing
+	pytest tests/ -v --cov=src --cov=apps --cov-report=html --cov-report=term-missing
 	@echo "Running TypeScript tests..."
 	cd apps/dashboard && yarn test --coverage --watchAll=false
 
@@ -66,11 +67,11 @@ test-coverage: ## Run tests with coverage report
 # Code Quality
 lint: ## Run all linters
 	@echo "Running Python linters..."
-	ruff check libs apps
-	black --check libs apps
-	isort --check-only libs apps
-	mypy libs apps
-	bandit -r libs apps
+	ruff check src apps
+	black --check src apps
+	isort --check-only src apps
+	mypy src apps
+	bandit -r src apps
 	safety check
 	@echo "Running TypeScript linters..."
 	cd apps/dashboard && yarn lint
@@ -191,16 +192,37 @@ clean-docker: ## Clean up Docker resources
 # Security
 security: ## Run security checks
 	@echo "Running security checks..."
-	bandit -r libs apps -f json -o bandit-report.json
-	bandit -r libs apps
+	bandit -r src apps -f json -o bandit-report.json
+	bandit -r src apps
 	safety check --json --output safety-report.json
 	safety check
 	@echo "Security checks completed!"
 
+# Deployment
+deploy: ## Deploy to Kubernetes using Helm
+	@echo "Deploying to Kubernetes..."
+	helm upgrade --install liquid-hive infra/helm/liquid-hive \
+		--namespace liquid-hive --create-namespace \
+		--values infra/helm/liquid-hive/values.yaml \
+		--values infra/helm/liquid-hive/values-dev.yaml \
+		--set image.tag=$(IMAGE_TAG) \
+		--wait
+	@echo "Deployment completed!"
+
+deploy-prod: ## Deploy to production
+	@echo "Deploying to production..."
+	helm upgrade --install liquid-hive infra/helm/liquid-hive \
+		--namespace liquid-hive-prod --create-namespace \
+		--values infra/helm/liquid-hive/values.yaml \
+		--values infra/helm/liquid-hive/values-aws-prod.yaml \
+		--set image.tag=$(IMAGE_TAG) \
+		--wait
+	@echo "Production deployment completed!"
+
 # Documentation
 docs: ## Generate documentation
 	@echo "Generating documentation..."
-	pdoc --html libs --output-dir docs/api
+	pdoc --html src --output-dir docs/api
 	@echo "Documentation generated in docs/api/"
 
 docs-serve: ## Serve documentation locally

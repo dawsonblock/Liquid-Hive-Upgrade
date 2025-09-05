@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from libs.core.config import get_config
-from libs.core.version import get_build_info
+from src.config import get_config
+from src.version import get_build_info
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

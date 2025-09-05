@@ -32,21 +32,8 @@ ingress:
 
 # Secrets Management Configuration
 secrets:
-  # Provider selection: vault, aws-secrets-manager, environment
+  # Provider selection: aws-secrets-manager, environment
   provider: "environment" # Default to environment for backward compatibility
-
-  # HashiCorp Vault configuration (for local development)
-  vault:
-    enabled: false
-    address: "http://vault:8200"
-    # For development only - in production use service accounts
-    token: ""
-    # KV mount path
-    mountPath: "secret"
-    # TLS configuration
-    tls:
-      enabled: false
-      skipVerify: false
 
   # AWS Secrets Manager configuration (for production)
   aws:

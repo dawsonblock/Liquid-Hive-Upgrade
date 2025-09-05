@@ -4,8 +4,8 @@ set -euo pipefail
 IMAGE_REPO=${1:-ghcr.io/your-org/liquid-hive}
 IMAGE_TAG=${2:-latest}
 NAMESPACE=${3:-default}
-VALUES_FILE=${4:-helm/liquid-hive/values-dev.yaml}
-CHART_DIR=$(cd "$(dirname "$0")/../liquid_hive_src/LIQUID-HIVE-main/helm/liquid-hive" && pwd)
+VALUES_FILE=${4:-infra/helm/liquid-hive/values-dev.yaml}
+CHART_DIR=$(cd "$(dirname "$0")/../infra/helm/liquid-hive" && pwd)
 
 export KUBECONFIG=${KUBECONFIG:-$HOME/.kube/config}
 
