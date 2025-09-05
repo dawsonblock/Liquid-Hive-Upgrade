@@ -11,7 +11,7 @@
 # ============================================================================
 # Build stage 1: Python dependencies
 # ============================================================================
-FROM python:3.11-slim as python-builder
+FROM python:3.13-slim as python-builder
 LABEL stage=python-builder
 
 # Install system dependencies needed for building Python packages
@@ -67,7 +67,7 @@ RUN trivy fs --exit-code 0 --format table /scan-target
 # ============================================================================
 # Runtime stage: Production image
 # ============================================================================
-FROM python:3.11-slim as runtime
+FROM python:3.13-slim as runtime
 LABEL maintainer="Liquid-Hive Team"
 LABEL version="2.0.0"
 LABEL description="Liquid-Hive-Upgrade: Oracle Provider Router with Planner & Arena"
