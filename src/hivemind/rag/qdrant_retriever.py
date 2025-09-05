@@ -18,7 +18,7 @@ import pathlib
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 try:
     import numpy as np
@@ -86,8 +86,8 @@ class QdrantRetriever:
         self.qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
 
         # Initialize components
-        self.embedding_model: Optional[SentenceTransformer] = None
-        self.qdrant_client: Optional[QdrantClient] = None
+        self.embedding_model: SentenceTransformer | None = None
+        self.qdrant_client: QdrantClient | None = None
         self.is_ready = False
         self.embedding_dimension = None
 
@@ -210,7 +210,7 @@ class QdrantRetriever:
             return {"error": str(e)}
 
     async def add_documents(
-        self, file_paths: list[str], metadata: Optional[dict[str, Any]] = None
+        self, file_paths: list[str], metadata: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Add documents to Qdrant with enhanced processing and metadata."""
         if not self.is_ready:
@@ -271,7 +271,7 @@ class QdrantRetriever:
             return results
 
     async def _process_document(
-        self, file_path: str, base_metadata: Optional[dict[str, Any]] = None
+        self, file_path: str, base_metadata: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Process a single document into chunks with embeddings."""
         try:
@@ -449,14 +449,14 @@ class QdrantRetriever:
 
                 if operation_info.status == UpdateStatus.COMPLETED:
                     uploaded_count += len(batch)
-                    log.debug(f"Uploaded batch {i//self.batch_size + 1}: {len(batch)} points")
+                    log.debug(f"Uploaded batch {i // self.batch_size + 1}: {len(batch)} points")
                 else:
                     log.warning(
-                        f"Batch upload {i//self.batch_size + 1} status: {operation_info.status}"
+                        f"Batch upload {i // self.batch_size + 1} status: {operation_info.status}"
                     )
 
             except Exception as e:
-                log.error(f"Failed to upload batch {i//self.batch_size + 1}: {e}")
+                log.error(f"Failed to upload batch {i // self.batch_size + 1}: {e}")
                 continue
 
         return uploaded_count
@@ -465,7 +465,7 @@ class QdrantRetriever:
         self,
         query: str,
         k: int = 5,
-        metadata_filter: Optional[dict[str, Any]] = None,
+        metadata_filter: dict[str, Any] | None = None,
         score_threshold: float = 0.0,
     ) -> list[Document]:
         """Enhanced search with metadata filtering and scoring."""
@@ -609,7 +609,7 @@ class QdrantRetriever:
                 content = content[:300] + "..."
 
             context_parts.append(
-                f"[{i+1}] Source: {source} (Type: {content_type}, Score: {score:.3f})\n{content}"
+                f"[{i + 1}] Source: {source} (Type: {content_type}, Score: {score:.3f})\n{content}"
             )
 
         return "\n\n".join(context_parts)

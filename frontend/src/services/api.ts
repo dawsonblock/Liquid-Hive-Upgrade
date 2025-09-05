@@ -1,4 +1,5 @@
 import axios from 'axios';
+
 import { getBackendHttpBase } from './env';
 
 // If an explicit backend base exists, point axios to it. Otherwise, rely on Vite dev proxy via '/api'.
@@ -12,11 +13,11 @@ export const api = axios.create({
 
 export const fetchState = () => api.get('/state').then(r => r.data);
 export const postChat = (q: string) =>
-  api.post('/chat?q=' + encodeURIComponent(q)).then(r => r.data);
+  api.post(`/chat?q=${  encodeURIComponent(q)}`).then(r => r.data);
 
 export const postVision = (form: FormData, groundingRequired: boolean) =>
   api
-    .post('/vision?grounding_required=' + String(groundingRequired), form, {
+    .post(`/vision?grounding_required=${  String(groundingRequired)}`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     .then(r => r.data);

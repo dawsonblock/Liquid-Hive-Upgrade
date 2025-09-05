@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -36,7 +36,7 @@ except Exception:
 class ConsentReq(BaseModel):
     scope: str
     target: str
-    ttl: Optional[int] = None
+    ttl: int | None = None
 
 
 @router.post("/consent/request")

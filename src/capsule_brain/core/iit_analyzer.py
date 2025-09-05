@@ -27,7 +27,7 @@ class IITAnalyzer:
         for i in range(8):
             self.graph.add_node(f"n{i}")
         for i in range(7):
-            self.graph.add_edge(f"n{i}", f"n{i+1}")
+            self.graph.add_edge(f"n{i}", f"n{i + 1}")
         self.engine.knowledge_graph = self.graph
 
     def get_initial_graph(self):

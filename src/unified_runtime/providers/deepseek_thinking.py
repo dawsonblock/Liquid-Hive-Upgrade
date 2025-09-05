@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import os
 import random
-from typing import Any, Optional
+from typing import Any
 
 from .base_provider import BaseProvider, GenRequest, GenResponse
 
@@ -160,7 +160,7 @@ Begin your response with <think> and end with your final answer outside the tags
         return final_answer
 
     def _fallback_response(
-        self, request: GenRequest, start_time: float, error: Optional[str] = None
+        self, request: GenRequest, start_time: float, error: str | None = None
     ) -> GenResponse:
         """Generate fallback response when API is unavailable."""
         fallback_content = (

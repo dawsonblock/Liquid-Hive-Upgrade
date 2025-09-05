@@ -24,7 +24,6 @@ import json
 import logging
 import os
 import random
-from typing import Optional
 
 try:
     import httpx
@@ -41,7 +40,7 @@ class DeepSeekClient:
     logic for environments without API access.
     """
 
-    def __init__(self, api_key: Optional[str] | None = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         # Read the API key from the environment if not explicitly provided.
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         self.base_url = "https://api.deepseek.com/v1/chat/completions"  # DeepSeek's actual endpoint

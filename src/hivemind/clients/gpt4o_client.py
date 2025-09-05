@@ -25,7 +25,6 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
 
 try:
     import httpx
@@ -42,7 +41,7 @@ class GPT4oClient:
     fallback logic for environments without API access.
     """
 
-    def __init__(self, api_key: Optional[str] | None = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.base_url = "https://api.openai.com/v1/chat/completions"  # Standard OpenAI endpoint
         # A simple backoff strategy for retrying requests.
@@ -92,7 +91,7 @@ class GPT4oClient:
                     return response.json()["choices"][0]["message"]["content"]
                 except httpx.RequestError as e:
                     logging.error(
-                        f"GPT-4o API request failed (attempt {attempt+1}/{self._max_retries+1}): {e}",
+                        f"GPT-4o API request failed (attempt {attempt + 1}/{self._max_retries + 1}): {e}",
                         exc_info=True,
                     )
                     if attempt < self._max_retries:
@@ -101,7 +100,7 @@ class GPT4oClient:
                     return self._stub_response(user_prompt)
                 except KeyError as e:
                     logging.error(
-                        f"GPT-4o API response format error (attempt {attempt+1}/{self._max_retries+1}): {e}, response: {response.text}",
+                        f"GPT-4o API response format error (attempt {attempt + 1}/{self._max_retries + 1}): {e}, response: {response.text}",
                         exc_info=True,
                     )
                     return self._stub_response(user_prompt)

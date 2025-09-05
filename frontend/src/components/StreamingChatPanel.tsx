@@ -1,12 +1,12 @@
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CacheIcon from '@mui/icons-material/Memory';
 import StreamIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import StopIcon from '@mui/icons-material/Stop';
-import SendIcon from '@mui/icons-material/Send';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReplayIcon from '@mui/icons-material/Replay';
-import CheckIcon from '@mui/icons-material/Check';
+import SendIcon from '@mui/icons-material/Send';
+import StopIcon from '@mui/icons-material/Stop';
 import {
   Accordion,
   AccordionDetails,
@@ -27,13 +27,15 @@ import {
   Tooltip,
 } from '@mui/material';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Markdown from './Markdown';
 import { useDispatch, useSelector } from 'react-redux';
+
 import { useProviders } from '../contexts/ProvidersContext';
 import { getBackendHttpBase, getBackendWsBase } from '../services/env';
 import type { RootState } from '../store';
 import { addChat, updateLastMessage, finalizeStreamingMessage } from '../store';
+
 import ContextSidebar from './ContextSidebar';
+import Markdown from './Markdown';
 
 interface StreamingMessage {
   role: 'user' | 'assistant';

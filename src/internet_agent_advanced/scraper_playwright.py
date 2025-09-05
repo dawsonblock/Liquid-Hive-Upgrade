@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -19,8 +19,8 @@ def _detect_challenge(html: str) -> str:
 async def fetch_playwright(
     url: str,
     wait_state: str = "networkidle",
-    wait_selector: Optional[str] = None,
-    storage_state_path: Optional[str] = None,
+    wait_selector: str | None = None,
+    storage_state_path: str | None = None,
 ) -> PageContent:
     t0 = time.time()
     network_payloads: list[dict[str, Any]] = []

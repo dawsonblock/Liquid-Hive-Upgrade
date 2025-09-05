@@ -5,7 +5,7 @@ A secure database query tool that can interact with the Neo4j knowledge graph
 and other configured databases with proper security restrictions.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
@@ -21,7 +21,7 @@ class DatabaseQueryTool(BaseTool):
     """Secure database query tool for Neo4j and other databases."""
 
     def __init__(self):
-        self.neo4j_driver: Optional[neo4j.Driver] = None
+        self.neo4j_driver: neo4j.Driver | None = None
         self._initialize_connections()
 
     def _initialize_connections(self):

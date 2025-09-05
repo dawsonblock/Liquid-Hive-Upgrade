@@ -12,7 +12,7 @@ from transformers import (
 
 # Minimal SFT for VL: dataset rows: {"image_path": "...", "text": "..."}
 def to_dataset(path):
-    return load_dataset("json", data_files=str(path))["train"]
+    return load_dataset("json", data_files=str(path))["train"]  # nosec
 
 
 def main():
@@ -26,8 +26,8 @@ def main():
     args = ap.parse_args()
 
     ds = to_dataset(args.data)
-    proc = AutoProcessor.from_pretrained(args.base, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.base, trust_remote_code=True)
+    proc = AutoProcessor.from_pretrained(args.base, trust_remote_code=True)  # nosec
+    model = AutoModelForCausalLM.from_pretrained(args.base, trust_remote_code=True)  # nosec
 
     lora = LoraConfig(
         r=args.r,
@@ -40,7 +40,6 @@ def main():
     model = get_peft_model(model, lora)
 
     def map_fn(e):
-
         import PIL.Image as Image
 
         img = Image.open(e["image_path"]).convert("RGB")

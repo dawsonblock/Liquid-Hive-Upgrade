@@ -175,7 +175,7 @@ class TextProcessingTool(BaseTool):
                 "avg_word_length": statistics.mean(word_lengths) if word_lengths else 0,
                 "max_word_length": max(word_lengths) if word_lengths else 0,
                 "min_word_length": min(word_lengths) if word_lengths else 0,
-                "unique_words": len(set(word.lower().strip('.,!?;:"()[]') for word in words)),
+                "unique_words": len({word.lower().strip('.,!?;:"()[]') for word in words}),
             },
             "readability": {
                 "avg_sentence_length": (

@@ -11,7 +11,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .base_tool import BaseTool, ToolResult
 
@@ -68,7 +68,7 @@ class ToolRegistry:
             )
             return False
 
-    def discover_tools(self, search_paths: Optional[list[str]] = None) -> int:
+    def discover_tools(self, search_paths: list[str] | None = None) -> int:
         """Automatically discover and register tools from specified paths.
         Returns number of tools discovered.
         """
@@ -110,7 +110,7 @@ class ToolRegistry:
                     spec.loader.exec_module(module)
 
                     # Look for BaseTool subclasses
-                    for name, obj in inspect.getmembers(module, inspect.isclass):
+                    for _name, obj in inspect.getmembers(module, inspect.isclass):
                         if (
                             issubclass(obj, BaseTool)
                             and obj != BaseTool
@@ -124,18 +124,18 @@ class ToolRegistry:
 
         return discovered_count
 
-    def get_tool(self, name: str) -> Optional[BaseTool]:
+    def get_tool(self, name: str) -> BaseTool | None:
         """Get a registered tool by name."""
         return self.tools.get(name)
 
-    def list_tools(self, category: Optional[str] = None) -> list[str]:
+    def list_tools(self, category: str | None = None) -> list[str]:
         """List all registered tool names, optionally filtered by category."""
         if category is None:
             return list(self.tools.keys())
 
         return [name for name, tool in self.tools.items() if tool.category == category]
 
-    def get_tool_schema(self, name: str) -> Optional[dict[str, Any]]:
+    def get_tool_schema(self, name: str) -> dict[str, Any] | None:
         """Get the schema for a specific tool."""
         tool = self.get_tool(name)
         if tool:
@@ -147,7 +147,7 @@ class ToolRegistry:
         return {name: tool.get_schema() for name, tool in self.tools.items()}
 
     async def execute_tool(
-        self, name: str, parameters: dict[str, Any], operator_id: Optional[str] = None
+        self, name: str, parameters: dict[str, Any], operator_id: str | None = None
     ) -> ToolResult:
         """Enhanced tool execution with approval workflow and analytics."""
         tool = self.get_tool(name)
@@ -230,7 +230,7 @@ class ToolRegistry:
         return [name for name, tool in self.tools.items() if tool.requires_approval]
 
     def _is_approved(
-        self, tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+        self, tool_name: str, parameters: dict[str, Any], operator_id: str | None
     ) -> bool:
         """Check if tool execution is approved."""
         # For now, implement simple approval logic
@@ -245,7 +245,7 @@ class ToolRegistry:
         return False
 
     def _create_approval_request(
-        self, tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+        self, tool_name: str, parameters: dict[str, Any], operator_id: str | None
     ) -> str:
         """Create an approval request for tool execution."""
         approval_id = f"approval_{tool_name}_{int(time.time())}"
@@ -271,7 +271,7 @@ class ToolRegistry:
 
     def approve_tool_execution(self, approval_id: str, approver_id: str) -> bool:
         """Approve a pending tool execution request."""
-        for approval_key, approval in self.pending_approvals.items():
+        for _approval_key, approval in self.pending_approvals.items():
             if approval["approval_id"] == approval_id:
                 approval["status"] = "approved"
                 approval["approved_by"] = approver_id
@@ -319,7 +319,7 @@ class ToolRegistry:
         result: ToolResult,
         execution_time: float,
         parameters: dict[str, Any],
-        operator_id: Optional[str],
+        operator_id: str | None,
     ):
         """Record detailed execution metrics."""
         stats = self.execution_stats[tool_name]
@@ -346,7 +346,7 @@ class ToolRegistry:
         parameters: dict[str, Any],
         result: ToolResult,
         execution_time: float,
-        operator_id: Optional[str],
+        operator_id: str | None,
         execution_id: str,
     ):
         """Log detailed tool usage for audit and analysis."""
@@ -369,7 +369,7 @@ class ToolRegistry:
         if len(self.tool_usage_log) > 1000:
             self.tool_usage_log = self.tool_usage_log[-1000:]
 
-    def get_tool_analytics(self, tool_name: Optional[str] = None, days: int = 7) -> dict[str, Any]:
+    def get_tool_analytics(self, tool_name: str | None = None, days: int = 7) -> dict[str, Any]:
         """Get analytics for tools."""
         if tool_name:
             if tool_name not in self.execution_stats:

@@ -141,7 +141,7 @@ class TestDSRouter:
     async def test_confidence_escalation(self, ds_router):
         """Test escalation to R1 when confidence is low."""
 
-        request = GenRequest(prompt="Solve this complex mathematical proof")
+        request = GenRequest(prompt="Please prove this mathematical theorem using formal logic")
 
         # Mock low confidence from thinking provider
         with patch.object(ds_router, "_assess_confidence", side_effect=[0.5, 0.95]):
@@ -149,7 +149,7 @@ class TestDSRouter:
 
         # Should escalate to R1 due to low confidence
         assert response.provider == "deepseek_r1"
-        assert response.metadata.get("escalated") == True
+        assert response.metadata.get("escalated")
         assert response.metadata.get("escalation_reason") == "low_confidence"
 
     @pytest.mark.asyncio
@@ -217,7 +217,7 @@ class TestSafetyGuards:
 
         assert "<REDACTED:EMAIL>" in redacted_text
         assert "<REDACTED:PHONE>" in redacted_text
-        assert pii_info["redacted"] == True
+        assert pii_info["redacted"]
         assert "email" in pii_info["types"]
         assert "phone" in pii_info["types"]
 
@@ -260,7 +260,7 @@ class TestSafetyGuards:
 
         sanitized_request, result = await pre_guard.process(request)
 
-        assert result.pii_redacted == True
+        assert result.pii_redacted
         assert "<REDACTED:EMAIL>" in sanitized_request.prompt
         assert not result.blocked  # Should not block ethical hacking question
 

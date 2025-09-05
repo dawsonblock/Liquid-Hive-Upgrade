@@ -92,43 +92,64 @@ class TestSecretsManager:
 
     def test_aws_secrets_manager_initialization(self):
         """Test AWS Secrets Manager initialization."""
-        with patch("boto3.client") as mock_boto3:
-            mock_client = Mock()
-            # Mock successful connection test
-            mock_client.describe_secret.side_effect = Exception("ResourceNotFoundException")
-            mock_boto3.return_value = mock_client
+        with patch("hvac.Client") as mock_vault:
+            # Disable vault by making it fail
+            mock_vault.side_effect = Exception("Vault not available")
 
-            manager = SecretsManager()
-            assert manager.get_provider() == SecretProvider.AWS_SECRETS_MANAGER
-            assert manager._aws_client is not None
+            with patch("boto3.client") as mock_boto3:
+                mock_client = Mock()
+                # Mock successful connection test with proper ClientError
+                from botocore.exceptions import ClientError
+
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
+                mock_boto3.return_value = mock_client
+
+                manager = SecretsManager()
+                assert manager.get_provider() == SecretProvider.AWS_SECRETS_MANAGER
+                assert manager._aws_client is not None
 
     def test_aws_secret_retrieval_json(self):
         """Test AWS Secrets Manager retrieval with JSON format."""
-        with patch("boto3.client") as mock_boto3:
-            mock_client = Mock()
-            mock_client.describe_secret.side_effect = Exception("ResourceNotFoundException")
-            mock_client.get_secret_value.return_value = {
-                "SecretString": json.dumps({"username": "admin", "password": "secret123"})
-            }
-            mock_boto3.return_value = mock_client
+        with patch("hvac.Client", side_effect=Exception("Vault not available")):
+            with patch("boto3.client") as mock_boto3:
+                mock_client = Mock()
+                from botocore.exceptions import ClientError
 
-            manager = SecretsManager()
-            secret = manager.get_secret("database/credentials")
-            assert secret == {"username": "admin", "password": "secret123"}
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
+                mock_client.get_secret_value.return_value = {
+                    "SecretString": json.dumps({"username": "admin", "password": "secret123"})
+                }
+                mock_boto3.return_value = mock_client
+
+                manager = SecretsManager()
+                secret = manager.get_secret("database/credentials")
+                assert secret == {"username": "admin", "password": "secret123"}
 
     def test_aws_secret_retrieval_string(self):
         """Test AWS Secrets Manager retrieval with string format."""
-        with patch("boto3.client") as mock_boto3:
-            mock_client = Mock()
-            mock_client.describe_secret.side_effect = Exception("ResourceNotFoundException")
-            mock_client.get_secret_value.return_value = {
-                "SecretString": "mongodb://localhost:27017/test"
-            }
-            mock_boto3.return_value = mock_client
+        with patch("hvac.Client", side_effect=Exception("Vault not available")):
+            with patch("boto3.client") as mock_boto3:
+                mock_client = Mock()
+                from botocore.exceptions import ClientError
 
-            manager = SecretsManager()
-            secret = manager.get_secret("database/url")
-            assert secret == "mongodb://localhost:27017/test"
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
+                mock_client.get_secret_value.return_value = {
+                    "SecretString": "mongodb://localhost:27017/test"
+                }
+                mock_boto3.return_value = mock_client
+
+                manager = SecretsManager()
+                secret = manager.get_secret("database/url")
+                assert secret == "mongodb://localhost:27017/test"
 
     def test_secret_caching(self):
         """Test that secrets are cached after first retrieval."""

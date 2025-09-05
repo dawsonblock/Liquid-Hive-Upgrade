@@ -169,7 +169,7 @@ class CodeAnalysisTool(BaseTool):
                         }
                     )
 
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            elif isinstance(node, ast.Import | ast.ImportFrom):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         structure["imports"].append(
@@ -205,18 +205,16 @@ class CodeAnalysisTool(BaseTool):
             # Cyclomatic complexity
             if isinstance(
                 node,
-                (
-                    ast.If,
-                    ast.While,
-                    ast.For,
-                    ast.ExceptHandler,
-                    ast.With,
-                    ast.Assert,
-                    ast.ListComp,
-                    ast.DictComp,
-                    ast.SetComp,
-                    ast.GeneratorExp,
-                ),
+                ast.If
+                | ast.While
+                | ast.For
+                | ast.ExceptHandler
+                | ast.With
+                | ast.Assert
+                | ast.ListComp
+                | ast.DictComp
+                | ast.SetComp
+                | ast.GeneratorExp,
             ):
                 complexity["cyclomatic_complexity"] += 1
             elif isinstance(node, ast.BoolOp):
@@ -227,7 +225,7 @@ class CodeAnalysisTool(BaseTool):
 
         # Function-level complexity
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 func_complexity = self._calculate_function_complexity(node)
                 complexity["function_complexities"].append(
                     {"name": node.name, "complexity": func_complexity, "line": node.lineno}
@@ -240,7 +238,7 @@ class CodeAnalysisTool(BaseTool):
         max_depth = current_depth
 
         for child in ast.iter_child_nodes(node):
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.With, ast.Try)):
+            if isinstance(child, ast.If | ast.While | ast.For | ast.With | ast.Try):
                 child_depth = self._calculate_nesting_depth(child, current_depth + 1)
                 max_depth = max(max_depth, child_depth)
             else:
@@ -254,7 +252,7 @@ class CodeAnalysisTool(BaseTool):
         complexity = 1
 
         for node in ast.walk(func_node):
-            if isinstance(node, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+            if isinstance(node, ast.If | ast.While | ast.For | ast.ExceptHandler):
                 complexity += 1
             elif isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
@@ -335,7 +333,7 @@ class CodeAnalysisTool(BaseTool):
         }
 
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 quality["total_functions"] += 1
 
                 # Check for docstring

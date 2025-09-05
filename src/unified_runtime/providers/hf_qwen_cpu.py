@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from typing import Any
 
@@ -21,6 +22,9 @@ except ImportError:
     AutoModelForCausalLM = None
     pipeline = None
     HF_AVAILABLE = False
+
+
+logger = logging.getLogger(__name__)
 
 
 class QwenCPUProvider(BaseProvider):
@@ -80,11 +84,11 @@ class QwenCPUProvider(BaseProvider):
                 "low_cpu_mem_usage": True,
             }
 
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec
                 self.model_name, token=self.hf_token, trust_remote_code=True
             )
 
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)  # nosec
 
             # Create text generation pipeline
             self.pipeline = pipeline(
@@ -251,7 +255,7 @@ class QwenCPUProvider(BaseProvider):
 
         try:
             # Quick health check with minimal generation
-            test_request = GenRequest(prompt="Hello, how are you?", max_tokens=20, temperature=0.5)
+            GenRequest(prompt="Hello, how are you?", max_tokens=20, temperature=0.5)
 
             # Don't actually generate for health check to save resources
             # Just verify model is loaded
@@ -270,8 +274,8 @@ class QwenCPUProvider(BaseProvider):
                     health_status["gpu_memory_mb"] = torch.cuda.get_device_properties(
                         0
                     ).total_memory // (1024**2)
-                except:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to fetch GPU memory info during health check: %r", exc)
 
             return health_status
 

@@ -4,7 +4,6 @@ Test suite for environment variable examples and configurations.
 Validates that .env.example contains all necessary variables.
 """
 
-import os
 import re
 from pathlib import Path
 
@@ -19,7 +18,7 @@ def test_env_example_has_required_variables():
     """Test that .env.example contains all required environment variables."""
     env_example_path = Path(__file__).parent.parent / ".env.example"
 
-    with open(env_example_path, "r") as f:
+    with open(env_example_path) as f:
         content = f.read()
 
     # Required variables that should be documented
@@ -36,16 +35,16 @@ def test_env_example_has_required_variables():
     ]
 
     for var in required_vars:
-        assert (
-            var in content
-        ), f"Required environment variable {var} should be documented in .env.example"
+        assert var in content, (
+            f"Required environment variable {var} should be documented in .env.example"
+        )
 
 
 def test_env_example_format():
     """Test that .env.example follows proper format conventions."""
     env_example_path = Path(__file__).parent.parent / ".env.example"
 
-    with open(env_example_path, "r") as f:
+    with open(env_example_path) as f:
         lines = f.readlines()
 
     # Check for proper formatting
@@ -55,16 +54,16 @@ def test_env_example_format():
             continue  # Skip empty lines and comments
 
         # Should match VAR=value or VAR= pattern
-        assert re.match(
-            r"^[A-Z_][A-Z0-9_]*=.*$", line
-        ), f"Line {line_num} should follow VAR=value format: {line}"
+        assert re.match(r"^[A-Z_][A-Z0-9_]*=.*$", line), (
+            f"Line {line_num} should follow VAR=value format: {line}"
+        )
 
 
 def test_sensitive_variables_not_exposed():
     """Test that sensitive variables don't contain real values."""
     env_example_path = Path(__file__).parent.parent / ".env.example"
 
-    with open(env_example_path, "r") as f:
+    with open(env_example_path) as f:
         content = f.read()
 
     # Patterns that suggest real API keys/secrets
@@ -76,16 +75,16 @@ def test_sensitive_variables_not_exposed():
     ]
 
     for pattern in sensitive_patterns:
-        assert not re.search(
-            pattern, content
-        ), f"Found potential real secret matching pattern: {pattern}"
+        assert not re.search(pattern, content), (
+            f"Found potential real secret matching pattern: {pattern}"
+        )
 
 
 def test_database_urls_are_examples():
     """Test that database URLs are example values, not real endpoints."""
     env_example_path = Path(__file__).parent.parent / ".env.example"
 
-    with open(env_example_path, "r") as f:
+    with open(env_example_path) as f:
         content = f.read()
 
     # Should contain example/placeholder values

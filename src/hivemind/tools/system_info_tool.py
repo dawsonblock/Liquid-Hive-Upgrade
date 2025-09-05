@@ -4,6 +4,7 @@
 A tool to gather system information, monitor resources, and check system health.
 """
 
+import logging
 import os
 import platform
 import time
@@ -347,8 +348,9 @@ class SystemInfoTool(BaseTool):
             elif disk_percent > 80:
                 health_score -= 10
                 issues.append(f"Moderate disk usage: {disk_percent:.1f}%")
-        except:
-            pass
+        except Exception as e:
+            # Disk usage info unavailable; log and continue with best-effort health scoring
+            logging.warning(f"Health scoring: unable to retrieve disk usage: {e!s}")
 
         # Check load average (on Unix-like systems)
         try:
@@ -362,8 +364,8 @@ class SystemInfoTool(BaseTool):
             elif load_ratio > 1.0:
                 health_score -= 10
                 issues.append(f"Moderate system load: {load_avg[0]:.2f}")
-        except:
-            pass
+        except Exception as e:
+            logging.warning(f"Health scoring: unable to retrieve system load average: {e!s}")
 
         health_score = max(0, health_score)
 

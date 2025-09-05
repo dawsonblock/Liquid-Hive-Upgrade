@@ -16,6 +16,7 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
+
 import { useProviders } from '../contexts/ProvidersContext';
 import {
   getSecretsHealth,
@@ -348,7 +349,7 @@ export default function SecretsPanel() {
         </Stack>
         <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>
           Preload loads the model at startup (may be slow). Autoload loads on first use. Leave both
-          off to keep provider in "initializing" until you manually load.
+          off to keep provider in &quot;initializing&quot; until you manually load.
         </Typography>
       </Paper>
 

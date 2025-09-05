@@ -16,7 +16,7 @@ async def index_qdrant(
     for i, ch in enumerate(chunks):
         points.append(
             {
-                "id": f"{meta.get('hash','h')}_{i}",
+                "id": f"{meta.get('hash', 'h')}_{i}",
                 "vector": vectors[i],
                 "payload": {"text": ch["text"], **meta, "chunk_id": ch["chunk_id"]},
             }

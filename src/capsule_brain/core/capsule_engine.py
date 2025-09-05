@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 from .alignment_core import AlignmentCore
 from .belief_state_manager import BeliefStateManager
@@ -20,7 +20,7 @@ class CapsuleEngine:
         self.self_wirer = SelfWirer(self)
         self.memory: list[dict[str, Any]] = []
         self.knowledge_graph = self.iit_analyzer.get_initial_graph()
-        self.bus: Optional[asyncio.Queue] = None
+        self.bus: asyncio.Queue | None = None
         self._background_tasks: list[asyncio.Task] = []
         self._shutdown_event = asyncio.Event()
 

@@ -13,12 +13,12 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Stack from '@mui/material/Stack';
 import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
@@ -26,6 +26,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useMemo, useState } from 'react';
 import { Provider } from 'react-redux';
+
 import CacheAdminPanel from './components/CacheAdminPanel';
 import ChatPanel from './components/ChatPanel';
 import ForgePanel from './components/ForgePanel';
@@ -304,16 +305,12 @@ export default function App() {
 
 function HeaderPollingChip() {
   // Lightweight consumer for header; safe because ProvidersProvider wraps App
-  try {
-    const { autoRefresh, intervalMs } = useProviders();
-    const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
-    const color: any = autoRefresh ? 'info' : 'default';
-    return (
-      <Tooltip title='Providers status polling'>
-        <Chip size='small' label={label} color={color} variant='outlined' sx={{ mr: 1 }} />
-      </Tooltip>
-    );
-  } catch {
-    return null;
-  }
+  const { autoRefresh, intervalMs } = useProviders();
+  const label = autoRefresh ? `Polling ${Math.round(intervalMs / 1000)}s` : 'Polling off';
+  const color: any = autoRefresh ? 'info' : 'default';
+  return (
+    <Tooltip title='Providers status polling'>
+      <Chip size='small' label={label} color={color} variant='outlined' sx={{ mr: 1 }} />
+    </Tooltip>
+  );
 }

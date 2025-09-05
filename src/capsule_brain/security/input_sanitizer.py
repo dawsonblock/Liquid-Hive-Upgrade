@@ -18,7 +18,7 @@ def validate_tool_params(params: dict) -> dict:
     for k, v in params.items():
         if isinstance(v, str):
             clean[k] = sanitize_input(v)
-        elif isinstance(v, (int, float, bool)):
+        elif isinstance(v, int | float | bool):
             clean[k] = v
         elif isinstance(v, list):
             clean[k] = [sanitize_input(str(i)) for i in v[:10]]

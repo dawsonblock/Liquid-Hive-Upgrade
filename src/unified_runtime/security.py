@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional
 
 from fastapi import HTTPException, Request
 
@@ -39,7 +38,7 @@ def _tenant_id_from_request(req: Request) -> str:
     return "anon"
 
 
-def _extract_sub_from_jwt(token: str) -> Optional[str]:
+def _extract_sub_from_jwt(token: str) -> str | None:
     if not jwt:
         return None
     pub_path = os.getenv("API_JWT_PUBLIC_KEY_PATH")

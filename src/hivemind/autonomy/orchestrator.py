@@ -5,7 +5,7 @@ import json
 import os
 import pathlib
 import time
-from typing import Any, Optional
+from typing import Any
 
 try:
     from ..confidence_modeler import ConfidenceModeler, TrustPolicy
@@ -24,13 +24,11 @@ class AutonomyOrchestrator:
       - Maintain/update a Cognitive Map based on training metadata
     """
 
-    def __init__(
-        self, engine: Any, adapter_manager: Optional[Any], settings: Optional[Any]
-    ) -> None:
+    def __init__(self, engine: Any, adapter_manager: Any | None, settings: Any | None) -> None:
         self.engine = engine
         self.adapter_manager = adapter_manager
         self.settings = settings
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
         self._running = False
         self.base_dir = pathlib.Path(getattr(settings, "runs_dir", "/app/data"))
         self.datasets_dir = pathlib.Path("/app/datasets")
@@ -263,7 +261,7 @@ class AutonomyOrchestrator:
 
                 if promotion_recommendation["should_promote"]:
                     # Create high-confidence promotion proposal
-                    proposal = {
+                    {
                         "action_type": "adapter_promotion",
                         "role": role,
                         "champion": champion,
@@ -287,7 +285,6 @@ class AutonomyOrchestrator:
     ) -> dict[str, Any]:
         """Perform statistical analysis of challenger vs champion performance."""
         try:
-
             import httpx
 
             async with httpx.AsyncClient(timeout=30) as client:
@@ -362,7 +359,7 @@ class AutonomyOrchestrator:
         except Exception as e:
             return {"should_promote": False, "reason": f"analysis_failed: {e}"}
 
-    async def _query_prometheus(self, client, base_url: str, query: str) -> Optional[float]:
+    async def _query_prometheus(self, client, base_url: str, query: str) -> float | None:
         """Query Prometheus API and extract scalar value."""
         try:
             url = f"{base_url}/api/v1/query"

@@ -1,5 +1,5 @@
-import React from 'react';
 import { Paper, Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
+import React from 'react';
 
 type Props = { context?: string; reasoning?: string; intent?: string; rationale?: string };
 

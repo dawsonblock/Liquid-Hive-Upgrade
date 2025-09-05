@@ -153,7 +153,7 @@ class PreGuard:
         """Detect potential prompt injection attacks."""
         for i, pattern in enumerate(self.injection_patterns):
             if pattern.search(prompt):
-                return True, f"pattern_{i+1}"
+                return True, f"pattern_{i + 1}"
         return False, ""
 
     def _redact_pii(self, text: str) -> tuple[str, dict[str, Any]]:

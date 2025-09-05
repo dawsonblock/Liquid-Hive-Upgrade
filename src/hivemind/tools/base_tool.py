@@ -5,7 +5,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 
 class ToolParameterType(Enum):
@@ -28,9 +28,9 @@ class ToolParameter:
     description: str
     required: bool = True
     default: Any = None
-    choices: Optional[list[Any]] = None
-    min_value: Optional[Union[int, float]] = None
-    max_value: Optional[Union[int, float]] = None
+    choices: list[Any] | None = None
+    min_value: int | float | None = None
+    max_value: int | float | None = None
 
 
 @dataclass
@@ -39,7 +39,7 @@ class ToolResult:
 
     success: bool
     data: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -107,7 +107,7 @@ class BaseTool(ABC):
                     errors.append(f"Parameter {param.name} must be a string")
                 elif param.type == ToolParameterType.INTEGER and not isinstance(value, int):
                     errors.append(f"Parameter {param.name} must be an integer")
-                elif param.type == ToolParameterType.FLOAT and not isinstance(value, (int, float)):
+                elif param.type == ToolParameterType.FLOAT and not isinstance(value, int | float):
                     errors.append(f"Parameter {param.name} must be a number")
                 elif param.type == ToolParameterType.BOOLEAN and not isinstance(value, bool):
                     errors.append(f"Parameter {param.name} must be a boolean")
@@ -117,11 +117,11 @@ class BaseTool(ABC):
                     errors.append(f"Parameter {param.name} must be a dictionary")
 
                 # Range validation
-                if param.min_value is not None and isinstance(value, (int, float)):
+                if param.min_value is not None and isinstance(value, int | float):
                     if value < param.min_value:
                         errors.append(f"Parameter {param.name} must be >= {param.min_value}")
 
-                if param.max_value is not None and isinstance(value, (int, float)):
+                if param.max_value is not None and isinstance(value, int | float):
                     if value > param.max_value:
                         errors.append(f"Parameter {param.name} must be <= {param.max_value}")
 

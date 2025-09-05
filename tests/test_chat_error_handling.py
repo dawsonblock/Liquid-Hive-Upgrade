@@ -21,6 +21,7 @@ def test_chat_httpx_request_error(monkeypatch):
     srv.text_roles = DummyRoles()
     srv.judge = types.SimpleNamespace()  # not used here
     srv.settings = types.SimpleNamespace(MODEL_ROUTING_ENABLED=False)
+    srv.ds_router = None  # Disable DS-Router to force legacy routing
 
     r = client.post("/api/chat", params={"q": "hello"})
     assert r.status_code == 200
@@ -39,6 +40,7 @@ def test_chat_keyerror_handling(monkeypatch):
     srv.text_roles = BadRoles()
     srv.judge = types.SimpleNamespace(rank=lambda a, prompt: {}, merge=lambda a, b: "ok")
     srv.settings = types.SimpleNamespace(MODEL_ROUTING_ENABLED=False, committee_k=1)
+    srv.ds_router = None  # Disable DS-Router to force legacy routing
 
     # We patch decide_policy to access wrong keys
     def bad_decide_policy(**kwargs):

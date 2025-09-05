@@ -18,7 +18,7 @@ import os
 import time
 import uuid
 from dataclasses import asdict, dataclass
-from typing import Any, Optional
+from typing import Any
 
 try:
     import redis.asyncio as redis
@@ -37,9 +37,9 @@ class SwarmTask:
     priority: int = 1
     timeout_seconds: int = 300
     created_at: float = None
-    assigned_to: Optional[str] = None
+    assigned_to: str | None = None
     status: str = "pending"  # pending, assigned, completed, failed, timeout
-    result: Optional[dict[str, Any]] = None
+    result: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.created_at is None:
@@ -137,7 +137,7 @@ class SwarmCoordinator:
 
     async def delegate_task(
         self, task_type: str, payload: dict[str, Any], priority: int = 1, timeout: int = 300
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Delegate a task to another node in the swarm.
 
         Args:
@@ -237,7 +237,7 @@ class SwarmCoordinator:
             # Merge states (simple last-write-wins for now)
             merged_state = local_state.copy()
 
-            for node_id, state_json in distributed_data.items():
+            for _node_id, state_json in distributed_data.items():
                 try:
                     node_state = json.loads(state_json)
                     # Merge logic here - could be more sophisticated
@@ -319,7 +319,7 @@ class SwarmCoordinator:
             except Exception:
                 continue
 
-    async def _find_best_node(self, task_type: str) -> Optional[str]:
+    async def _find_best_node(self, task_type: str) -> str | None:
         """Find the best node to handle a specific task type."""
         nodes_data = await self.redis_client.hgetall("swarm:nodes")
 
@@ -434,9 +434,7 @@ class SwarmCoordinator:
 
             self.active_tasks.discard(task.task_id)
 
-    async def _wait_for_task_completion(
-        self, task_id: str, timeout: int
-    ) -> Optional[dict[str, Any]]:
+    async def _wait_for_task_completion(self, task_id: str, timeout: int) -> dict[str, Any] | None:
         """Wait for a delegated task to complete."""
         start_time = time.time()
 
@@ -464,10 +462,10 @@ class SwarmCoordinator:
 
 
 # Global swarm coordinator instance
-_swarm_coordinator: Optional[SwarmCoordinator] = None
+_swarm_coordinator: SwarmCoordinator | None = None
 
 
-async def get_swarm_coordinator() -> Optional[SwarmCoordinator]:
+async def get_swarm_coordinator() -> SwarmCoordinator | None:
     """Get global swarm coordinator instance."""
     global _swarm_coordinator
 

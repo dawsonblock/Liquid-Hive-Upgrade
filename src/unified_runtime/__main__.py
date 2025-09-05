@@ -23,7 +23,7 @@ def main() -> None:
     configuration bundled with this repository.
     """
     setup_logging()
-    host = os.getenv("HOST", "0.0.0.0")
+    host = os.getenv("HOST", "0.0.0.0")  # nosec B104 - configurable host binding
     # Default to port 8000 to align with Prometheus scrape configuration
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host=host, port=port)

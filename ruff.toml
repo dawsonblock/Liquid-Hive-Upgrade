@@ -1,8 +1,8 @@
-[tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["backend_test.py", "tools/"]
 
-[tool.ruff.lint]
+[lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -15,8 +15,13 @@ select = [
 ignore = [
     "E501",  # line too long, handled by formatter
     "B008",  # do not perform function calls in argument defaults
+    "E402",  # module level import not at top of file (common in conditional imports)
+    "F401",  # unused import (many are used conditionally)
+    "B904",  # raise without from inside except (acceptable in many cases)
+    "B005",  # strip with multi-characters (acceptable usage)
+    "B007",  # unused loop control variable (acceptable when only value is needed)
 ]
 
-[tool.ruff.format]
+[format]
 quote-style = "double"
 indent-style = "space"

@@ -7,7 +7,7 @@ import pathlib
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -15,7 +15,7 @@ class KnowledgeFrontier:
     kind: str  # orphan_nodes | weak_component | semantic_gap
     description: str
     nodes: list[str] = field(default_factory=list)
-    missing_edge: Optional[tuple[str, str]] = None
+    missing_edge: tuple[str, str] | None = None
 
 
 class CuriosityEngine:
@@ -30,9 +30,9 @@ class CuriosityEngine:
     def __init__(
         self,
         engine: Any,
-        roles: Optional[Any] = None,
-        retriever: Optional[Any] = None,
-        settings: Optional[Any] = None,
+        roles: Any | None = None,
+        retriever: Any | None = None,
+        settings: Any | None = None,
         loop_interval_sec: int = 900,  # 15 minutes
     ) -> None:
         self.engine = engine
@@ -41,8 +41,8 @@ class CuriosityEngine:
         self.settings = settings
         self.loop_interval_sec = loop_interval_sec
 
-        self._task: Optional[asyncio.Task] = None
-        self._approvals_task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
+        self._approvals_task: asyncio.Task | None = None
         self._running = False
 
         # Storage
@@ -225,7 +225,7 @@ class CuriosityEngine:
         return list(comps.values())
 
     # ---- Phase 2: Question Generator ----
-    async def _generate_question(self, frontier: KnowledgeFrontier) -> Optional[str]:
+    async def _generate_question(self, frontier: KnowledgeFrontier) -> str | None:
         prompt = (
             "You are a Research Scientist AI. You will be given a description of a gap in your own knowledge graph. "
             "Your mission is to formulate a single, powerful, and open-ended question that, if answered, would help you bridge this gap. "
@@ -465,7 +465,7 @@ class CuriosityEngine:
 
 **Research Question:** {question}
 
-**Generated:** {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(timestamp))}
+**Generated:** {time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))}
 
 **Research Summary:**
 {summary}
@@ -511,7 +511,7 @@ The findings above extend the AI system's knowledge base through active explorat
             except Exception:
                 pass
 
-    def _get_rag_ingest_directory(self) -> Optional[pathlib.Path]:
+    def _get_rag_ingest_directory(self) -> pathlib.Path | None:
         """Get the RAG ingestion directory path."""
         try:
             # Try to get from settings first

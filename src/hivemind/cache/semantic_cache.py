@@ -22,9 +22,9 @@ import os
 import time
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 semcache_deps_available = False
 try:
@@ -92,8 +92,8 @@ class SemanticCache:
     """
 
     # Class-level attribute annotations for better static typing
-    redis_client: Optional[Any]
-    embedding_model: Optional[Any]
+    redis_client: Any | None
+    embedding_model: Any | None
     is_ready: bool
     enable_memory_fallback: bool
     _mem_store: dict[str, CacheEntry]
@@ -204,9 +204,7 @@ class SemanticCache:
             else:
                 self.is_ready = False
 
-    async def get(
-        self, query: str, context: Optional[dict[str, Any]] = None
-    ) -> Optional[dict[str, Any]]:
+    async def get(self, query: str, context: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """Get cached response for a semantically similar query.
 
         Args:
@@ -269,8 +267,8 @@ class SemanticCache:
         self,
         query: str,
         response: dict[str, Any],
-        context: Optional[dict[str, Any]] = None,
-        ttl: Optional[int] = None,
+        context: dict[str, Any] | None = None,
+        ttl: int | None = None,
     ) -> bool:
         """Cache a response for a query.
 
@@ -377,7 +375,7 @@ class SemanticCache:
 
         return normalized
 
-    def _get_embedding(self, text: str) -> Optional[Any]:
+    def _get_embedding(self, text: str) -> Any | None:
         """Generate embedding for text with lightweight fallback when model missing."""
         if self.embedding_model is not None:
             try:
@@ -410,8 +408,8 @@ class SemanticCache:
             return None
 
     async def _find_similar_entry(
-        self, query_embedding: Any, query: str, context: Optional[dict[str, Any]]
-    ) -> Optional[CacheEntry]:
+        self, query_embedding: Any, query: str, context: dict[str, Any] | None
+    ) -> CacheEntry | None:
         """Find the most similar cached entry."""
         try:
             # Get all cached entries (in production, you'd want more efficient similarity search)
@@ -553,7 +551,7 @@ class SemanticCache:
             log.warning(f"Failed to update cache entry: {e}")
 
     def _should_cache_query(
-        self, query: str, response: dict[str, Any], context: Optional[dict[str, Any]]
+        self, query: str, response: dict[str, Any], context: dict[str, Any] | None
     ) -> bool:
         """Determine if a query should be cached based on strategy and content."""
         if self.strategy == CacheStrategy.DISABLED:
@@ -625,7 +623,7 @@ class SemanticCache:
 
         return base_ttl
 
-    def _get_similarity_threshold(self, query: str, context: Optional[dict[str, Any]]) -> float:
+    def _get_similarity_threshold(self, query: str, context: dict[str, Any] | None) -> float:
         """Get adaptive similarity threshold based on query and context."""
         base_threshold = self.similarity_threshold
 
@@ -663,7 +661,7 @@ class SemanticCache:
             sanitized.pop(field, None)
 
         # Add cache metadata
-        sanitized["cached_at"] = datetime.now(timezone.utc).isoformat()
+        sanitized["cached_at"] = datetime.now(UTC).isoformat()
 
         return sanitized
 
@@ -879,7 +877,7 @@ class SemanticCache:
         except Exception:
             return 0.0
 
-    async def clear_cache(self, pattern: Optional[str] = None) -> dict[str, Any]:
+    async def clear_cache(self, pattern: str | None = None) -> dict[str, Any]:
         """Clear cache entries matching pattern."""
         try:
             if self.redis_client is None:
@@ -976,14 +974,14 @@ class SemanticCache:
 
 
 # Global semantic cache instance
-_semantic_cache: Optional[SemanticCache] = None
+_semantic_cache: SemanticCache | None = None
 
 
 async def get_semantic_cache(
     redis_url: str = "redis://localhost:6379",
     embedding_model: str = "all-MiniLM-L6-v2",
     similarity_threshold: float = 0.95,
-) -> Optional[SemanticCache]:
+) -> SemanticCache | None:
     """Get global semantic cache instance."""
     global _semantic_cache
 

@@ -5,7 +5,7 @@ import math
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from .schema import Plan, TaskNode
 
@@ -19,7 +19,7 @@ class NodeResult:
     value: Any
     attempts: int
     duration_ms: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class PlanExecutor:
@@ -61,11 +61,12 @@ class PlanExecutor:
         try:
             # Use ast.literal_eval for safer evaluation of simple expressions
             import ast
+
             val = ast.literal_eval(expr)
         except (ValueError, SyntaxError):
             # Fallback to restricted eval for complex expressions
             try:
-                val = eval(expr, safe_globals, safe_locals)
+                val = eval(expr, safe_globals, safe_locals)  # nosec B307 - restricted eval with safe globals
             except Exception as e:
                 return f"Error: {e}"
         except Exception as e:
@@ -101,7 +102,7 @@ class PlanExecutor:
             async with sem:
                 attempts = 0
                 node_start = time.perf_counter()
-                last_err: Optional[str] = None
+                last_err: str | None = None
                 timeout = n.timeout_sec
                 while True:
                     try:
@@ -121,7 +122,7 @@ class PlanExecutor:
                         )
                         self.results[n.id] = res
                         return
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         last_err = "timeout"
                     except Exception as e:
                         last_err = str(e)

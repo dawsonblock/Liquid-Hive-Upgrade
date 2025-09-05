@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 @dataclass
@@ -9,11 +9,11 @@ class ProviderConfig:
     name: str
     kind: str
     base_url: str
-    api_key_env: Optional[str] = None
-    model: Optional[str] = None
-    max_tokens: Optional[int] = None
-    role: Optional[str] = None
-    cost_profile: Optional[str] = None
+    api_key_env: str | None = None
+    model: str | None = None
+    max_tokens: int | None = None
+    role: str | None = None
+    cost_profile: str | None = None
 
 
 class OracleProvider(Protocol):

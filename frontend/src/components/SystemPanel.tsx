@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
+
 import {
   approveProposal,
   denyProposal,
@@ -49,7 +50,7 @@ const SystemPanel: React.FC = () => {
     };
     load();
 
-    const ws = new WebSocket(getBackendWsBase() + '/api/ws');
+    const ws = new WebSocket(`${getBackendWsBase()  }/api/ws`);
     ws.onmessage = ev => {
       try {
         const msg = JSON.parse(ev.data);

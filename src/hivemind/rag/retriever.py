@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Optional
+from typing import Any
 
 try:
     import faiss  # FAISS for vector indexing
@@ -53,8 +53,8 @@ class Retriever:
         self.index_dir = pathlib.Path(index_dir)
         self.index_dir.mkdir(parents=True, exist_ok=True)
         self.embed_model_id = embed_model_id
-        self.embedding_model: Optional[SentenceTransformer] = None
-        self.faiss_index: Optional[faiss.IndexFlatL2] = None  # Using L2 for simplicity
+        self.embedding_model: SentenceTransformer | None = None
+        self.faiss_index: faiss.IndexFlatL2 | None = None  # Using L2 for simplicity
         self.doc_store: list[Document] = []
         self.is_ready = False
 
@@ -193,10 +193,10 @@ class Retriever:
             query_embedding = self.embedding_model.encode(query)
             query_embedding = np.array([query_embedding]).astype("float32")
 
-            D, I = self.faiss_index.search(query_embedding, k)  # D is distances, I is indices
+            distances, indices = self.faiss_index.search(query_embedding, k)  # distances, indices
 
             results: list[Document] = []
-            for idx in I[0]:
+            for idx in indices[0]:
                 if idx < len(self.doc_store):  # Ensure index is valid
                     results.append(self.doc_store[idx])
             log.debug(f"Search for '{query[:50]}' returned {len(results)} results.")
@@ -218,6 +218,6 @@ class Retriever:
             snippet = doc.page_content[:200].strip() + (
                 "..." if len(doc.page_content) > 200 else ""
             )
-            context_lines.append(f"[{i+1}] Source: {source}\n{snippet}")
+            context_lines.append(f"[{i + 1}] Source: {source}\n{snippet}")
 
         return "\n\n".join(context_lines)

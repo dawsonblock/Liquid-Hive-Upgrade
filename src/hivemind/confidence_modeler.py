@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -52,7 +52,7 @@ class ConfidenceModeler:
         except ImportError:
             self.embedding_model = None
 
-    def _get_text_embedding(self, text: str) -> Optional[np.ndarray]:
+    def _get_text_embedding(self, text: str) -> np.ndarray | None:
         """Get embedding for text with caching."""
         if not self.embedding_model:
             return None

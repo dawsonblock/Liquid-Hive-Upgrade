@@ -16,11 +16,13 @@ import urllib.parse as _u
 import urllib.request as _req
 import uuid
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Request, UploadFile
 
@@ -33,10 +35,8 @@ except Exception:
     internet_tools_router = None  # type: ignore
     internet_metrics_app = None  # type: ignore
     internet_test_router = None  # type: ignore
-import os
 
 # Add src to Python path for imports
-import sys
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -208,12 +208,157 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7")
+
+# Lifespan function must be defined before app creation
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize global components on startup."""
+    global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
+    global \
+        resource_estimator, \
+        adapter_manager, \
+        tool_auditor, \
+        intent_modeler, \
+        confidence_modeler, \
+        ds_router, \
+        tool_registry
+    global get_semantic_cache, semantic_cache, cache_manager
+    global autonomy_orchestrator, _autonomy_lock
+    global text_roles_small, text_roles_large
+
+    # Initialize settings
+    if Settings is not None:
+        try:
+            settings = Settings()
+            print("✅ Settings initialized")
+        except Exception as e:
+            print(f"❌ Settings initialization failed: {e}")
+            settings = None
+    else:
+        settings = None
+
+    # Initialize DS-Router
+    if DSRouter is not None and RouterConfig is not None:
+        try:
+            router_config = RouterConfig.from_env()
+            ds_router = DSRouter(router_config)
+            print("✅ DS-Router initialized")
+        except Exception as e:
+            print(f"❌ DS-Router initialization failed: {e}")
+            ds_router = None
+    else:
+        ds_router = None
+
+    # Initialize retriever
+    if settings is not None:
+        try:
+            if hasattr(settings, "rag_index") and hasattr(settings, "embed_model"):
+                retriever = Retriever(settings.rag_index, settings.embed_model)
+                print("✅ FAISS Retriever initialized")
+        except Exception:
+            retriever = None
+    else:
+        retriever = None
+
+    # Initialize other components...
+    if settings is not None:
+        try:
+            if TextRoles is not None:
+                text_roles = TextRoles(settings)
+                print("✅ Text Roles initialized")
+        except Exception as e:
+            print(f"❌ Text Roles initialization failed: {e}")
+            text_roles = None
+
+        try:
+            if Judge is not None:
+                judge = Judge(settings)
+                print("✅ Judge initialized")
+        except Exception as e:
+            print(f"❌ Judge initialization failed: {e}")
+            judge = None
+
+    # Initialize Semantic Cache
+    if get_semantic_cache is not None:
+        try:
+            semantic_cache = await get_semantic_cache(
+                redis_url=getattr(settings, "redis_url", "redis://localhost:6379/0")
+                if settings
+                else "redis://localhost:6379/0",
+                embedding_model=getattr(settings, "embed_model", "all-MiniLM-L6-v2")
+                if settings
+                else "all-MiniLM-L6-v2",
+            )
+            if semantic_cache and semantic_cache.is_ready:
+                print("🧠 Semantic Cache initialized successfully")
+                if create_cache_manager is not None:
+                    cache_manager = await create_cache_manager(semantic_cache)
+                    if cache_manager:
+                        print("📈 Cache Manager initialized successfully")
+                    else:
+                        print("⚠️ Cache Manager initialization failed")
+            else:
+                print("⚠️ Semantic Cache initialization failed")
+
+        except Exception as e:
+            print(f"❌ Failed to initialize Semantic Cache: {e}")
+            semantic_cache = None
+            cache_manager = None
+
+    # Initialize other components as needed
+    # ... (additional component initialization can be added here)
+
+    yield  # App is running
+
+    # Cleanup on shutdown
+
+
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7", lifespan=lifespan)
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
     app.include_router(metrics_router)
+
+
+# Middleware to ensure arena is mounted when needed
+@app.middleware("http")
+async def arena_mounting_middleware(request, call_next):
+    # Check if request is for arena and mount if needed
+    if request.url.path.startswith("/api/arena"):
+        ensure_arena_mounted()
+    response = await call_next(request)
+    return response
+
+
+# Helper function to dynamically mount arena router
+def ensure_arena_mounted():
+    """Ensure arena router is mounted if ENABLE_ARENA is true."""
+    try:
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        if enabled:
+            # Check if already mounted
+            already = any(
+                getattr(r, "path", "") and "/arena" in getattr(r, "path", "") for r in app.routes
+            )
+            if not already:
+                from .arena import router as arena_router
+
+                app.include_router(arena_router)
+                log.info("✅ Arena router mounted dynamically")
+    except Exception as e:
+        log.error(f"❌ Failed to mount arena router: {e}")
+
+
+# Mount arena router if enabled (for tests that set ENABLE_ARENA)
+try:
+    if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true":
+        from .arena import router as arena_router
+
+        app.include_router(arena_router)
+        log.info("✅ Arena router mounted at startup")
+except Exception as e:
+    log.error(f"❌ Failed to mount arena router at startup: {e}")
 
 # Conditionally mount Arena service if enabled
 try:
@@ -234,22 +379,22 @@ if "internet_metrics_app" in globals() and internet_metrics_app is not None:
     # Mount under separate path to avoid conflict with existing metrics
     app.mount("/internet-agent-metrics", internet_metrics_app)
 
-engine: Optional[Any] = None
-text_roles: Optional[Any] = None
-text_roles_small: Optional[Any] = None
-text_roles_large: Optional[Any] = None
-judge: Optional[Any] = None
-retriever: Optional[Any] = None
-settings: Optional[Any] = None
-strategy_selector: Optional[Any] = None
-vl_roles: Optional[Any] = None
-resource_estimator: Optional[Any] = None
-adapter_manager: Optional[Any] = None
-tool_auditor: Optional[Any] = None
-intent_modeler: Optional[Any] = None
-confidence_modeler: Optional[Any] = None
-ds_router: Optional[Any] = None
-tool_registry: Optional[Any] = None
+engine: Any | None = None
+text_roles: Any | None = None
+text_roles_small: Any | None = None
+text_roles_large: Any | None = None
+judge: Any | None = None
+retriever: Any | None = None
+settings: Any | None = None
+strategy_selector: Any | None = None
+vl_roles: Any | None = None
+resource_estimator: Any | None = None
+adapter_manager: Any | None = None
+tool_auditor: Any | None = None
+intent_modeler: Any | None = None
+confidence_modeler: Any | None = None
+ds_router: Any | None = None
+tool_registry: Any | None = None
 
 try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
@@ -271,23 +416,30 @@ except Exception:
         pass
 
 
-autonomy_orchestrator: Optional[Any] = None
+autonomy_orchestrator: Any | None = None
 _autonomy_lock: Any = None
 _autonomy_lock_key = "liquid_hive:autonomy_leader"
 _autonomy_id = uuid.uuid4().hex
 
 # Semantic cache
-semantic_cache: Optional[Any] = None
+semantic_cache: Any | None = None
 cache_manager = None
 
 websockets: list[WebSocket] = []
 
 
-@app.on_event("startup")
-async def startup() -> None:
+# Original startup function converted to lifespan (duplicate removed)
+async def startup_components():
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
+    global \
+        resource_estimator, \
+        adapter_manager, \
+        tool_auditor, \
+        intent_modeler, \
+        confidence_modeler, \
+        ds_router, \
+        tool_registry
     global semantic_cache, cache_manager
     # Initialize OTEL tracer (if enabled)
     try:
@@ -305,8 +457,9 @@ async def startup() -> None:
         already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
         if enabled and not already:
             app.include_router(arena_router)
-    except Exception:
-        pass
+            print("✅ Arena router mounted")
+    except Exception as e:
+        print(f"❌ Failed to mount arena router: {e}")
     # Mount Providers admin endpoints if present (keys redacted)
     try:
         from .providers_admin_mount import mount_admin_providers  # type: ignore
@@ -425,6 +578,10 @@ async def startup() -> None:
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
 
+    yield  # App is running
+
+    # Cleanup on shutdown
+
 
 def _env_write(key: str, value: str) -> None:
     try:
@@ -449,21 +606,21 @@ def _env_write(key: str, value: str) -> None:
         pass
 
 
-def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict[str, Any]]:
+def _prom_q(base_url: str | None, promql: str) -> dict[str, Any] | None:
     if not base_url:
         return None
     try:
         params = _u.urlencode({"query": promql})
-        with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
+        with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:  # nosec B310 - controlled prometheus URL
             data = cast(dict[str, Any], _json.loads(r.read().decode()))
             if data.get("status") == "success":
-                return cast(Optional[dict[str, Any]], data.get("data"))
+                return cast(dict[str, Any] | None, data.get("data"))
     except Exception:
         return None
     return None
 
 
-def _scalar(data: Optional[dict[str, Any]]) -> Optional[float]:
+def _scalar(data: dict[str, Any] | None) -> float | None:
     if not data:
         return None
     try:
@@ -555,7 +712,7 @@ async def vllm_models() -> dict[str, Any]:
         if settings is None or settings.vllm_endpoint is None:
             return {"error": "vLLM endpoint not configured"}
         url = settings.vllm_endpoint.rstrip("/") + "/v1/models"
-        with _req.urlopen(url, timeout=5) as r:
+        with _req.urlopen(url, timeout=5) as r:  # nosec B310 - controlled vLLM endpoint URL
             data = _json.loads(r.read().decode())
             return data
     except Exception as exc:
@@ -641,7 +798,7 @@ async def secret_set(payload: dict[str, Any], request: Request) -> dict[str, Any
         # Persist to .env when using environment provider to survive restarts
         if _SecretProvider is not None and provider == _SecretProvider.ENVIRONMENT:
             try:
-                _env_write(name, serialized if isinstance(value, (dict, list)) else str(value))
+                _env_write(name, serialized if isinstance(value, dict | list) else str(value))
             except Exception:
                 # Non-fatal
                 pass
@@ -1101,15 +1258,13 @@ async def cache_analytics() -> dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/clear")
-async def cache_clear(request: Request, payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+async def cache_clear(request: Request, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Clear semantic cache entries. Optional body: { "pattern": "substring" }
 
     If ADMIN_TOKEN is set, requires X-Admin-Token header.
     """
     try:
-        if semantic_cache is None:
-            return {"error": "Semantic cache not available"}
-
+        # Check authorization first
         admin_token = os.environ.get("ADMIN_TOKEN")
         if admin_token:
             header_token = request.headers.get("x-admin-token") or request.headers.get(
@@ -1117,6 +1272,9 @@ async def cache_clear(request: Request, payload: Optional[dict[str, Any]] = None
             )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
+
+        if semantic_cache is None:
+            return {"error": "Semantic cache not available"}
 
         pattern = None
         if payload:
@@ -1161,7 +1319,7 @@ async def execute_tool(
 
 
 async def check_tool_approval(
-    tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+    tool_name: str, parameters: dict[str, Any], operator_id: str | None
 ) -> dict[str, Any]:
     """Check tool approval status."""
     # This would integrate with your approval system
@@ -1250,7 +1408,7 @@ async def get_cache_status() -> dict[str, Any]:
             "status": "enabled" if semantic_cache.is_ready else "error",
             "health": health,
             "analytics": analytics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -1388,11 +1546,13 @@ async def batch_execute_tools(requests: list[dict[str, Any]]) -> list[dict[str, 
 
 
 @app.post(f"{API_PREFIX}/admin/router/set-thresholds")
-async def set_router_thresholds(thresholds: dict[str, float]) -> dict[str, Any]:
+async def set_router_thresholds(request: Request, thresholds: dict[str, float]) -> dict[str, Any]:
     """Set router confidence and support thresholds (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
-    if not admin_token:
-        return {"error": "Admin token not configured"}
+    if admin_token:
+        header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+        if header_token != admin_token:
+            return {"error": "Unauthorized"}
 
     if ds_router is None:
         return {"error": "DS-Router not available"}
@@ -1440,8 +1600,8 @@ async def autopromote_preview() -> dict[str, Any]:
 
     for role, entry in getattr(adapter_manager, "state", {}).items():  # type: ignore
         entry_map: dict[str, Any] = cast(dict[str, Any], (entry or {}))
-        active = cast(Optional[str], entry_map.get("active"))
-        challenger = cast(Optional[str], entry_map.get("challenger"))
+        active = cast(str | None, entry_map.get("active"))
+        challenger = cast(str | None, entry_map.get("challenger"))
         if not (active and challenger and active != challenger):
             continue
         r_active = (
@@ -1712,7 +1872,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     if provider_used is None:
         policy_used = None
         roles_obj: Any = text_roles if text_roles is not None else None
-        decision: Optional[dict[str, Any]] = None
+        decision: dict[str, Any] | None = None
         try:
             routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
             chosen_model = None
@@ -1802,10 +1962,10 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                         dilemma_type: str = str(ethical_analysis.get("dilemma_type", "unknown"))
                         severity: str = str(ethical_analysis.get("severity", "medium"))
                         detected_raw: Any = ethical_analysis.get("all_detected", [])
-                        if not isinstance(detected_raw, (list, tuple)):
+                        if not isinstance(detected_raw, list | tuple):
                             detected_raw = []
                         detected_list_any: list[Any] = (
-                            list(detected_raw) if isinstance(detected_raw, (list, tuple)) else []
+                            list(detected_raw) if isinstance(detected_raw, list | tuple) else []
                         )  # type: ignore[list-item]
                         detected_list: list[str] = [str(x) for x in detected_list_any]
 
@@ -1813,7 +1973,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                         ethical_proposal = f"""ETHICAL DILEMMA DETECTED: {dilemma_type.upper()}
 Severity: {severity}
 Original Query: {q}
-Detected Issues: {', '.join(detected_list)}
+Detected Issues: {", ".join(detected_list)}
 
 This query has been flagged for ethical review. Please provide guidance on how to respond appropriately while maintaining ethical standards. [action:ethical_review]"""
 
@@ -1919,8 +2079,8 @@ async def vision(
     if engine is not None:
         engine.add_memory("user", question)  # type: ignore
     answer: str = "Vision processing unavailable"
-    critique: Optional[str] = None
-    grounding: Optional[dict[str, Any]] = None
+    critique: str | None = None
+    grounding: dict[str, Any] | None = None
     try:
         vl_any = vl_roles  # type: ignore[assignment]
         judge_any = judge  # type: ignore[assignment]
@@ -2077,14 +2237,14 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
         # Stream response chunks
         accumulated_content: str = ""
         chunk_count: int = 0
-        last_provider: Optional[str] = None
+        last_provider: str | None = None
         router_any = cast(Any, ds_router)
         async for chunk in router_any.generate_stream(gen_request):
             part: str = getattr(chunk, "content", "")
             accumulated_content += part
             chunk_count += 1
             last_provider = cast(
-                Optional[str], getattr(chunk, "provider", last_provider or "ds_router_stream")
+                str | None, getattr(chunk, "provider", last_provider or "ds_router_stream")
             )
 
             # Send chunk to client
