@@ -1,5 +1,5 @@
 # Multi-stage build for production-ready API
-FROM python:3.12-slim as builder
+FROM python:3.11-slim as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt .
+COPY ../../requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app
@@ -27,11 +27,9 @@ COPY --from=builder /root/.local /home/app/.local
 # Set up working directory
 WORKDIR /app
 
-# Copy source code
-COPY --chown=app:app . .
-
-# Make sure scripts are executable
-RUN chmod +x /home/app/.local/bin/*
+# Copy source code (from repo root context)
+COPY --chown=app:app src/ ./src/
+COPY --chown=app:app apps/api/ ./apps/api/
 
 # Set environment variables
 ENV PATH=/home/app/.local/bin:$PATH
@@ -50,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Start application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
