@@ -1,5 +1,0 @@
-apiVersion: v2
-name: liquid-hive-upgrade
-version: 0.1.0
-appVersion: "0.1.0"
-description: Liquid Hive Upgrade - Planner, Arena, Oracle Router
