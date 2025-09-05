@@ -13,7 +13,18 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  hygiene:
+    name: Repository Hygiene
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Run hygiene checks
+      uses: ./.github/workflows/repo-hygiene.yml
+
   test:
+    needs: hygiene
     name: Test & Lint
     runs-on: ubuntu-latest
     strategy:
