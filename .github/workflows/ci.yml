@@ -1,143 +1,240 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  release:
+    types: [ published ]
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  discover:
+  test:
+    name: Test & Lint
     runs-on: ubuntu-latest
-    outputs:
-      has_cmake: ${{ steps.detect.outputs.has_cmake }}
-      has_python: ${{ steps.detect.outputs.has_python }}
-      has_node: ${{ steps.detect.outputs.has_node }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: detect
-        shell: bash
-        run: |
-          has_cmake=false
-          has_python=false
-          has_node=false
-          git ls-files | grep -qiE '(^|/)(CMakeLists\.txt|.*\.cmake)$' && has_cmake=true
-          git ls-files | grep -qiE '(^|/)(pyproject\.toml|requirements\.txt|setup\.py)$' && has_python=true
-          git ls-files | grep -qiE '(^|/)(package\.json)$' && has_node=true
-          echo "has_cmake=$has_cmake"   >> $GITHUB_OUTPUT
-          echo "has_python=$has_python" >> $GITHUB_OUTPUT
-          echo "has_node=$has_node"     >> $GITHUB_OUTPUT
+    strategy:
+      matrix:
+        python-version: [3.11, 3.12]
+        node-version: [18, 20]
+        include:
+          - test-type: unit
+          - test-type: integration
 
-  cmake:
-    needs: discover
-    if: needs.discover.outputs.has_cmake == 'true'
-    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cmake clang lld
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build -j
-      - name: Unit tests (ctest)
-        run: ctest --test-dir build --output-on-failure
-      - name: Package
-        run: |
-          cmake --build build --target package || true
-          tar -czf build_artifacts.tgz -C build .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: cmake-artifacts
-          path: build_artifacts.tgz
-          if-no-files-found: warn
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-  python:
-    needs: discover
-    if: needs.discover.outputs.has_python == 'true'
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'yarn'
+        cache-dependency-path: frontend/yarn.lock
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov ruff bandit safety
+
+    - name: Install Node dependencies
+      run: |
+        cd frontend
+        yarn install --frozen-lockfile
+
+    - name: Python Lint
+      run: |
+        ruff check . --output-format=github
+        ruff format . --check
+
+    - name: Node Lint
+      run: |
+        cd frontend
+        yarn lint
+
+    - name: Security Checks
+      run: |
+        bandit -r src/ apps/ -f json -o bandit-report.json || true
+        safety check --json --output safety-report.json || true
+
+    - name: Python Tests
+      run: |
+        pytest tests/ --cov=src --cov=apps --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+
+    - name: Frontend Tests
+      run: |
+        cd frontend
+        yarn test --coverage --watchAll=false
+
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml,./frontend/coverage/lcov.info
+        flags: ${{ matrix.test-type }}
+        name: codecov-${{ matrix.python-version }}-${{ matrix.node-version }}
+
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
+    needs: test
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Lint (ruff)
-        run: ruff check .
-      - name: Format check (ruff)
-        run: ruff format --check .
-      - name: Type check (mypy)
-        run: mypy src/ --ignore-missing-imports || true
-        continue-on-error: true
-      - name: Security scan (bandit)
-        run: bandit -r src/ -f json -o bandit-report.json || true
-        continue-on-error: true
-      - name: Tests
-        run: pytest -q --maxfail=1 --disable-warnings --cov --cov-report=xml
-      - uses: actions/upload-artifact@v4
-        with:
-          name: python-coverage
-          path: coverage.xml
-          if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bandit-security-report
-          path: bandit-report.json
-          if-no-files-found: warn
+    - uses: actions/checkout@v4
 
-  node:
-    needs: discover
-    if: needs.discover.outputs.has_node == 'true'
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python, javascript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  build:
+    name: Build & Package
     runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Detect package manager
-        id: pm
-        run: |
-          pm="yarn"  # Enforce yarn as per build hardening requirements
-          echo "pm=$pm" >> $GITHUB_OUTPUT
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: 'frontend/yarn.lock'
-      - name: Install frontend deps
-        run: |
-          cd frontend
-          yarn install --frozen-lockfile
-      - name: Lint
-        run: |
-          cd frontend
-          yarn lint || true
-        continue-on-error: true
-      - name: Type check
-        run: |
-          cd frontend
-          yarn type-check || true
-        continue-on-error: true
-      - name: Build
-        run: |
-          cd frontend
-          yarn build
-      - name: Test
-        run: |
-          cd frontend
-          yarn test --ci --watchAll=false
-      - uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/dist
-          if-no-files-found: warn
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'yarn'
+        cache-dependency-path: frontend/yarn.lock
+
+    - name: Build Python package
+      run: |
+        pip install build
+        python -m build
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        yarn install --frozen-lockfile
+        yarn build
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts-${{ github.sha }}
+        path: |
+          dist/
+          frontend/dist/
+          sbom.spdx.json
+        retention-days: 30
+
+  performance:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Start services
+      run: docker-compose up -d --wait
+
+    - name: Install k6
+      run: |
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Run performance tests
+      run: k6 run tests/performance/k6_smoke.js
+
+    - name: Cleanup
+      if: always()
+      run: docker-compose down -v
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, performance]
+    if: github.event_name == 'release'
+    environment: production
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: 3.12.0
+
+    - name: Deploy to Kubernetes
+      run: |
+        helm upgrade --install liquid-hive \
+          infra/helm/liquid-hive \
+          -f infra/helm/liquid-hive/values-prod.yaml \
+          --set image.tag=${{ github.event.release.tag_name }} \
+          --wait --timeout=10m
+      env:
+        KUBECONFIG: ${{ secrets.KUBECONFIG }}
