@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
-from pydantic import BaseSettings, Field, validator
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings
 
 
 class DatabaseConfig(BaseSettings):
@@ -97,7 +98,8 @@ class AppConfig(BaseSettings):
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     features: FeaturesConfig = Field(default_factory=FeaturesConfig)
     
-    @validator("environment")
+    @field_validator("environment")
+    @classmethod
     def validate_environment(cls, v: str) -> str:
         """Validate environment value."""
         allowed = {"development", "staging", "production", "test"}

@@ -10,6 +10,8 @@ import yaml
 
 from src.config import AppConfig, ConfigLoader, get_config
 
+pytestmark = pytest.mark.unit
+
 
 class TestConfigLoader:
     """Test configuration loader functionality."""
