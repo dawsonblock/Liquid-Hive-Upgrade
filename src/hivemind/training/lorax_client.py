@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import urllib.error as err
 import urllib.request as req
-from typing import Any, Optional
+from typing import Any
 
 
 class LoRAXClient:
@@ -14,7 +14,7 @@ class LoRAXClient:
       - settings.lorax_api_key (optional)
     """
 
-    def __init__(self, base_url: Optional[str], api_key: Optional[str] = None) -> None:
+    def __init__(self, base_url: str | None, api_key: str | None = None) -> None:
         self.base = base_url.rstrip("/") if base_url else None
         self.api_key = api_key
 
@@ -25,7 +25,7 @@ class LoRAXClient:
         return h
 
     def online_sft(
-        self, prompt: str, response: str, metadata: Optional[dict[str, Any]] = None
+        self, prompt: str, response: str, metadata: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         if not self.base:
             return {"status": "disabled"}

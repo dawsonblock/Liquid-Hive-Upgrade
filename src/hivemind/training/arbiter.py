@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 try:
     from ...unified_runtime.providers import GenRequest
@@ -38,7 +38,7 @@ class Arbiter:
     - Cost Profile: Single API ecosystem, ~70% cost reduction vs GPT-4o
     """
 
-    def __init__(self, settings: Optional[Any] = None):
+    def __init__(self, settings: Any | None = None):
         self.settings = settings
         self.logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class Arbiter:
         self,
         original_prompt: str,
         synthesized_answer: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Refine a synthesized answer using the DeepSeek oracle hierarchy.
 
@@ -230,7 +230,7 @@ Synthesized Answer:
 
 Please analyze and refine this answer, providing a higher-quality version."""
 
-    def _parse_oracle_response(self, response: str) -> Optional[dict[str, Any]]:
+    def _parse_oracle_response(self, response: str) -> dict[str, Any] | None:
         """Parse and validate oracle response JSON."""
         try:
             parsed = json.loads(response)

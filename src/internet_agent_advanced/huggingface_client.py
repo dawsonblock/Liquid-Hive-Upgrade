@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
 from huggingface_hub import HfApi
 
 
-def get_hf(api_token: Optional[str] = None) -> HfApi:
+def get_hf(api_token: str | None = None) -> HfApi:
     token = api_token or os.getenv("HUGGINGFACE_TOKEN")
     return HfApi(token=token)
 
 
-def fetch_model_card(repo_id: str, api_token: Optional[str] = None) -> dict[str, Any]:
+def fetch_model_card(repo_id: str, api_token: str | None = None) -> dict[str, Any]:
     api = get_hf(api_token)
     info = api.model_info(repo_id)
     card = info.cardData or {}

@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 # Third-party imports with graceful handling
 try:
@@ -50,10 +50,10 @@ class SecretsManager:
     """
 
     def __init__(self):
-        self._vault_client: Optional[Any] = None
-        self._aws_client: Optional[Any] = None
+        self._vault_client: Any | None = None
+        self._aws_client: Any | None = None
         self._cache: dict[str, Any] = {}
-        self._provider: Optional[SecretProvider] = None
+        self._provider: SecretProvider | None = None
 
         # Initialize providers
         self._init_providers()
@@ -135,7 +135,7 @@ class SecretsManager:
             logger.debug(f"Failed to connect to AWS Secrets Manager: {e}")
             return False
 
-    def get_secret(self, secret_path: str, default: Optional[Any] = None) -> Optional[Any]:
+    def get_secret(self, secret_path: str, default: Any | None = None) -> Any | None:
         """Retrieve a secret from the configured provider.
 
         Args:
@@ -169,7 +169,7 @@ class SecretsManager:
 
         return value
 
-    def _get_vault_secret(self, secret_path: str, default: Optional[Any] = None) -> Optional[Any]:
+    def _get_vault_secret(self, secret_path: str, default: Any | None = None) -> Any | None:
         """Retrieve secret from HashiCorp Vault."""
         if not self._vault_client:
             return default
@@ -202,7 +202,7 @@ class SecretsManager:
 
         return default
 
-    def _get_aws_secret(self, secret_name: str, default: Optional[Any] = None) -> Optional[Any]:
+    def _get_aws_secret(self, secret_name: str, default: Any | None = None) -> Any | None:
         """Retrieve secret from AWS Secrets Manager."""
         if not self._aws_client:
             return default
@@ -230,11 +230,11 @@ class SecretsManager:
 
         return default
 
-    def _get_env_secret(self, env_var: str, default: Optional[Any] = None) -> Optional[Any]:
+    def _get_env_secret(self, env_var: str, default: Any | None = None) -> Any | None:
         """Retrieve secret from environment variable."""
         return os.environ.get(env_var, default)
 
-    def get_database_url(self) -> Optional[str]:
+    def get_database_url(self) -> str | None:
         """Get database connection URL."""
         # Try different common secret paths/names
         for path in ["database/mongo_url", "mongo_url", "MONGO_URL"]:
@@ -243,7 +243,7 @@ class SecretsManager:
                 return str(url)
         return None
 
-    def get_redis_url(self) -> Optional[str]:
+    def get_redis_url(self) -> str | None:
         """Get Redis connection URL."""
         for path in ["redis/url", "redis_url", "REDIS_URL"]:
             url = self.get_secret(path)
@@ -251,7 +251,7 @@ class SecretsManager:
                 return str(url)
         return None
 
-    def get_vllm_config(self) -> dict[str, Optional[str]]:
+    def get_vllm_config(self) -> dict[str, str | None]:
         """Get vLLM configuration."""
         config = {}
 
@@ -285,7 +285,7 @@ class SecretsManager:
 
         return config
 
-    def get_prometheus_url(self) -> Optional[str]:
+    def get_prometheus_url(self) -> str | None:
         """Get Prometheus base URL."""
         for path in ["prometheus/base_url", "prometheus_base_url", "PROMETHEUS_BASE_URL"]:
             url = self.get_secret(path)
@@ -293,7 +293,7 @@ class SecretsManager:
                 return str(url)
         return None
 
-    def store_secret(self, secret_path: str, value: Union[str, dict[str, Any]]) -> bool:
+    def store_secret(self, secret_path: str, value: str | dict[str, Any]) -> bool:
         """Store a secret (only supported by Vault and environment in dev).
 
         Args:
@@ -336,7 +336,7 @@ class SecretsManager:
         self._cache.clear()
         logger.debug("Secrets cache cleared")
 
-    def get_provider(self) -> Optional[SecretProvider]:
+    def get_provider(self) -> SecretProvider | None:
         """Get the current active provider."""
         return self._provider
 

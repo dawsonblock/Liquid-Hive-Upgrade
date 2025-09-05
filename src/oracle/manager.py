@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 try:
     import yaml  # type: ignore
@@ -46,7 +46,7 @@ class ProviderManager:
         self.providers_cfg = providers
         return providers, self.routing
 
-    def resolve_api_key(self, cfg: ProviderConfig) -> Optional[str]:
+    def resolve_api_key(self, cfg: ProviderConfig) -> str | None:
         if not cfg.api_key_env:
             return None
         # Environment first. External secrets manager integration can be added here

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -8,7 +8,7 @@ from .base import ProviderConfig
 
 
 class DeepSeekProvider:
-    def __init__(self, cfg: ProviderConfig, api_key: Optional[str]) -> None:
+    def __init__(self, cfg: ProviderConfig, api_key: str | None) -> None:
         self.name = cfg.name
         self.cfg = cfg
         self._key = api_key

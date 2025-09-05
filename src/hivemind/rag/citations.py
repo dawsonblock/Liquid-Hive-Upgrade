@@ -31,7 +31,7 @@ def format_context(documents: list[Document]) -> str:
         source = doc.metadata.get("source", "unknown")
         # Simple chunking for display
         snippet = doc.page_content[:300].strip() + ("..." if len(doc.page_content) > 300 else "")
-        context_lines.append(f"[{i+1}] Source: {source}\n{snippet}")
+        context_lines.append(f"[{i + 1}] Source: {source}\n{snippet}")
 
     return "\n\n".join(context_lines)
 
@@ -58,6 +58,6 @@ def format_context_with_scores(documents: list[Document], scores: list[float]) -
     for i, (doc, score) in enumerate(zip(documents, scores, strict=False)):
         source = doc.metadata.get("source", "unknown")
         snippet = doc.page_content[:300].strip() + ("..." if len(doc.page_content) > 300 else "")
-        context_lines.append(f"[{i+1}] Source: {source} (Score: {score:.3f})\n{snippet}")
+        context_lines.append(f"[{i + 1}] Source: {source} (Score: {score:.3f})\n{snippet}")
 
     return "\n\n".join(context_lines)

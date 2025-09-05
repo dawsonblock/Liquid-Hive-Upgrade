@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ class GenRequest:
     """Standardized generation request."""
 
     prompt: str
-    system_prompt: Optional[str] = None
-    max_tokens: Optional[int] = None
-    temperature: Optional[float] = None
-    cot_budget: Optional[int] = None  # For reasoning modes
+    system_prompt: str | None = None
+    max_tokens: int | None = None
+    temperature: float | None = None
+    cot_budget: int | None = None  # For reasoning modes
     metadata: dict[str, Any] = None
     stream: bool = False  # Enable streaming mode
 
@@ -43,8 +43,8 @@ class GenResponse:
     output_tokens: int = 0
     latency_ms: float = 0.0
     cost_usd: float = 0.0
-    confidence: Optional[float] = None
-    logprobs: Optional[list[float]] = None
+    confidence: float | None = None
+    logprobs: list[float] | None = None
     metadata: dict[str, Any] = None
     is_complete: bool = True  # For streaming responses
 
@@ -112,9 +112,7 @@ class BaseProvider(ABC):
             and self.__class__.generate_stream != BaseProvider.generate_stream
         )
 
-    def _log_generation(
-        self, request: GenRequest, response: GenResponse, error: Optional[str] = None
-    ):
+    def _log_generation(self, request: GenRequest, response: GenResponse, error: str | None = None):
         """Log generation attempt with structured data."""
         log_data = {
             "provider": self.name,

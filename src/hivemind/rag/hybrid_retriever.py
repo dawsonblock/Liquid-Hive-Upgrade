@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from hivemind.config import Settings
 
@@ -55,8 +55,8 @@ class HybridRetriever:
         mode: RetrievalMode = RetrievalMode.AUTO,
     ):
         self.mode = mode
-        self.faiss_retriever: Optional[Retriever] = None
-        self.qdrant_retriever: Optional[QdrantRetriever] = None
+        self.faiss_retriever: Retriever | None = None
+        self.qdrant_retriever: QdrantRetriever | None = None
         self.is_ready = False
 
         # Performance tracking
@@ -128,7 +128,7 @@ class HybridRetriever:
         self,
         query: str,
         k: int = 5,
-        metadata_filter: Optional[dict[str, Any]] = None,
+        metadata_filter: dict[str, Any] | None = None,
         prefer_qdrant: bool = True,
     ) -> list[Document]:
         """Perform hybrid search across available backends.
@@ -167,7 +167,7 @@ class HybridRetriever:
             return await self._fallback_search(query, k)
 
     async def _search_qdrant_only(
-        self, query: str, k: int, metadata_filter: Optional[dict[str, Any]]
+        self, query: str, k: int, metadata_filter: dict[str, Any] | None
     ) -> list[Document]:
         """Search using Qdrant only."""
         if not self.qdrant_retriever or not self.qdrant_retriever.is_ready:
@@ -185,7 +185,7 @@ class HybridRetriever:
         return await self.faiss_retriever.search(query, k)
 
     async def _search_hybrid(
-        self, query: str, k: int, metadata_filter: Optional[dict[str, Any]], prefer_qdrant: bool
+        self, query: str, k: int, metadata_filter: dict[str, Any] | None, prefer_qdrant: bool
     ) -> list[Document]:
         """Perform hybrid search using both backends."""
         self.retrieval_stats["hybrid_searches"] += 1
@@ -289,7 +289,7 @@ class HybridRetriever:
     async def add_documents(
         self,
         file_paths: list[str],
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
         use_qdrant: bool = True,
     ) -> dict[str, Any]:
         """Add documents to the preferred backend."""
@@ -323,7 +323,7 @@ class HybridRetriever:
                 snippet = doc.page_content[:200].strip() + (
                     "..." if len(doc.page_content) > 200 else ""
                 )
-                context_lines.append(f"[{i+1}] Source: {source} (Backend: {backend})\n{snippet}")
+                context_lines.append(f"[{i + 1}] Source: {source} (Backend: {backend})\n{snippet}")
 
             return "\n\n".join(context_lines)
 

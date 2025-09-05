@@ -5,7 +5,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 
 class ToolParameterType(Enum):
@@ -28,9 +28,9 @@ class ToolParameter:
     description: str
     required: bool = True
     default: Any = None
-    choices: Optional[list[Any]] = None
-    min_value: Optional[Union[int, float]] = None
-    max_value: Optional[Union[int, float]] = None
+    choices: list[Any] | None = None
+    min_value: int | float | None = None
+    max_value: int | float | None = None
 
 
 @dataclass
@@ -39,7 +39,7 @@ class ToolResult:
 
     success: bool
     data: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

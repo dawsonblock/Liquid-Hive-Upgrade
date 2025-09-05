@@ -6,16 +6,14 @@ class VLClient:
     def __init__(self, model_id: str, revision: str = "main"):
         # Pin revision for security - prevents supply chain attacks
         self.processor = AutoProcessor.from_pretrained(
-            model_id, 
-            revision=revision, 
-            trust_remote_code=True
+            model_id, revision=revision, trust_remote_code=True
         )
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_id, 
+            model_id,
             revision=revision,
-            torch_dtype=torch.bfloat16, 
-            device_map="auto", 
-            trust_remote_code=True
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            trust_remote_code=True,
         )
 
     def generate(self, prompt: str, image):

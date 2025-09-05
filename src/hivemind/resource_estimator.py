@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -17,7 +17,7 @@ class ResourceEstimator:
     be extended to use it for complexity. We keep this lightweight.
     """
 
-    def __init__(self, cost_model: Optional[CostModel] = None) -> None:
+    def __init__(self, cost_model: CostModel | None = None) -> None:
         self.cost = cost_model or CostModel()
 
     def _estimate_tokens(self, prompt: str) -> int:
@@ -29,7 +29,7 @@ class ResourceEstimator:
         return int(base + bonus)
 
     def estimate_cost(
-        self, role: str = "implementer", tier: str = "auto", prompt: Optional[str] = None
+        self, role: str = "implementer", tier: str = "auto", prompt: str | None = None
     ) -> dict[str, Any]:
         predicted_tokens = None
         if prompt:

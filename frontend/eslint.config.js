@@ -24,6 +24,8 @@ export default [
         ecmaFeatures: {
           jsx: true,
         },
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.browser,

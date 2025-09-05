@@ -5,7 +5,6 @@ A web search tool that can perform internet searches and return results.
 This tool requires approval due to external network access.
 """
 
-import asyncio
 from typing import Any
 
 import aiohttp
@@ -107,7 +106,7 @@ class WebSearchTool(BaseTool):
 
         except aiohttp.ClientError as e:
             return ToolResult(success=False, error=f"Network error during search: {e!s}")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ToolResult(success=False, error="Search request timed out")
         except Exception as e:
             return ToolResult(success=False, error=f"Search failed: {e!s}")

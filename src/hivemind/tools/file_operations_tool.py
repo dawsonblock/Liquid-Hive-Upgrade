@@ -22,11 +22,12 @@ class FileOperationsTool(BaseTool):
         # Define allowed directories for security
         # Use secure temporary directory instead of hardcoded /tmp
         import tempfile
+
         secure_temp_dir = tempfile.mkdtemp(prefix="liquid_hive_")
-        
+
         self.allowed_directories = {
             "/app/data/ingest",
-            "/app/data/output", 
+            "/app/data/output",
             "/app/data/temp",
             secure_temp_dir,
         }

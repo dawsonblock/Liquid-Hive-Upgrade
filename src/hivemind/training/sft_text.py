@@ -1,7 +1,7 @@
 import argparse
 import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from datasets import Dataset, concatenate_datasets, load_dataset
 from transformers import TrainingArguments
@@ -12,7 +12,7 @@ SYSTEM_PREFIX = "### Instruction:\n"
 ASSISTANT_PREFIX = "\n\n### Response:\n"
 
 
-def _format_sample(sample: dict[str, Any]) -> Optional[str]:
+def _format_sample(sample: dict[str, Any]) -> str | None:
     """Normalize different HF dataset formats to a single instruction-response text.
     Supported patterns:
       - {input, output}
@@ -63,9 +63,9 @@ def _format_sample(sample: dict[str, Any]) -> Optional[str]:
 class DataConfig:
     datasets: list[str]
     split: str = "train"
-    eval_split: Optional[str] = None
-    max_train_samples: Optional[int] = None
-    max_eval_samples: Optional[int] = None
+    eval_split: str | None = None
+    max_train_samples: int | None = None
+    max_eval_samples: int | None = None
 
 
 DEFAULT_DATASETS = [
@@ -74,7 +74,7 @@ DEFAULT_DATASETS = [
 ]
 
 
-def load_mixture(cfg: DataConfig) -> (Dataset, Optional[Dataset]):
+def load_mixture(cfg: DataConfig) -> (Dataset, Dataset | None):
     train_parts: list[Dataset] = []
     eval_parts: list[Dataset] = []
     for ds_name in cfg.datasets:
@@ -135,8 +135,8 @@ def train_sft(
     num_epochs: float = 1.0,
     per_device_batch_size: int = 2,
     grad_accum: int = 8,
-    max_train_samples: Optional[int] = None,
-    max_eval_samples: Optional[int] = None,
+    max_train_samples: int | None = None,
+    max_eval_samples: int | None = None,
 ) -> None:
     os.makedirs(out_dir, exist_ok=True)
 

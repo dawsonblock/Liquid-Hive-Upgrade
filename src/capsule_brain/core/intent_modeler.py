@@ -16,15 +16,13 @@ powerful LLM with a specialised prompt.
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 class IntentModeler:
     """Analyse user prompt history to derive high‑level operator intent."""
 
     def __init__(self, engine) -> None:
         self.engine = engine
-        self.current_intent: Optional[str] = None
+        self.current_intent: str | None = None
 
     async def refresh_intent(self) -> str:
         """Generate a new intent hypothesis based on recent prompts.

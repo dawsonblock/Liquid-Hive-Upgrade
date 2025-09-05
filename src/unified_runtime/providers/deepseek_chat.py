@@ -9,7 +9,7 @@ import json
 import os
 import random
 from collections.abc import AsyncGenerator
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from .base_provider import BaseProvider, GenRequest, GenResponse, StreamChunk
 
@@ -22,7 +22,7 @@ except ImportError:
 class DeepSeekChatProvider(BaseProvider):
     """DeepSeek V3.1 non-thinking mode provider."""
 
-    def __init__(self, config: Optional[dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         cfg = config or {}
         super().__init__("deepseek_chat", cfg)
         self.api_key = cfg.get("api_key") or os.getenv("DEEPSEEK_API_KEY")
@@ -60,7 +60,7 @@ class DeepSeekChatProvider(BaseProvider):
             "Content-Type": "application/json",
         }
 
-        last_error: Optional[str] = None
+        last_error: str | None = None
         for attempt in range(self.max_retries):
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:  # type: ignore[reportUnknownMemberType]
@@ -209,7 +209,7 @@ class DeepSeekChatProvider(BaseProvider):
             )
 
     def _fallback_response(
-        self, request: GenRequest, start_time: float, error: Optional[str] = None
+        self, request: GenRequest, start_time: float, error: str | None = None
     ) -> GenResponse:
         """Generate fallback response when API is unavailable."""
         fallback_content = (

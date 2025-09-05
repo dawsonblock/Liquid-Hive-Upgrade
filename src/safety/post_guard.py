@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from unified_runtime.providers.base_provider import GenRequest, GenResponse
 
@@ -21,7 +20,7 @@ class PostGuardResult:
     blocked: bool
     reason: str = ""
     status: str = "passed"
-    toxicity_score: Optional[float] = None
+    toxicity_score: float | None = None
     safety_violations: list[str] = None
     citations_added: bool = False
 

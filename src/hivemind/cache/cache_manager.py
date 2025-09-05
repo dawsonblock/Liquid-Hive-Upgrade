@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from .semantic_cache import CacheStrategy, SemanticCache
 
@@ -330,18 +330,18 @@ class CacheManager:
 
             report = f"""
 🧠 LIQUID-HIVE Semantic Cache Report
-{'='*50}
+{"=" * 50}
 
 📊 Cache Performance:
-  • Hit Rate: {analytics['hit_rate']:.1%} ({analytics['cache_hits']}/{analytics['total_queries']} queries)
-  • Cache Size: {analytics['current_size']}/{analytics['max_size']} entries ({analytics['current_size']/analytics['max_size']:.1%} full)
-  • Memory Usage: {analytics['memory_usage_mb']:.1f} MB
-  • Average Similarity: {analytics['average_similarity']:.3f}
+  • Hit Rate: {analytics["hit_rate"]:.1%} ({analytics["cache_hits"]}/{analytics["total_queries"]} queries)
+  • Cache Size: {analytics["current_size"]}/{analytics["max_size"]} entries ({analytics["current_size"] / analytics["max_size"]:.1%} full)
+  • Memory Usage: {analytics["memory_usage_mb"]:.1f} MB
+  • Average Similarity: {analytics["average_similarity"]:.3f}
 
 ⚙️ Configuration:
-  • Strategy: {analytics['strategy'].upper()}
-  • Similarity Threshold: {analytics['similarity_threshold']:.3f}
-  • Default TTL: {analytics['ttl_seconds']} seconds
+  • Strategy: {analytics["strategy"].upper()}
+  • Similarity Threshold: {analytics["similarity_threshold"]:.3f}
+  • Default TTL: {analytics["ttl_seconds"]} seconds
 
 🎯 Performance Analysis:
 """
@@ -362,7 +362,7 @@ class CacheManager:
             return f"Failed to generate report: {e!s}"
 
 
-async def create_cache_manager(redis_url: str = "redis://localhost:6379") -> Optional[CacheManager]:
+async def create_cache_manager(redis_url: str = "redis://localhost:6379") -> CacheManager | None:
     """Create cache manager with semantic cache."""
     try:
         from .semantic_cache import get_semantic_cache

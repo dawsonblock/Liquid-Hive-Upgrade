@@ -5,7 +5,6 @@ import os
 import threading
 import time
 import urllib.parse
-from typing import Optional
 
 try:
     import redis  # optional
@@ -24,7 +23,7 @@ class InMemoryStore:
         with self._lock:
             self._data[key] = (time.time() + ttl, value)
 
-    def get(self, key: str) -> Optional[dict]:
+    def get(self, key: str) -> dict | None:
         with self._lock:
             v = self._data.get(key)
             if not v:
@@ -103,7 +102,7 @@ class ConsentManager:
             return {"allowed": False, "reason": "consent_required", "scope": scope, "target": host}
         return {"allowed": True, "scope": scope, "target": host, "via": "default"}
 
-    def approve(self, scope: str, target: str, ttl: Optional[int] = None):
+    def approve(self, scope: str, target: str, ttl: int | None = None):
         ttl = ttl or DEFAULT_TTL_S
         key = self._key(scope, target)
         if self.r:

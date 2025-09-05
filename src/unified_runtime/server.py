@@ -16,7 +16,7 @@ import urllib.parse as _u
 import urllib.request as _req
 import uuid
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import httpx
 
@@ -33,10 +33,8 @@ except Exception:
     internet_tools_router = None  # type: ignore
     internet_metrics_app = None  # type: ignore
     internet_test_router = None  # type: ignore
-import os
 
 # Add src to Python path for imports
-import sys
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -234,22 +232,22 @@ if "internet_metrics_app" in globals() and internet_metrics_app is not None:
     # Mount under separate path to avoid conflict with existing metrics
     app.mount("/internet-agent-metrics", internet_metrics_app)
 
-engine: Optional[Any] = None
-text_roles: Optional[Any] = None
-text_roles_small: Optional[Any] = None
-text_roles_large: Optional[Any] = None
-judge: Optional[Any] = None
-retriever: Optional[Any] = None
-settings: Optional[Any] = None
-strategy_selector: Optional[Any] = None
-vl_roles: Optional[Any] = None
-resource_estimator: Optional[Any] = None
-adapter_manager: Optional[Any] = None
-tool_auditor: Optional[Any] = None
-intent_modeler: Optional[Any] = None
-confidence_modeler: Optional[Any] = None
-ds_router: Optional[Any] = None
-tool_registry: Optional[Any] = None
+engine: Any | None = None
+text_roles: Any | None = None
+text_roles_small: Any | None = None
+text_roles_large: Any | None = None
+judge: Any | None = None
+retriever: Any | None = None
+settings: Any | None = None
+strategy_selector: Any | None = None
+vl_roles: Any | None = None
+resource_estimator: Any | None = None
+adapter_manager: Any | None = None
+tool_auditor: Any | None = None
+intent_modeler: Any | None = None
+confidence_modeler: Any | None = None
+ds_router: Any | None = None
+tool_registry: Any | None = None
 
 try:
     from hivemind.autonomy.orchestrator import AutonomyOrchestrator
@@ -271,13 +269,13 @@ except Exception:
         pass
 
 
-autonomy_orchestrator: Optional[Any] = None
+autonomy_orchestrator: Any | None = None
 _autonomy_lock: Any = None
 _autonomy_lock_key = "liquid_hive:autonomy_leader"
 _autonomy_id = uuid.uuid4().hex
 
 # Semantic cache
-semantic_cache: Optional[Any] = None
+semantic_cache: Any | None = None
 cache_manager = None
 
 websockets: list[WebSocket] = []
@@ -287,7 +285,14 @@ websockets: list[WebSocket] = []
 async def startup() -> None:
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
-    global resource_estimator, adapter_manager, tool_auditor, intent_modeler, confidence_modeler, ds_router, tool_registry
+    global \
+        resource_estimator, \
+        adapter_manager, \
+        tool_auditor, \
+        intent_modeler, \
+        confidence_modeler, \
+        ds_router, \
+        tool_registry
     global semantic_cache, cache_manager
     # Initialize OTEL tracer (if enabled)
     try:
@@ -449,7 +454,7 @@ def _env_write(key: str, value: str) -> None:
         pass
 
 
-def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict[str, Any]]:
+def _prom_q(base_url: str | None, promql: str) -> dict[str, Any] | None:
     if not base_url:
         return None
     try:
@@ -457,13 +462,13 @@ def _prom_q(base_url: Optional[str], promql: str) -> Optional[dict[str, Any]]:
         with _req.urlopen(f"{base_url}/api/v1/query?{params}") as r:
             data = cast(dict[str, Any], _json.loads(r.read().decode()))
             if data.get("status") == "success":
-                return cast(Optional[dict[str, Any]], data.get("data"))
+                return cast(dict[str, Any] | None, data.get("data"))
     except Exception:
         return None
     return None
 
 
-def _scalar(data: Optional[dict[str, Any]]) -> Optional[float]:
+def _scalar(data: dict[str, Any] | None) -> float | None:
     if not data:
         return None
     try:
@@ -1101,7 +1106,7 @@ async def cache_analytics() -> dict[str, Any]:
 
 
 @app.post(f"{API_PREFIX}/cache/clear")
-async def cache_clear(request: Request, payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+async def cache_clear(request: Request, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Clear semantic cache entries. Optional body: { "pattern": "substring" }
 
     If ADMIN_TOKEN is set, requires X-Admin-Token header.
@@ -1161,7 +1166,7 @@ async def execute_tool(
 
 
 async def check_tool_approval(
-    tool_name: str, parameters: dict[str, Any], operator_id: Optional[str]
+    tool_name: str, parameters: dict[str, Any], operator_id: str | None
 ) -> dict[str, Any]:
     """Check tool approval status."""
     # This would integrate with your approval system
@@ -1440,8 +1445,8 @@ async def autopromote_preview() -> dict[str, Any]:
 
     for role, entry in getattr(adapter_manager, "state", {}).items():  # type: ignore
         entry_map: dict[str, Any] = cast(dict[str, Any], (entry or {}))
-        active = cast(Optional[str], entry_map.get("active"))
-        challenger = cast(Optional[str], entry_map.get("challenger"))
+        active = cast(str | None, entry_map.get("active"))
+        challenger = cast(str | None, entry_map.get("challenger"))
         if not (active and challenger and active != challenger):
             continue
         r_active = (
@@ -1712,7 +1717,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
     if provider_used is None:
         policy_used = None
         roles_obj: Any = text_roles if text_roles is not None else None
-        decision: Optional[dict[str, Any]] = None
+        decision: dict[str, Any] | None = None
         try:
             routing = bool(getattr(settings, "MODEL_ROUTING_ENABLED", False)) if settings else False
             chosen_model = None
@@ -1813,7 +1818,7 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                         ethical_proposal = f"""ETHICAL DILEMMA DETECTED: {dilemma_type.upper()}
 Severity: {severity}
 Original Query: {q}
-Detected Issues: {', '.join(detected_list)}
+Detected Issues: {", ".join(detected_list)}
 
 This query has been flagged for ethical review. Please provide guidance on how to respond appropriately while maintaining ethical standards. [action:ethical_review]"""
 
@@ -1919,8 +1924,8 @@ async def vision(
     if engine is not None:
         engine.add_memory("user", question)  # type: ignore
     answer: str = "Vision processing unavailable"
-    critique: Optional[str] = None
-    grounding: Optional[dict[str, Any]] = None
+    critique: str | None = None
+    grounding: dict[str, Any] | None = None
     try:
         vl_any = vl_roles  # type: ignore[assignment]
         judge_any = judge  # type: ignore[assignment]
@@ -2077,14 +2082,14 @@ async def _handle_streaming_generation(websocket: WebSocket, query: str):
         # Stream response chunks
         accumulated_content: str = ""
         chunk_count: int = 0
-        last_provider: Optional[str] = None
+        last_provider: str | None = None
         router_any = cast(Any, ds_router)
         async for chunk in router_any.generate_stream(gen_request):
             part: str = getattr(chunk, "content", "")
             accumulated_content += part
             chunk_count += 1
             last_provider = cast(
-                Optional[str], getattr(chunk, "provider", last_provider or "ds_router_stream")
+                str | None, getattr(chunk, "provider", last_provider or "ds_router_stream")
             )
 
             # Send chunk to client

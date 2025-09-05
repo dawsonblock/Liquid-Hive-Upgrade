@@ -3,7 +3,6 @@ try:
 except ImportError:
     from pydantic import BaseSettings
 import os
-from typing import Optional
 
 # Import secrets manager with graceful fallback
 try:
@@ -18,21 +17,21 @@ except ImportError:
 class Settings(BaseSettings):
     # External service URLs must come from environment for portability
     # Provide sensible defaults for docker-compose network
-    vllm_endpoint: Optional[str] = "http://vllm:8000"  # default for local compose
-    vllm_endpoint_small: Optional[str] = None
-    vllm_endpoint_large: Optional[str] = None
+    vllm_endpoint: str | None = "http://vllm:8000"  # default for local compose
+    vllm_endpoint_small: str | None = None
+    vllm_endpoint_large: str | None = None
     MODEL_ROUTING_ENABLED: bool = False
     vllm_api_key: str = "unused"
-    redis_url: Optional[str] = None  # e.g., redis://redis:6379
-    neo4j_url: Optional[str] = None  # e.g., bolt://neo4j:7687
+    redis_url: str | None = None  # e.g., redis://redis:6379
+    neo4j_url: str | None = None  # e.g., bolt://neo4j:7687
 
     # Observability / estimator config
-    PROMETHEUS_BASE_URL: Optional[str] = None
+    PROMETHEUS_BASE_URL: str | None = None
     COST_PER_1K_TOKENS_SMALL: float = 0.0008
     COST_PER_1K_TOKENS_LARGE: float = 0.0030
 
     # RAG / Embeddings
-    embed_model: Optional[str] = "sentence-transformers/all-MiniLM-L6-v2"
+    embed_model: str | None = "sentence-transformers/all-MiniLM-L6-v2"
 
     vl_model_id: str = "LiquidAI/LFM2-VL-1.6B"
     committee_k: int = 3
@@ -44,7 +43,7 @@ class Settings(BaseSettings):
     adapters_dir: str = "/app/adapters"
 
     # Optional currently active text adapter path
-    text_adapter_path: Optional[str] = None
+    text_adapter_path: str | None = None
 
     # Foundational adapter path (centralized)
     foundational_adapter_path: str = "/app/adapters/foundational/champion_v1"
@@ -60,7 +59,7 @@ class Settings(BaseSettings):
     TRUSTED_AUTONOMY_ENABLED: bool = False
     TRUST_THRESHOLD: float = 0.999
     TRUST_MIN_SAMPLES: int = 200
-    TRUST_ALLOWLIST: Optional[str] = None  # comma-separated action types
+    TRUST_ALLOWLIST: str | None = None  # comma-separated action types
 
     # --- Auto-Promotion ---
     AUTOPROMOTE_ENABLED: bool = False
@@ -69,10 +68,10 @@ class Settings(BaseSettings):
     AUTOPROMOTE_COOLDOWN_HOURS: int = 24
 
     # --- Secrets Management ---
-    SECRETS_PROVIDER: Optional[str] = None  # auto-detected
-    VAULT_ADDR: Optional[str] = None
-    VAULT_TOKEN: Optional[str] = None
-    AWS_SECRETS_PREFIX: Optional[str] = "liquid-hive"
+    SECRETS_PROVIDER: str | None = None  # auto-detected
+    VAULT_ADDR: str | None = None
+    VAULT_TOKEN: str | None = None
+    AWS_SECRETS_PREFIX: str | None = "liquid-hive"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

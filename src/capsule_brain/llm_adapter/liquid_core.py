@@ -57,7 +57,7 @@ class LiquidReasoningCore:
             vec_list = vec.squeeze(0).detach().cpu().numpy().tolist()
             results = self.engine_ref.search_memory(vec_list, top_k=1)
             if results:
-                return f"[Liquid Thought] Focusing on: {results[0].get('text','processing')}."
+                return f"[Liquid Thought] Focusing on: {results[0].get('text', 'processing')}."
         norm = float(torch.norm(vec).item())
         return (
             "[Liquid Thought] High-intensity cognitive processing detected."

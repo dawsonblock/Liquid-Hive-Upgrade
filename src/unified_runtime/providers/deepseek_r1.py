@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import os
 import random
-from typing import Any, Optional
+from typing import Any
 
 from .base_provider import BaseProvider, GenRequest, GenResponse
 
@@ -139,7 +139,7 @@ You are operating in deep reasoning mode. Take time to think through this proble
                     self._log_generation(request, None, error_msg)
                     return self._fallback_response(request, start_time, error=error_msg)
 
-    def _parse_reasoning_response(self, content: str) -> tuple[Optional[str], Optional[str]]:
+    def _parse_reasoning_response(self, content: str) -> tuple[str | None, str | None]:
         """Parse R1 response to extract reasoning chain and final answer."""
         # Look for structured reasoning patterns
         reasoning_markers = [
@@ -164,7 +164,7 @@ You are operating in deep reasoning mode. Take time to think through this proble
         return None, content
 
     def _fallback_response(
-        self, request: GenRequest, start_time: float, error: Optional[str] = None
+        self, request: GenRequest, start_time: float, error: str | None = None
     ) -> GenResponse:
         """Generate fallback response when R1 API is unavailable."""
         fallback_content = (

@@ -40,7 +40,6 @@ def main():
     model = get_peft_model(model, lora)
 
     def map_fn(e):
-
         import PIL.Image as Image
 
         img = Image.open(e["image_path"]).convert("RGB")

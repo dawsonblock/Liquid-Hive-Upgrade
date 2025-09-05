@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -25,9 +25,9 @@ router = APIRouter(prefix=f"{API_PREFIX}/arena", tags=["arena"])
 
 
 class SubmitRequest(BaseModel):
-    task_id: Optional[str] = None
+    task_id: str | None = None
     input: str = Field(..., description="Prompt/input for the task")
-    reference: Optional[str] = Field(None, description="Optional reference/ground truth")
+    reference: str | None = Field(None, description="Optional reference/ground truth")
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -42,9 +42,9 @@ class CompareRequest(BaseModel):
     model_b: str
     output_a: str
     output_b: str
-    winner: Optional[str] = Field(None, description="'A' | 'B' | 'tie' (optional manual judgement)")
-    judge: Optional[str] = Field(None, description="Judge identifier (optional)")
-    rationale: Optional[str] = None
+    winner: str | None = Field(None, description="'A' | 'B' | 'tie' (optional manual judgement)")
+    judge: str | None = Field(None, description="Judge identifier (optional)")
+    rationale: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

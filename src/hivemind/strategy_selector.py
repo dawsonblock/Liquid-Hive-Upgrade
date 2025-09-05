@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 try:
     from .resource_estimator import ResourceEstimator
@@ -31,11 +31,11 @@ class StrategySelector:
       - Decide model among {small, large}; provide alias {Courier, Master}
     """
 
-    def __init__(self, client: Optional[Any] = None) -> None:
+    def __init__(self, client: Any | None = None) -> None:
         self.client = client
         self.estimator = ResourceEstimator() if ResourceEstimator else None
 
-    async def decide(self, prompt: str, ctx: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    async def decide(self, prompt: str, ctx: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = ctx or {}
 
         # Ethical Synthesizer: Check for ethical dilemmas first

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -18,12 +18,12 @@ class TaskNode(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     retries: int = Field(0, ge=0, le=5)
-    timeout_sec: Optional[float] = Field(None, ge=0.01, description="Per-node timeout")
+    timeout_sec: float | None = Field(None, ge=0.01, description="Per-node timeout")
 
 
 class Plan(BaseModel):
     nodes: dict[str, TaskNode] = Field(default_factory=dict)
-    description: Optional[str] = None
+    description: str | None = None
 
     @model_validator(mode="after")
     def _validate_dag(self) -> Plan:

@@ -16,7 +16,7 @@ Key Benefits:
 import asyncio
 import logging
 import os
-from typing import Any, Optional
+from typing import Any
 
 try:
     import httpx
@@ -55,7 +55,7 @@ class DeepSeekR1Client:
             )
 
     async def generate(
-        self, prompt: str, system_prompt: Optional[str] = None, **kwargs
+        self, prompt: str, system_prompt: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Generate enhanced reasoning response from DeepSeek R1.
 
@@ -157,7 +157,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
                         continue
                 else:
                     logging.error(
-                        f"DeepSeek R1 API request failed (attempt {attempt+1}/{self._max_retries+1}): {e}"
+                        f"DeepSeek R1 API request failed (attempt {attempt + 1}/{self._max_retries + 1}): {e}"
                     )
                     if attempt < self._max_retries:
                         await asyncio.sleep(self._retry_delay)
@@ -165,7 +165,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
 
             except Exception as e:
                 logging.error(
-                    f"DeepSeek R1 API error (attempt {attempt+1}/{self._max_retries+1}): {e}"
+                    f"DeepSeek R1 API error (attempt {attempt + 1}/{self._max_retries + 1}): {e}"
                 )
                 if attempt < self._max_retries:
                     await asyncio.sleep(self._retry_delay)
@@ -182,7 +182,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
         output_cost = (completion_tokens / 1000) * self.output_cost_per_1k
         return input_cost + output_cost
 
-    def _enhanced_stub_response(self, prompt: str, error: Optional[str] = None) -> dict[str, Any]:
+    def _enhanced_stub_response(self, prompt: str, error: str | None = None) -> dict[str, Any]:
         """Provide enhanced stub response when API is unavailable."""
         # Extract the original response if this is a refinement prompt
         original_answer = prompt
@@ -287,7 +287,7 @@ Use your advanced reasoning capabilities to provide platinum-quality refinement.
 
 
 # Global instance for the enhanced dreaming state
-_r1_arbiter_client: Optional[DeepSeekR1Client] = None
+_r1_arbiter_client: DeepSeekR1Client | None = None
 
 
 def get_r1_arbiter_client() -> DeepSeekR1Client:
