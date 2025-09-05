@@ -1,6 +1,7 @@
 """FastAPI router for Oracle decision engine endpoints."""
 
 import asyncio
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 
