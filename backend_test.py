@@ -12,7 +12,7 @@ import requests
 
 
 class ComprehensiveBackendTester:
-    def __init__(self, base_url="http://localhost:8001"):
+    def __init__(self, base_url="http://localhost:8080"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
