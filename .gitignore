@@ -10,6 +10,12 @@ Thumbs.db
 *.orig
 *.map
 
+# Generated TypeScript files (should not be committed)
+*.js.map
+*.d.ts.map
+frontend/src/**/*.js
+frontend/src/**/*.d.ts
+
 # Reports/artifacts
 reports/
 
@@ -97,6 +103,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.npm/
 .pnpm-store/
 .next/
 .out/
