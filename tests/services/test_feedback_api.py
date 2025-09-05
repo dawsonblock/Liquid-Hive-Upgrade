@@ -1,6 +1,7 @@
 """Tests for the feedback collection API."""
 
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
