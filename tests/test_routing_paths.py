@@ -62,8 +62,11 @@ class TestRoutingPaths:
         ]
 
         for question in hard_questions:
+            print(f"\nTesting: {question}")
+            print(f"Is hard: {router._is_hard_problem(question)}")
             decision = await router._determine_routing(GenRequest(prompt=question))
-            assert decision.provider == "deepseek_thinking"
+            print(f"Decision: provider={decision.provider}, reasoning={decision.reasoning}")
+            assert decision.provider == "deepseek_thinking", f"Expected deepseek_thinking, got {decision.provider} for '{question}'"
             assert decision.reasoning == "complex_query"
             assert decision.cot_budget <= router.config.max_cot_tokens
 
@@ -91,7 +94,7 @@ class TestRoutingPaths:
 
         # Mock confidence assessment to return low confidence first, then high
         with patch.object(router, "_assess_confidence", side_effect=[0.4, 0.9]):
-            request = GenRequest(prompt="Solve this complex problem")
+            request = GenRequest(prompt="Please prove this mathematical theorem")
             response = await router.generate(request)
 
         # Should have escalated to R1

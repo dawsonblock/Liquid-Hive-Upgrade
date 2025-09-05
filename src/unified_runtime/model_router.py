@@ -100,13 +100,42 @@ class DSRouter:
         self.providers["qwen_cpu"] = _Echo("qwen_cpu")
 
     def _is_hard_problem(self, text: str) -> bool:
-        hard_keywords = ["prove", "optimize", "debug", "analyze", "irrational", "big-o", "regex"]
+        hard_keywords = ["prove", "optimize", "debug", "analyze", "analysis", "irrational", "big-o", "regex", "derive", "formula", "theorem"]
         tl = text.lower()
         return any(k in tl for k in hard_keywords)
 
     async def _assess_confidence(self, resp: GenResponse, request: GenRequest = None) -> float:
         """Assess confidence of a response, optionally considering the request context."""
-        return float(resp.confidence or 0.8)
+        # If response already has confidence, use it
+        if resp.confidence is not None:
+            return float(resp.confidence)
+        
+        # Analyze content for confidence indicators
+        content = resp.content.lower()
+        
+        # Low confidence indicators
+        low_conf_phrases = [
+            "i'm not sure", "not certain", "might be", "possibly", "maybe", 
+            "could be", "i think", "probably", "not entirely sure"
+        ]
+        
+        # High confidence indicators  
+        high_conf_phrases = [
+            "definitively", "clearly", "certainly", "absolutely", "precisely",
+            "exactly", "without doubt", "obviously", "undoubtedly"
+        ]
+        
+        # Check for confidence indicators
+        if any(phrase in content for phrase in low_conf_phrases):
+            return 0.3
+        elif any(phrase in content for phrase in high_conf_phrases):
+            return 0.9
+        else:
+            # Default confidence based on content length and structure
+            if len(content) > 100 and "because" in content:
+                return 0.8
+            else:
+                return 0.6
 
     async def _get_rag_support_score(self, request: GenRequest) -> float:
         """Get RAG support score for a request."""
@@ -115,7 +144,17 @@ class DSRouter:
 
     async def _determine_routing(self, request: GenRequest) -> RoutingDecision:
         """Determine routing decision for a request."""
+        # Check RAG support score
+        rag_support = await self._get_rag_support_score(request)
+        
+        # Route to thinking if hard problem OR low RAG support
         if self._is_hard_problem(request.prompt):
+            return RoutingDecision(
+                provider="deepseek_thinking",
+                reasoning="complex_query",
+                cot_budget=self.config.max_cot_tokens
+            )
+        elif rag_support < self.config.support_threshold:
             return RoutingDecision(
                 provider="deepseek_thinking",
                 reasoning="complex_query",

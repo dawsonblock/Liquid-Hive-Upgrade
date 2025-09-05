@@ -45,7 +45,7 @@ class PostGuard:
         """Compile patterns for detecting unsafe output."""
         return {
             "explicit_violence": re.compile(
-                r"\b(?:detailed instructions.*(?:kill|harm|hurt|attack)|step-by-step.*(?:violence|weapon|bomb))\b",
+                r"\b(?:detailed instructions.*(?:kill|harm|hurt|attack)|step-by-step.*(?:violence|weapon|bomb|hurt|harm))\b",
                 re.IGNORECASE,
             ),
             "illegal_instructions": re.compile(
