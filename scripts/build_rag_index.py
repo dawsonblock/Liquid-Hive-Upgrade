@@ -126,11 +126,13 @@ def main():
     
     # Try to get embedder
     try:
+        import sys
+        sys.path.append('/app')
         from src.hivemind.embedding.embedder import embed_batch, get_embedding_dimension
         embedding_dim = get_embedding_dimension()
-    except ImportError:
-        logger.error("Embedder not available")
-        print("[RAG] Embedder not available - install embedding dependencies")
+    except ImportError as ie:
+        logger.error("Embedder not available", error=str(ie))
+        print(f"[RAG] Embedder not available - {ie}")
         return 2
     
     # Process documents and create chunks
