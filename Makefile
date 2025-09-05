@@ -1,7 +1,7 @@
 # Liquid Hive Production-Grade Makefile
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev test lint format clean build docker deploy health
+.PHONY: help install dev test lint format clean build docker deploy health memory-init memory-gc memory-stats
 
 # Configuration
 PYTHON := python3
@@ -29,15 +29,43 @@ install-dev: ## Install development dependencies
 	cd frontend && $(YARN) install --frozen-lockfile
 	@echo "✅ Development setup complete!"
 
+# Memory System Operations
+memory-init: ## Initialize vector memory system (Qdrant collections)
+	@echo "🧠 Initializing memory system..."
+	$(PYTHON) -c "from src.hivemind.clients.qdrant_store import ensure_collection; ensure_collection()"
+	@echo "✅ Memory system initialized!"
+
+memory-gc: ## Run memory garbage collection
+	@echo "🧹 Running memory garbage collection..."
+	$(PYTHON) -m src.hivemind.maintenance.memory_gc
+	@echo "✅ Memory GC completed!"
+
+memory-stats: ## Get memory system statistics
+	@echo "📊 Memory system statistics:"
+	@curl -fsS http://localhost:8001/api/memory/stats || echo "❌ Memory API not responding"
+
+memory-health: ## Check memory system health
+	@echo "❤️ Memory system health check:"
+	@curl -fsS http://localhost:8001/api/memory/health || echo "❌ Memory API not responding"
+
+rag-index: ## Build RAG index from documentation
+	@echo "📚 Building RAG index..."
+	$(PYTHON) scripts/build_rag_index.py --src data/ingest --out rag_index/faiss_index.bin
+	@echo "✅ RAG index built!"
+
 # Development Environment
 dev: ## Start complete development stack
 	@echo "🚀 Starting development environment..."
 	docker compose up --build
 	@echo "🌐 Services available:"
-	@echo "  API:        http://localhost:8080"
-	@echo "  Frontend:   http://localhost:5173"
-	@echo "  Grafana:    http://localhost:3000"
-	@echo "  Prometheus: http://localhost:9090"
+	@echo "  API:          http://localhost:8001"
+	@echo "  Frontend:     http://localhost:3000"
+	@echo "  Feedback API: http://localhost:8091"
+	@echo "  Oracle API:   http://localhost:8092"
+	@echo "  Qdrant:       http://localhost:6333"
+	@echo "  Redis:        localhost:6379"
+	@echo "  Grafana:      http://localhost:3001"
+	@echo "  Prometheus:   http://localhost:9090"
 
 dev-api: ## Start API in development mode
 	@echo "🔧 Starting API in development mode..."
@@ -50,7 +78,7 @@ dev-frontend: ## Start frontend in development mode
 # Testing
 test: ## Run complete test suite
 	@echo "🧪 Running backend tests..."
-	pytest tests/ --maxfail=1 --disable-warnings -q --cov=src --cov=apps --cov-report=xml
+	pytest tests/ --maxfail=1 --disable-warnings -q --cov=src --cov=apps --cov=services --cov-report=xml
 	@echo "🧪 Running frontend tests..."
 	cd frontend && $(YARN) test --coverage --watchAll=false
 	@echo "✅ All tests passed!"
@@ -63,6 +91,29 @@ test-integration: ## Run integration tests only
 	@echo "🧪 Running integration tests..."
 	pytest tests/integration/ -v
 
+test-services: ## Run services tests only
+	@echo "🧪 Running services tests..."
+	pytest tests/services/ -v
+
+test-memory: ## Test memory system functionality
+	@echo "🧪 Testing memory system..."
+	$(PYTHON) -c "
+import asyncio
+from src.hivemind.embedding.embedder import embed_text, health_check
+from src.hivemind.clients.qdrant_store import ensure_collection
+from src.hivemind.clients.redis_cache import health_check as redis_health
+
+print('Testing embedder...')
+health = health_check()
+print(f'Embedder status: {health[\"status\"]}')
+
+print('Testing Redis...')
+redis_status = redis_health()
+print(f'Redis status: {redis_status[\"status\"]}')
+
+print('Memory system test complete!')
+	"
+
 test-performance: ## Run performance tests
 	@echo "🏃 Running performance tests..."
 	k6 run tests/performance/k6_smoke.js
@@ -70,24 +121,30 @@ test-performance: ## Run performance tests
 # Code Quality
 lint: ## Run all linters
 	@echo "🔍 Linting Python code..."
-	ruff check src apps
-	ruff format --check src apps
+	ruff check src apps services
+	ruff format --check src apps services
 	@echo "🔍 Linting frontend code..."
 	cd frontend && $(YARN) lint
 	@echo "✅ All linting passed!"
 
 format: ## Format all code
 	@echo "💅 Formatting Python code..."
-	ruff format src apps
+	ruff format src apps services
 	@echo "💅 Formatting frontend code..."
 	cd frontend && $(YARN) format
 	@echo "✅ Code formatted!"
 
 security: ## Run security checks
 	@echo "🔒 Running security checks..."
-	bandit -r src apps
+	bandit -r src apps services
 	safety check
 	@echo "✅ Security checks passed!"
+
+# Verification and Validation
+verify-wiring: ## Verify Docker Compose and Helm wiring consistency
+	@echo "🔍 Verifying service wiring..."
+	bash scripts/verify_wiring.sh
+	@echo "✅ Wiring verification complete!"
 
 # Docker Operations
 build: ## Build all Docker images
@@ -97,6 +154,8 @@ build: ## Build all Docker images
 build-prod: ## Build production Docker images
 	@echo "🐳 Building production images..."
 	docker build -t liquid-hive-api:$(IMAGE_TAG) -f apps/api/Dockerfile .
+	docker build -t liquid-hive-feedback-api:$(IMAGE_TAG) -f services/feedback_api/Dockerfile .
+	docker build -t liquid-hive-oracle-api:$(IMAGE_TAG) -f services/oracle_api/Dockerfile .
 	docker build -t liquid-hive-frontend:$(IMAGE_TAG) -f frontend/Dockerfile .
 
 # Docker Compose Operations
@@ -121,12 +180,15 @@ logs-api: ## Show API logs only
 logs-frontend: ## Show frontend logs only  
 	docker compose logs -f frontend
 
+logs-memory: ## Show memory system logs
+	docker compose logs -f api feedback-api oracle-api memory-gc
+
 # Database Operations
 db-reset: ## Reset database (if using one)
 	@echo "🗄️  Resetting database..."
-	docker compose down postgres || true
-	docker volume rm liquid-hive_postgres_data || true
-	docker compose up -d postgres
+	docker compose down mongodb || true
+	docker volume rm liquid-hive_mongodb_data || true
+	docker compose up -d mongodb
 
 # Kubernetes Deployment
 helm-apply: ## Deploy using Helm (development)
@@ -141,7 +203,7 @@ helm-prod: ## Deploy to production
 	@echo "☸️  Deploying to production..."
 	helm upgrade --install liquid-hive \
 		infra/helm/liquid-hive \
-		-f infra/helm/liquid-hive/values-prod.yaml \
+		-f infra/helm/liquid-hive/values-aws-prod.yaml \
 		--set image.tag=$(IMAGE_TAG) \
 		--wait --timeout=10m
 	@echo "✅ Production deployment complete!"
@@ -151,8 +213,10 @@ deploy: helm-apply ## Alias for helm-apply
 # Health Checks
 health: ## Check service health
 	@echo "❤️  Checking service health..."
-	@curl -s http://localhost:8080/health || echo "❌ API not responding"
-	@curl -s http://localhost:5173/ || echo "❌ Frontend not responding"
+	@curl -s http://localhost:8001/health || echo "❌ Main API not responding"
+	@curl -s http://localhost:8091/health || echo "❌ Feedback API not responding"  
+	@curl -s http://localhost:8092/health || echo "❌ Oracle API not responding"
+	@curl -s http://localhost:3000/ || echo "❌ Frontend not responding"
 	@echo "✅ Health check complete!"
 
 # Cleanup
@@ -176,12 +240,19 @@ clean-docker: ## Clean Docker resources
 	docker volume prune -f
 	@echo "✅ Docker cleanup complete!"
 
+clean-memory: ## Clean memory system data
+	@echo "🧹 Cleaning memory data..."
+	docker compose down qdrant redis
+	docker volume rm liquid-hive_qdrant_data liquid-hive_redis_data 2>/dev/null || true
+	rm -f rag_index/*.bin rag_index/*.json
+	@echo "✅ Memory data cleaned!"
+
 # CI Pipeline (local)
-ci: install-dev lint test security ## Run complete CI pipeline locally
+ci: install-dev lint test security verify-wiring ## Run complete CI pipeline locally
 	@echo "🎉 CI pipeline completed successfully!"
 
 # Development Workflow
-dev-setup: install-dev ## Complete development setup
+dev-setup: install-dev memory-init ## Complete development setup
 	@echo "⚡ Development setup complete!"
 	@echo "Run 'make dev' to start the development environment"
 
