@@ -37,7 +37,7 @@ jobs:
       - name: Lint Helm charts
         run: |
           if command -v helm >/dev/null 2>&1; then
-            helm lint deploy/helm/liquid-hive || true
+            helm lint helm/liquid-hive || true
           fi
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.24.0
@@ -77,18 +77,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/sbom
-          idx=0
-          for D in ${{ steps.df.outputs.file }}; do
-            F="${D#file=}"
-            NAME="${F//\//-}"
-            IMAGE="${REGISTRY}/liquid-hive-${NAME}:${IMAGE_TAG}"
-            docker buildx build \
-              --cache-from=${CACHE_FROM} --cache-to=${CACHE_TO} \
-              --platform linux/amd64 \
-              -f "$F" -t "$IMAGE" --load .
-            echo "$IMAGE" >> artifacts/images.txt
-            syft packages dir:. -o spdx-json > "artifacts/sbom/${NAME}.spdx.json" || true
-            idx=$((idx+1))
+          echo '${{ steps.df.outputs.file }}' | while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+              F="${line#file=}"
+              NAME="${F//\//-}"
+              IMAGE="${REGISTRY}/liquid-hive-${NAME}:${IMAGE_TAG}"
+              docker buildx build \
+                --cache-from=${CACHE_FROM} --cache-to=${CACHE_TO} \
+                --platform linux/amd64 \
+                -f "$F" -t "$IMAGE" --load .
+              echo "$IMAGE" >> artifacts/images.txt
+              syft packages dir:. -o spdx-json > "artifacts/sbom/${NAME}.spdx.json" || echo "SBOM generation failed for $NAME"
+            fi
           done
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
@@ -146,7 +146,7 @@ jobs:
           kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s || true
       - name: Helm install Liquid-Hive
         run: |
-          helm upgrade --install liquid-hive deploy/helm/liquid-hive \
+          helm upgrade --install liquid-hive helm/liquid-hive \
             --namespace liquid-hive --create-namespace \
             --set unifiedRuntime.image.repository=${REGISTRY}/liquid-hive-docker-base-Dockerfile.nonroot \
             --set unifiedRuntime.image.tag=${IMAGE_TAG}

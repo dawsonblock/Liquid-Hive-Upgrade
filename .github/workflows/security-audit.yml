@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -55,7 +55,7 @@ jobs:
 
       # Upload security scan results
       - name: Upload Semgrep results to GitHub Advanced Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -73,7 +73,7 @@ jobs:
           output: "docker-trivy-results.sarif"
 
       - name: Upload Docker security scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "docker-trivy-results.sarif"
 

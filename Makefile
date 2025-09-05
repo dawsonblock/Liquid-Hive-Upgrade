@@ -266,4 +266,3 @@ stop: ## Stop all development servers
 	@pkill -f "uvicorn" || true
 	@pkill -f "vite" || true
 	@echo "✅ All servers stopped!"
-        main

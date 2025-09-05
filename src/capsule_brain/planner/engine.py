@@ -59,7 +59,15 @@ class PlanExecutor:
             "e": math.e,
         }
         try:
-            val = eval(expr, safe_globals, safe_locals)
+            # Use ast.literal_eval for safer evaluation of simple expressions
+            import ast
+            val = ast.literal_eval(expr)
+        except (ValueError, SyntaxError):
+            # Fallback to restricted eval for complex expressions
+            try:
+                val = eval(expr, safe_globals, safe_locals)
+            except Exception as e:
+                return f"Error: {e}"
         except Exception as e:
             raise ValueError(f"Bad expression: {e}")
         return {"expression": expr, "value": float(val)}

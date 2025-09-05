@@ -295,7 +295,7 @@ class QdrantRetriever:
 
             # Generate embeddings and create points
             points = []
-            doc_hash = hashlib.md5(content.encode()).hexdigest()
+            doc_hash = hashlib.sha256(content.encode()).hexdigest()
 
             for i, chunk in enumerate(chunks):
                 try:

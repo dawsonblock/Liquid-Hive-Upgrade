@@ -20,11 +20,15 @@ class FileOperationsTool(BaseTool):
 
     def __init__(self):
         # Define allowed directories for security
+        # Use secure temporary directory instead of hardcoded /tmp
+        import tempfile
+        secure_temp_dir = tempfile.mkdtemp(prefix="liquid_hive_")
+        
         self.allowed_directories = {
             "/app/data/ingest",
-            "/app/data/output",
+            "/app/data/output", 
             "/app/data/temp",
-            "/tmp",
+            secure_temp_dir,
         }
 
         # Ensure allowed directories exist
@@ -166,7 +170,7 @@ class FileOperationsTool(BaseTool):
             content = await f.read()
 
         # Calculate file hash for integrity
-        file_hash = hashlib.md5(content.encode()).hexdigest()
+        file_hash = hashlib.sha256(content.encode()).hexdigest()
 
         return ToolResult(
             success=True,
@@ -257,8 +261,8 @@ class FileOperationsTool(BaseTool):
         # Add file hash if it's a file and small enough
         if file_path.is_file() and stat_info.st_size < 10 * 1024 * 1024:  # 10MB limit
             with open(path, "rb") as f:
-                file_hash = hashlib.md5(f.read()).hexdigest()
-                info["md5_hash"] = file_hash
+                file_hash = hashlib.sha256(f.read()).hexdigest()
+                info["sha256_hash"] = file_hash
 
         return ToolResult(success=True, data=info, metadata={"operation": "info"})
 
