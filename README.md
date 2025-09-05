@@ -1,394 +1,363 @@
 # 🧠 LIQUID-HIVE
 
-[![CI](https://github.com/AetheronResearch/liquid-hive/workflows/CI/badge.svg)](https://github.com/AetheronResearch/liquid-hive/actions)
+[![CI](https://github.com/liquid-hive/liquid-hive/workflows/CI/badge.svg)](https://github.com/liquid-hive/liquid-hive/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
-[![Security](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Security](https://img.shields.io/badge/security-hardened-green.svg)](SECURITY.md)
+[![Coverage](https://codecov.io/gh/liquid-hive/liquid-hive/branch/main/graph/badge.svg)](https://codecov.io/gh/liquid-hive/liquid-hive)
 
 > **Production-Ready AI Cognitive System** - A unified multi-agent reasoning platform with advanced memory, retrieval, and self-improvement capabilities.
 
-## 🚀 Quick Start
+## ⚡ Quick Start
 
-**One-command deployment:**
+### **One-Command Development Setup**
 
 ```bash
-# Development setup
-git clone https://github.com/AetheronResearch/liquid-hive.git
+git clone https://github.com/liquid-hive/liquid-hive.git
 cd liquid-hive
-make dev-setup
-
-# Production deployment
-docker-compose up --build -d
+make dev-setup && make dev
 ```
 
-**API Usage:**
+🌐 **Services Available:**
+- **API**: http://localhost:8080
+- **Frontend**: http://localhost:5173  
+- **Grafana**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
+
+### **One-Command Production Deployment**
 
 ```bash
-curl -X POST http://localhost:8000/api/chat \
+# Docker Compose
+docker compose up --build -d
+
+# Kubernetes (Helm)
+make helm-apply
+```
+
+### **API Usage**
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Version info
+curl http://localhost:8080/version
+
+# API endpoints
+curl -X POST http://localhost:8080/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is the capital of France?"}'
+  -d '{"query": "Analyze this data set"}'
 ```
 
 ## 🏗️ Architecture
 
-Liquid-Hive is a production-grade cognitive system built on a microservices architecture:
+**Production-Grade Microservices Architecture:**
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        FE[React Frontend :5173]
+    end
+    
+    subgraph "API Layer"  
+        API[FastAPI Backend :8080]
+    end
+    
+    subgraph "Core Libraries"
+        UR[unified_runtime]
+        CB[capsule_brain] 
+        HM[hivemind]
+        IA[internet_agent_advanced]
+        OR[oracle]
+        SF[safety]
+    end
+    
+    subgraph "Infrastructure"
+        PROM[Prometheus :9090]
+        GRAF[Grafana :3000]
+        REDIS[Redis :6379]
+        QDRANT[Qdrant :6333]
+    end
+    
+    FE --> API
+    API --> UR
+    UR --> CB
+    UR --> HM
+    UR --> IA
+    UR --> OR
+    UR --> SF
+    API --> REDIS
+    API --> QDRANT
+    PROM --> GRAF
+```
 
 ### **Core Components**
 
-- 🧠 **unified_runtime/** – FastAPI server with dynamic strategy selection
-- 💾 **capsule_brain/** – Long-term memory and knowledge graph
-- 🤖 **hivemind/** – Multi-agent reasoning core with specialized roles
-- 📊 **Observability** – Prometheus metrics + Grafana dashboards
-- 🌐 **Frontend** – React/TypeScript interface with real-time chat
+| Component | Purpose | Location |
+|-----------|---------|----------|
+| 🧠 **unified_runtime** | Multi-provider LLM orchestration | `src/unified_runtime/` |
+| 💾 **capsule_brain** | Long-term memory & knowledge graphs | `src/capsule_brain/` |
+| 🤖 **hivemind** | Multi-agent reasoning & swarm protocols | `src/hivemind/` |
+| 🌐 **internet_agent** | Web scraping & research capabilities | `src/internet_agent_advanced/` |
+| 🔮 **oracle** | LLM provider abstractions (OpenAI, Claude, etc.) | `src/oracle/` |
+| 🛡️ **safety** | Input/output filtering & security guards | `src/safety/` |
 
-### **Infrastructure Services**
+### **Services & Ports**
 
-| Service | Purpose | Port |
-|---------|---------|------|
-| FastAPI Backend | Core API | 8000 |
-| React Frontend | Web Interface | 3000 |
-| Redis | Message Bus | 6379 |
-| Neo4j | Knowledge Graph | 7474 |
-| Qdrant | Vector Database | 6333 |
-| Prometheus | Metrics | 9090 |
-| Grafana | Dashboards | 3030 |
+| Service | Purpose | Port | Health Check |
+|---------|---------|------|--------------|
+| FastAPI API | Core backend services | 8080 | `/health` |
+| React Frontend | User interface | 5173 | `/` |
+| Prometheus | Metrics collection | 9090 | `/metrics` |
+| Grafana | Monitoring dashboards | 3000 | `/api/health` |
+| Redis | Caching layer | 6379 | `ping` |
+| Qdrant | Vector database | 6333 | `/health` |
+
+## 🛠️ Developer Commands
+
+```bash
+# Development
+make dev-setup     # Install dependencies & setup
+make dev          # Start development stack
+make test         # Run test suite with coverage
+make lint         # Code quality checks
+make format       # Format all code
+make security     # Security vulnerability scan
+
+# Docker Operations  
+make build        # Build Docker images
+make up          # Start services (background)
+make down        # Stop services & cleanup
+make logs        # View service logs
+
+# Deployment
+make deploy      # Deploy to Kubernetes (dev)
+make helm-prod   # Deploy to production
+
+# Utilities
+make clean       # Clean temporary files
+make health      # Check service health
+make status      # Show system status
+```
 
 ## 📦 Installation
 
 ### **Prerequisites**
 
-- Python 3.10+
-- Node.js 18+
-- Docker & Docker Compose
-- 8GB+ RAM (for AI models)
+- **Python 3.11+** with pip
+- **Node.js 18+** with Yarn  
+- **Docker** & Docker Compose
+- **Optional**: kubectl, Helm (for K8s deployment)
 
 ### **Development Setup**
 
 ```bash
-# Clone and install
-git clone https://github.com/AetheronResearch/liquid-hive.git
+# Clone repository
+git clone https://github.com/liquid-hive/liquid-hive.git
 cd liquid-hive
 
-# Backend setup
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+# Install dependencies
+make install-dev
 
-# Frontend setup
-cd frontend
-yarn install --frozen-lockfile
-yarn build
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
 
-# Start services
-docker-compose up --build
+# Start development
+make dev
 ```
 
-### **Production Docker**
+### **Production Deployment**
+
+#### **Docker Compose (Recommended)**
 
 ```bash
-# Build production image
-docker build -t liquid-hive:latest .
+# Start production stack
+docker compose up --build -d
 
-# Deploy with compose
-docker-compose -f docker-compose.prod.yml up -d
+# View logs
+docker compose logs -f
+
+# Stop stack  
+docker compose down -v
 ```
 
-## 🔧 Development
-
-### **Makefile Commands**
+#### **Kubernetes (Advanced)**
 
 ```bash
-# Development
-make dev-setup      # Full development environment setup
-make install        # Install all dependencies
-make test           # Run all tests (Python + Node.js)
-make lint           # Run all linters
-make format         # Auto-format all code
+# Deploy with Helm
+helm upgrade --install liquid-hive \
+  infra/helm/liquid-hive \
+  -f infra/helm/liquid-hive/values-prod.yaml
 
-# Quality & Security
-make security-scan  # Run security analysis (bandit)
-make type-check     # Run type checking (mypy)
-make clean          # Clean build artifacts
-make docs           # Build documentation
-
-# Docker
-make docker-build   # Build production Docker image
-make docker-run     # Run in Docker
-make docker-clean   # Clean Docker resources
+# Check deployment
+kubectl get pods -l app=liquid-hive
 ```
 
-### **Project Structure**
+## ⚙️ Configuration
 
-```
-liquid-hive/
-├── 🚀 CI/CD & Config
-│   ├── .github/workflows/     # GitHub Actions (CI/CD)
-│   ├── .gitignore            # Git ignore rules
-│   ├── Makefile              # Development commands
-│   ├── docker-compose.yml    # Development services
-│   └── Dockerfile            # Production container
-│
-├── 🧠 Core System
-│   ├── src/                  # Python source code
-│   │   ├── unified_runtime/  # FastAPI server
-│   │   ├── capsule_brain/    # Memory & knowledge graph
-│   │   ├── hivemind/         # Multi-agent reasoning
-│   │   ├── oracle/           # Quality assurance
-│   │   └── safety/           # Security & validation
-│   │
-│   ├── frontend/             # React TypeScript UI
-│   │   ├── src/components/   # React components
-│   │   ├── src/services/     # API clients
-│   │   └── public/           # Static assets
-│   │
-├── 🗄️ Data & Config
-│   ├── data/                 # RAG indices & storage
-│   ├── config/               # Service configurations
-│   ├── infra/k8s/            # Kubernetes manifests
-│   └── helm/                 # Helm charts
-│
-├── 📊 Observability
-│   ├── prometheus/           # Metrics collection
-│   ├── grafana/             # Dashboards
-│   └── docs/                # Documentation
-│
-└── 🧪 Testing
-    ├── tests/               # Python tests
-    └── scripts/             # Utility scripts
-```
-
-## 🔗 API Reference
-
-### **Chat Endpoint**
-
-```http
-POST /api/chat
-Content-Type: application/json
-
-{
-  "query": "What is quantum computing?",
-  "strategy": "comprehensive",  # optional: "fast", "comprehensive", "creative"
-  "context": "technical",       # optional context hint
-  "max_tokens": 1000           # optional token limit
-}
-```
-
-**Response:**
-```json
-{
-  "response": "Quantum computing is...",
-  "strategy_used": "comprehensive",
-  "thinking_process": "...",
-  "sources": ["doc1.pdf", "doc2.txt"],
-  "confidence": 0.92,
-  "processing_time_ms": 1500
-}
-```
-
-### **Vision Analysis**
-
-```http
-POST /api/vision
-Content-Type: multipart/form-data
-
-question: "Describe this image"
-file: [image.png]
-grounding_required: false
-```
-
-### **Health Check**
+### **Environment Variables**
 
 ```bash
-curl http://localhost:8000/api/healthz
+# Backend Configuration
+API_PORT=8080
+LOG_LEVEL=INFO
+CORS_ORIGINS=http://localhost:5173
+
+# Frontend Configuration  
+VITE_API_BASE=http://localhost:8080
+
+# Optional Services
+REDIS_URL=redis://localhost:6379/0
+QDRANT_URL=http://localhost:6333
+
+# AI Providers (optional)
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here  
+DEEPSEEK_API_KEY=your_key_here
 ```
+
+Full configuration reference: [.env.example](.env.example)
 
 ## 🧪 Testing
 
-### **Quick Test**
-
-```bash
-# Backend tests
-pytest tests/ -v --cov=src
-
-# Frontend tests  
-cd frontend && yarn test
-
-# Integration tests
-python tests/test_smoke.py
+### **Test Structure**
+```
+tests/
+├── unit/          # Unit tests
+├── integration/   # Integration tests  
+└── performance/   # Load testing (k6)
 ```
 
-### **Manual Testing**
+### **Running Tests**
 
 ```bash
-# Chat API
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is the capital of France?"}'
+# Full test suite
+make test
 
-# Vision API
-curl -X POST "http://localhost:8000/api/vision" \
-  -F "question=Describe this image" \
-  -F "file=@/path/to/image.png" \
-  -F "grounding_required=false"
+# Specific test types
+pytest tests/unit/              # Unit tests
+pytest tests/integration/       # Integration tests  
+k6 run tests/performance/k6_smoke.js  # Performance tests
+
+# With coverage
+pytest --cov=src --cov-report=html
 ```
 
-## 📈 Performance & Monitoring
-
-### **Metrics Dashboard**
-
-Access Grafana at `http://localhost:3030` for:
-
-- 📊 **Request Metrics** - Latency, throughput, error rates
-- 🧠 **AI Model Performance** - Token usage, inference times
-- 💾 **Memory Usage** - Capsule brain, knowledge graph
-- 🔄 **System Health** - Service status, resource utilization
-
-### **Key Performance Indicators**
-
-| Metric | Target | Alert Threshold |
-|--------|---------|----------------|
-| API Response Time (p95) | < 2s | > 5s |
-| Error Rate | < 1% | > 5% |
-| Memory Usage | < 80% | > 90% |
-| Token Cost/Request | $0.01 | $0.05 |
-
-## 🔐 Security
-
-### **Security Features**
-
-- ✅ **Input Sanitization** - All inputs validated and sanitized
-- ✅ **Authentication** - JWT-based with secure token handling  
-- ✅ **Authorization** - Role-based access control (RBAC)
-- ✅ **HTTPS** - All communications encrypted in transit
-- ✅ **Dependency Scanning** - Automated via Dependabot
-- ✅ **Container Security** - Minimal base images, non-root execution
-
-### **Security Scanning**
+### **Performance Testing**
 
 ```bash
-# Python security scan
-bandit -r src/ -f json -o security-report.json
+# Smoke test
+make test-performance
 
-# Frontend security audit
-cd frontend && yarn audit
-
-# Container security scan
-docker scout cves liquid-hive:latest
+# Custom load test
+k6 run --vus 50 --duration 2m tests/performance/k6_smoke.js
 ```
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+## 🔒 Security
 
-## 📚 Training & Self-Improvement
+**Security-First Design:**
 
-### **Dataset Building**
+- ✅ **Input Sanitization**: All inputs filtered through safety guards
+- ✅ **Output Filtering**: AI responses sanitized before delivery  
+- ✅ **Dependency Scanning**: Automated vulnerability checks
+- ✅ **Container Security**: Non-root containers, minimal attack surface
+- ✅ **Secrets Management**: Environment-based configuration
+- ✅ **Security Headers**: CORS, CSP, HSTS implemented
 
-The system uses a hierarchical Oracle-Arbiter pipeline for quality assurance:
+**Security Tools:**
+- `bandit` - Python security linting
+- `safety` - Vulnerability scanning
+- `trivy` - Container security scanning
+- `CodeQL` - Static analysis
+
+Report security issues: [SECURITY.md](SECURITY.md)
+
+## 📊 Monitoring & Observability
+
+### **Built-in Monitoring**
+
+- **Prometheus Metrics**: `/metrics` endpoint on all services
+- **Grafana Dashboards**: Pre-configured dashboards for API, system metrics
+- **Structured Logging**: JSON logs with correlation IDs
+- **Health Checks**: Comprehensive service health monitoring
+
+### **Key Metrics**
+
+- Request latency (p50, p95, p99)
+- Error rates by endpoint
+- Agent reasoning performance
+- Memory usage & retrieval accuracy
+- Vector database query performance
+
+## 🚀 Production Deployment
+
+### **Docker Production Stack**
 
 ```bash
-# Build training dataset with Oracle refinement
-ENABLE_ORACLE_REFINEMENT=True python -m hivemind.training.dataset_build
+# Build production images
+make build-prod
 
-# Fast mode (skip external API calls)
-ENABLE_ORACLE_REFINEMENT=False python -m hivemind.training.dataset_build
-
-# Enhanced reasoning mode with DeepSeek R1
-ENABLE_ORACLE_REFINEMENT=True FORCE_DEEPSEEK_R1_ARBITER=True python -m hivemind.training.dataset_build
-```
-
-### **Pipeline Configuration**
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `ENABLE_ORACLE_REFINEMENT` | `True` | Master switch for refinement pipeline |
-| `FORCE_DEEPSEEK_R1_ARBITER` | `False` | Use DeepSeek R1 for all refinements |
-
-### **Model Training**
-
-Fine-tune adapters using the `/train` endpoint:
-
-```bash
-curl -X POST http://localhost:8000/api/train \
-  -H "Content-Type: application/json" \
-  -d '{"dataset_path": "/data/training_dataset.jsonl"}'
-```
-
-## 🚢 Production Deployment
-
-### **Docker Production**
-
-```dockerfile
-# Multi-stage build for optimized production image
-FROM python:3.11-slim as builder
-# ... (build steps)
-
-FROM node:18-alpine as frontend
-# ... (frontend build)
-
-FROM python:3.11-slim as production
-# ... (final production image)
+# Deploy with production config
+docker compose -f docker-compose.yaml up -d
 ```
 
 ### **Kubernetes with Helm**
 
 ```bash
-# Deploy to Kubernetes
-helm install liquid-hive ./infra/helm/liquid-hive \
-  --set image.tag=v1.0.0 \
-  --set ingress.enabled=true \
-  --set autoscaling.enabled=true
+# Add custom values
+cp infra/helm/liquid-hive/values.yaml values-custom.yaml
+
+# Deploy
+helm upgrade --install liquid-hive \
+  infra/helm/liquid-hive \
+  -f values-custom.yaml \
+  --namespace liquid-hive \
+  --create-namespace
 ```
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete deployment guide.
+### **CI/CD Pipeline**
 
-## 📖 Documentation
-
-- 📋 [**Contributing Guide**](CONTRIBUTING.md) - Development workflow
-- 🔐 [**Security Policy**](SECURITY.md) - Vulnerability reporting
-- 🚀 [**Deployment Guide**](docs/DEPLOYMENT.md) - Production deployment
-- 📊 [**Graduation Report**](docs/GRADUATION_REPORT.md) - System analysis
-- 🏗️ [**Architecture**](docs/architecture/) - Detailed system design
+Automated pipeline includes:
+- ✅ **Multi-Python Testing** (3.11, 3.12)
+- ✅ **Multi-Node Testing** (18, 20)
+- ✅ **Security Scanning** (CodeQL, Trivy, Bandit)
+- ✅ **Performance Testing** (k6 load tests)
+- ✅ **Docker Build & Push** (on releases)
+- ✅ **SBOM Generation** (Software Bill of Materials)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-### **Quick Contributor Setup**
+- Development workflow
+- Code standards  
+- Testing requirements
+- Security guidelines
 
-```bash
-# Fork and clone
-git clone https://github.com/your-fork/liquid-hive.git
-cd liquid-hive
+## 📖 Documentation
 
-# Development setup
-make dev-setup
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-make test lint
-
-# Submit PR
-git push origin feature/amazing-feature
-```
+- **[Getting Started](docs/GETTING_STARTED.md)** - Detailed setup guide
+- **[Architecture](docs/ARCHITECTURE.md)** - System design & components
+- **[API Reference](docs/api/)** - Generated API documentation
+- **[Operations](docs/OPERATIONS.md)** - Production operations guide
+- **[Security](SECURITY.md)** - Security policies & reporting
 
 ## 📄 License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## 🏆 Acknowledgments
 
-- **DeepSeek** - For advanced reasoning capabilities
-- **OpenAI** - For GPT models and embeddings  
-- **Qdrant** - For vector search
-- **FastAPI** - For high-performance API framework
-- **React** - For modern frontend framework
+Built with modern, production-grade technologies:
+- **FastAPI** - High-performance Python API framework
+- **React** - Modern frontend library
+- **Prometheus + Grafana** - Industrial-grade monitoring
+- **Docker** - Containerization platform
+- **Kubernetes** - Container orchestration
+- **Helm** - Kubernetes package management
 
 ---
 
-**⚡ Built with production-grade engineering practices:**
-[![CI](https://github.com/AetheronResearch/liquid-hive/workflows/CI/badge.svg)](https://github.com/AetheronResearch/liquid-hive/actions)
-[![Security](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
-[![Code Quality](https://img.shields.io/badge/code%20quality-ruff-orange.svg)](https://github.com/astral-sh/ruff)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+**[⚡ Get Started Now](#quick-start)** | **[📚 Documentation](docs/)** | **[🤝 Contribute](CONTRIBUTING.md)** | **[🔒 Security](SECURITY.md)**
