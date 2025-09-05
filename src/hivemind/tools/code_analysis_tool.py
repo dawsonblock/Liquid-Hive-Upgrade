@@ -205,7 +205,16 @@ class CodeAnalysisTool(BaseTool):
             # Cyclomatic complexity
             if isinstance(
                 node,
-                ast.If | ast.While | ast.For | ast.ExceptHandler | ast.With | ast.Assert | ast.ListComp | ast.DictComp | ast.SetComp | ast.GeneratorExp,
+                ast.If
+                | ast.While
+                | ast.For
+                | ast.ExceptHandler
+                | ast.With
+                | ast.Assert
+                | ast.ListComp
+                | ast.DictComp
+                | ast.SetComp
+                | ast.GeneratorExp,
             ):
                 complexity["cyclomatic_complexity"] += 1
             elif isinstance(node, ast.BoolOp):

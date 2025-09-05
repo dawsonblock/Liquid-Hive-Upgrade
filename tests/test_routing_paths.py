@@ -66,7 +66,9 @@ class TestRoutingPaths:
             print(f"Is hard: {router._is_hard_problem(question)}")
             decision = await router._determine_routing(GenRequest(prompt=question))
             print(f"Decision: provider={decision.provider}, reasoning={decision.reasoning}")
-            assert decision.provider == "deepseek_thinking", f"Expected deepseek_thinking, got {decision.provider} for '{question}'"
+            assert decision.provider == "deepseek_thinking", (
+                f"Expected deepseek_thinking, got {decision.provider} for '{question}'"
+            )
             assert decision.reasoning == "complex_query"
             assert decision.cot_budget <= router.config.max_cot_tokens
 

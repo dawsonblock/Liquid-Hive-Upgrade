@@ -60,12 +60,14 @@ test('copy and regenerate buttons render and work in streaming panel', async () 
   const copyButtons = screen.getAllByRole('button', { name: /copy message/i });
   // Mock clipboard
   Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
-  fireEvent.click(copyButtons[0]);
+  expect(copyButtons[0]).toBeTruthy();
+  fireEvent.click(copyButtons[0]!);
   expect(navigator.clipboard.writeText).toHaveBeenCalled();
 
   // Regenerate should be disabled if not connected; simulate connected state by ensuring readyState OPEN
   const regenButtons = screen.getAllByRole('button', { name: /regenerate response/i });
-  fireEvent.click(regenButtons[0]);
+  expect(regenButtons[0]).toBeTruthy();
+  fireEvent.click(regenButtons[0]!);
   // Should not throw; nothing else to assert without deeper ws spy
 });
 

@@ -50,15 +50,17 @@ test('copy and regenerate actions work for assistant messages', async () => {
   // Copy button should be present
   const copyBtns = screen.getAllByRole('button', { name: /copy message/i });
   const copyBtn = copyBtns[0];
+  expect(copyBtn).toBeTruthy();
   // Mock clipboard
   Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
-  fireEvent.click(copyBtn);
+  fireEvent.click(copyBtn!);
   expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Hello World');
 
   // Regenerate should call postChat again with previous prompt
   (postChat as jest.Mock).mockResolvedValueOnce({ answer: 'Hello Again' });
   const regenBtns = screen.getAllByRole('button', { name: /regenerate response/i });
   const regenBtn = regenBtns[0];
-  fireEvent.click(regenBtn);
+  expect(regenBtn).toBeTruthy();
+  fireEvent.click(regenBtn!);
   expect(await screen.findByText('Hello Again')).toBeInTheDocument();
 });

@@ -208,6 +208,7 @@ except Exception:
 
 API_PREFIX = "/api"
 
+
 # Lifespan function must be defined before app creation
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -281,8 +282,12 @@ async def lifespan(app: FastAPI):
     if get_semantic_cache is not None:
         try:
             semantic_cache = await get_semantic_cache(
-                redis_url=getattr(settings, "redis_url", "redis://localhost:6379/0") if settings else "redis://localhost:6379/0",
-                embedding_model=getattr(settings, "embed_model", "all-MiniLM-L6-v2") if settings else "all-MiniLM-L6-v2",
+                redis_url=getattr(settings, "redis_url", "redis://localhost:6379/0")
+                if settings
+                else "redis://localhost:6379/0",
+                embedding_model=getattr(settings, "embed_model", "all-MiniLM-L6-v2")
+                if settings
+                else "all-MiniLM-L6-v2",
             )
             if semantic_cache and semantic_cache.is_ready:
                 print("🧠 Semantic Cache initialized successfully")
@@ -307,12 +312,14 @@ async def lifespan(app: FastAPI):
 
     # Cleanup on shutdown
 
+
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7", lifespan=lifespan)
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
     app.include_router(metrics_router)
+
 
 # Middleware to ensure arena is mounted when needed
 @app.middleware("http")
@@ -323,6 +330,7 @@ async def arena_mounting_middleware(request, call_next):
     response = await call_next(request)
     return response
 
+
 # Helper function to dynamically mount arena router
 def ensure_arena_mounted():
     """Ensure arena router is mounted if ENABLE_ARENA is true."""
@@ -330,18 +338,23 @@ def ensure_arena_mounted():
         enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
         if enabled:
             # Check if already mounted
-            already = any(getattr(r, "path", "") and "/arena" in getattr(r, "path", "") for r in app.routes)
+            already = any(
+                getattr(r, "path", "") and "/arena" in getattr(r, "path", "") for r in app.routes
+            )
             if not already:
                 from .arena import router as arena_router
+
                 app.include_router(arena_router)
                 log.info("✅ Arena router mounted dynamically")
     except Exception as e:
         log.error(f"❌ Failed to mount arena router: {e}")
 
+
 # Mount arena router if enabled (for tests that set ENABLE_ARENA)
 try:
     if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true":
         from .arena import router as arena_router
+
         app.include_router(arena_router)
         log.info("✅ Arena router mounted at startup")
 except Exception as e:

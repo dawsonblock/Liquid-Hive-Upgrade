@@ -100,8 +100,11 @@ class TestSecretsManager:
                 mock_client = Mock()
                 # Mock successful connection test with proper ClientError
                 from botocore.exceptions import ClientError
-                error_response = {'Error': {'Code': 'ResourceNotFoundException'}}
-                mock_client.describe_secret.side_effect = ClientError(error_response, 'DescribeSecret')
+
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
                 mock_boto3.return_value = mock_client
 
                 manager = SecretsManager()
@@ -114,8 +117,11 @@ class TestSecretsManager:
             with patch("boto3.client") as mock_boto3:
                 mock_client = Mock()
                 from botocore.exceptions import ClientError
-                error_response = {'Error': {'Code': 'ResourceNotFoundException'}}
-                mock_client.describe_secret.side_effect = ClientError(error_response, 'DescribeSecret')
+
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
                 mock_client.get_secret_value.return_value = {
                     "SecretString": json.dumps({"username": "admin", "password": "secret123"})
                 }
@@ -131,8 +137,11 @@ class TestSecretsManager:
             with patch("boto3.client") as mock_boto3:
                 mock_client = Mock()
                 from botocore.exceptions import ClientError
-                error_response = {'Error': {'Code': 'ResourceNotFoundException'}}
-                mock_client.describe_secret.side_effect = ClientError(error_response, 'DescribeSecret')
+
+                error_response = {"Error": {"Code": "ResourceNotFoundException"}}
+                mock_client.describe_secret.side_effect = ClientError(
+                    error_response, "DescribeSecret"
+                )
                 mock_client.get_secret_value.return_value = {
                     "SecretString": "mongodb://localhost:27017/test"
                 }

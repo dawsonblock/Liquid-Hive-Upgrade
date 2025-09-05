@@ -65,7 +65,7 @@ class BudgetTracker:
 
     async def record_usage(self, response_or_tokens, cost: float = None) -> None:
         """Record usage from a GenResponse object or raw tokens/cost."""
-        if hasattr(response_or_tokens, 'prompt_tokens'):  # GenResponse object
+        if hasattr(response_or_tokens, "prompt_tokens"):  # GenResponse object
             response = response_or_tokens
             total_tokens = (response.prompt_tokens or 0) + (response.output_tokens or 0)
             cost = response.cost_usd or 0.0
@@ -74,7 +74,7 @@ class BudgetTracker:
         else:  # Raw tokens and cost
             tokens = response_or_tokens
             self.tokens_used += tokens
-            self.usd_spent += (cost or 0.0)
+            self.usd_spent += cost or 0.0
 
 
 class DSRouter:
@@ -100,7 +100,19 @@ class DSRouter:
         self.providers["qwen_cpu"] = _Echo("qwen_cpu")
 
     def _is_hard_problem(self, text: str) -> bool:
-        hard_keywords = ["prove", "optimize", "debug", "analyze", "analysis", "irrational", "big-o", "regex", "derive", "formula", "theorem"]
+        hard_keywords = [
+            "prove",
+            "optimize",
+            "debug",
+            "analyze",
+            "analysis",
+            "irrational",
+            "big-o",
+            "regex",
+            "derive",
+            "formula",
+            "theorem",
+        ]
         tl = text.lower()
         return any(k in tl for k in hard_keywords)
 
@@ -115,14 +127,28 @@ class DSRouter:
 
         # Low confidence indicators
         low_conf_phrases = [
-            "i'm not sure", "not certain", "might be", "possibly", "maybe",
-            "could be", "i think", "probably", "not entirely sure"
+            "i'm not sure",
+            "not certain",
+            "might be",
+            "possibly",
+            "maybe",
+            "could be",
+            "i think",
+            "probably",
+            "not entirely sure",
         ]
 
         # High confidence indicators
         high_conf_phrases = [
-            "definitively", "clearly", "certainly", "absolutely", "precisely",
-            "exactly", "without doubt", "obviously", "undoubtedly"
+            "definitively",
+            "clearly",
+            "certainly",
+            "absolutely",
+            "precisely",
+            "exactly",
+            "without doubt",
+            "obviously",
+            "undoubtedly",
         ]
 
         # Check for confidence indicators
@@ -152,19 +178,17 @@ class DSRouter:
             return RoutingDecision(
                 provider="deepseek_thinking",
                 reasoning="complex_query",
-                cot_budget=self.config.max_cot_tokens
+                cot_budget=self.config.max_cot_tokens,
             )
         elif rag_support < self.config.support_threshold:
             return RoutingDecision(
                 provider="deepseek_thinking",
                 reasoning="complex_query",
-                cot_budget=self.config.max_cot_tokens
+                cot_budget=self.config.max_cot_tokens,
             )
         else:
             return RoutingDecision(
-                provider="deepseek_chat",
-                reasoning="simple_query",
-                cot_budget=None
+                provider="deepseek_chat", reasoning="simple_query", cot_budget=None
             )
 
     async def get_provider_status(self) -> dict[str, Any]:
@@ -184,7 +208,7 @@ class DSRouter:
             return GenResponse(
                 content="Request cannot be processed: budget limit exceeded for today.",
                 provider="budget_limiter",
-                confidence=1.0
+                confidence=1.0,
             )
 
         # Route simple vs hard
