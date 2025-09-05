@@ -3,7 +3,7 @@
 import os
 import time
 import math
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from qdrant_client.http import models as qm
 import structlog
 
