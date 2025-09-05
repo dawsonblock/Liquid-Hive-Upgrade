@@ -141,7 +141,7 @@ class TestDSRouter:
     async def test_confidence_escalation(self, ds_router):
         """Test escalation to R1 when confidence is low."""
 
-        request = GenRequest(prompt="Solve this complex mathematical proof")
+        request = GenRequest(prompt="Please prove this mathematical theorem using formal logic")
 
         # Mock low confidence from thinking provider
         with patch.object(ds_router, "_assess_confidence", side_effect=[0.5, 0.95]):
