@@ -334,18 +334,18 @@ def ensure_arena_mounted():
             if not already:
                 from .arena import router as arena_router
                 app.include_router(arena_router)
-                print("✅ Arena router mounted dynamically")
+                log.info("✅ Arena router mounted dynamically")
     except Exception as e:
-        print(f"❌ Failed to mount arena router: {e}")
+        log.error(f"❌ Failed to mount arena router: {e}")
 
 # Mount arena router if enabled (for tests that set ENABLE_ARENA)
 try:
     if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true":
         from .arena import router as arena_router
         app.include_router(arena_router)
-        print("✅ Arena router mounted at startup")
+        log.info("✅ Arena router mounted at startup")
 except Exception as e:
-    print(f"❌ Failed to mount arena router at startup: {e}")
+    log.error(f"❌ Failed to mount arena router at startup: {e}")
 
 # Conditionally mount Arena service if enabled
 try:
