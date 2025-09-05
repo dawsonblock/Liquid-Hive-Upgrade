@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-
+import logging
 from .base_tool import BaseTool, ToolParameter, ToolParameterType, ToolResult
 
 
@@ -347,8 +347,9 @@ class SystemInfoTool(BaseTool):
             elif disk_percent > 80:
                 health_score -= 10
                 issues.append(f"Moderate disk usage: {disk_percent:.1f}%")
-        except Exception:
-            pass
+        except Exception as e:
+            # Disk usage info unavailable; log and continue with best-effort health scoring
+            logging.warning(f"Health scoring: unable to retrieve disk usage: {e!s}")
 
         # Check load average (on Unix-like systems)
         try:
