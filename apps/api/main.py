@@ -81,7 +81,7 @@ async def version_info() -> dict[str, str]:
 
 
 @app.get("/config")
-async def config_info() -> dict[str, any]:
+async def config_info() -> dict[str, Any]:
     """Configuration information endpoint (debug only)."""
     if not config.debug:
         return {"error": "Configuration endpoint only available in debug mode"}
