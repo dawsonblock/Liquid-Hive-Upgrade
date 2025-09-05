@@ -567,7 +567,6 @@ async def startup_components():
     yield  # App is running
     
     # Cleanup on shutdown
-    pass
 
 
 def _env_write(key: str, value: str) -> None:
