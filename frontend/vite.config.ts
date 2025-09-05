@@ -30,7 +30,7 @@ export default defineConfig({
         target: (
           process.env.VITE_BACKEND_URL ||
           process.env.REACT_APP_BACKEND_URL ||
-          'http://localhost:8000'
+          'http://localhost:8001'
         ).replace('http', 'ws'),
         ws: true,
         changeOrigin: true,
