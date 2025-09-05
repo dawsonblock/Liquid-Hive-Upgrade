@@ -305,7 +305,6 @@ async def lifespan(app: FastAPI):
     yield  # App is running
     
     # Cleanup on shutdown
-    pass
 
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7", lifespan=lifespan)
 
