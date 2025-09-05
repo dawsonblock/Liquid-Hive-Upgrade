@@ -38,7 +38,7 @@ class LiquidHiveAPITester:
     def __init__(self):
         """Initialize the tester with service endpoints."""
         # Core API endpoints
-        self.main_api_url = "http://localhost:8000"
+        self.main_api_url = "http://localhost:8001"
         self.feedback_api_url = "http://localhost:8091"
         self.oracle_api_url = "http://localhost:8092"
         
