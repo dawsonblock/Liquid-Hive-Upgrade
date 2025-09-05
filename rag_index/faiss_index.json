@@ -1,0 +1,66 @@
+{
+  "created_at": 1757112235.462817,
+  "source_directory": "data/ingest",
+  "documents_processed": 3,
+  "chunks_created": 7,
+  "embedding_dimension": 1536,
+  "index_type": "IndexFlatIP",
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "build_stats": {
+    "embedding_time_seconds": 7.458805084228516,
+    "index_time_seconds": 0.0004935264587402344,
+    "total_time_seconds": 0.0010166168212890625
+  },
+  "chunks_metadata": [
+    {
+      "source_file": "programming_concepts.txt",
+      "chunk_index": 0,
+      "total_chunks": 3,
+      "doc_hash": "d6d52564",
+      "chunk_size": 1000
+    },
+    {
+      "source_file": "programming_concepts.txt",
+      "chunk_index": 1,
+      "total_chunks": 3,
+      "doc_hash": "d6d52564",
+      "chunk_size": 872
+    },
+    {
+      "source_file": "programming_concepts.txt",
+      "chunk_index": 2,
+      "total_chunks": 3,
+      "doc_hash": "d6d52564",
+      "chunk_size": 72
+    },
+    {
+      "source_file": "ai_basics.md",
+      "chunk_index": 0,
+      "total_chunks": 2,
+      "doc_hash": "81c0e392",
+      "chunk_size": 926
+    },
+    {
+      "source_file": "ai_basics.md",
+      "chunk_index": 1,
+      "total_chunks": 2,
+      "doc_hash": "81c0e392",
+      "chunk_size": 752
+    },
+    {
+      "source_file": "liquid_hive_docs.txt",
+      "chunk_index": 0,
+      "total_chunks": 2,
+      "doc_hash": "d1aba505",
+      "chunk_size": 1000
+    },
+    {
+      "source_file": "liquid_hive_docs.txt",
+      "chunk_index": 1,
+      "total_chunks": 2,
+      "doc_hash": "d1aba505",
+      "chunk_size": 454
+    }
+  ]
+}
