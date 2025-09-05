@@ -1112,9 +1112,7 @@ async def cache_clear(request: Request, payload: dict[str, Any] | None = None) -
     If ADMIN_TOKEN is set, requires X-Admin-Token header.
     """
     try:
-        if semantic_cache is None:
-            return {"error": "Semantic cache not available"}
-
+        # Check authorization first
         admin_token = os.environ.get("ADMIN_TOKEN")
         if admin_token:
             header_token = request.headers.get("x-admin-token") or request.headers.get(
@@ -1122,6 +1120,9 @@ async def cache_clear(request: Request, payload: dict[str, Any] | None = None) -
             )
             if header_token != admin_token:
                 return {"error": "Unauthorized"}
+
+        if semantic_cache is None:
+            return {"error": "Semantic cache not available"}
 
         pattern = None
         if payload:
@@ -1393,12 +1394,14 @@ async def batch_execute_tools(requests: list[dict[str, Any]]) -> list[dict[str, 
 
 
 @app.post(f"{API_PREFIX}/admin/router/set-thresholds")
-async def set_router_thresholds(thresholds: dict[str, float]) -> dict[str, Any]:
+async def set_router_thresholds(request: Request, thresholds: dict[str, float]) -> dict[str, Any]:
     """Set router confidence and support thresholds (Admin only)."""
     admin_token = os.environ.get("ADMIN_TOKEN")
-    if not admin_token:
-        return {"error": "Admin token not configured"}
-
+    if admin_token:
+        header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
+        if header_token != admin_token:
+            return {"error": "Unauthorized"}
+    
     if ds_router is None:
         return {"error": "DS-Router not available"}
 
