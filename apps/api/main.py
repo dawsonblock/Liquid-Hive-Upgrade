@@ -62,6 +62,9 @@ app.add_middleware(
     allowed_hosts=["*"] if config.debug else ["localhost", "127.0.0.1"]
 )
 
+# Include routers
+app.include_router(memory_router)
+
 
 @app.get("/")
 async def root() -> dict[str, str]:
