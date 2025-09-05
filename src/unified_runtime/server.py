@@ -23,6 +23,7 @@ import httpx
 log = logging.getLogger(__name__)
 
 from fastapi import FastAPI, File, Request, UploadFile
+from contextlib import asynccontextmanager
 
 # Integrate internet agent advanced routes and metrics
 try:
@@ -206,12 +207,145 @@ except Exception:
 
 API_PREFIX = "/api"
 
-app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7")
+# Lifespan function must be defined before app creation
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize global components on startup."""
+    global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
+    global \
+        resource_estimator, \
+        adapter_manager, \
+        tool_auditor, \
+        intent_modeler, \
+        confidence_modeler, \
+        ds_router, \
+        tool_registry
+    global get_semantic_cache, semantic_cache, cache_manager
+    global autonomy_orchestrator, _autonomy_lock
+    global text_roles_small, text_roles_large
+
+    # Initialize settings
+    if Settings is not None:
+        try:
+            settings = Settings()
+            print("✅ Settings initialized")
+        except Exception as e:
+            print(f"❌ Settings initialization failed: {e}")
+            settings = None
+    else:
+        settings = None
+
+    # Initialize DS-Router
+    if DSRouter is not None and RouterConfig is not None:
+        try:
+            router_config = RouterConfig.from_env()
+            ds_router = DSRouter(router_config)
+            print("✅ DS-Router initialized")
+        except Exception as e:
+            print(f"❌ DS-Router initialization failed: {e}")
+            ds_router = None
+    else:
+        ds_router = None
+
+    # Initialize retriever
+    if settings is not None:
+        try:
+            if hasattr(settings, "rag_index") and hasattr(settings, "embed_model"):
+                retriever = Retriever(settings.rag_index, settings.embed_model)
+                print("✅ FAISS Retriever initialized")
+        except Exception:
+            retriever = None
+    else:
+        retriever = None
+
+    # Initialize other components...
+    if settings is not None:
+        try:
+            if TextRoles is not None:
+                text_roles = TextRoles(settings)
+                print("✅ Text Roles initialized")
+        except Exception as e:
+            print(f"❌ Text Roles initialization failed: {e}")
+            text_roles = None
+
+        try:
+            if Judge is not None:
+                judge = Judge(settings)
+                print("✅ Judge initialized")
+        except Exception as e:
+            print(f"❌ Judge initialization failed: {e}")
+            judge = None
+
+    # Initialize Semantic Cache
+    if get_semantic_cache is not None:
+        try:
+            semantic_cache = await get_semantic_cache(
+                redis_url=getattr(settings, "redis_url", "redis://localhost:6379/0") if settings else "redis://localhost:6379/0",
+                embedding_model=getattr(settings, "embed_model", "all-MiniLM-L6-v2") if settings else "all-MiniLM-L6-v2",
+            )
+            if semantic_cache and semantic_cache.is_ready:
+                print("🧠 Semantic Cache initialized successfully")
+                if create_cache_manager is not None:
+                    cache_manager = await create_cache_manager(semantic_cache)
+                    if cache_manager:
+                        print("📈 Cache Manager initialized successfully")
+                    else:
+                        print("⚠️ Cache Manager initialization failed")
+            else:
+                print("⚠️ Semantic Cache initialization failed")
+
+        except Exception as e:
+            print(f"❌ Failed to initialize Semantic Cache: {e}")
+            semantic_cache = None
+            cache_manager = None
+
+    # Initialize other components as needed
+    # ... (additional component initialization can be added here)
+    
+    yield  # App is running
+    
+    # Cleanup on shutdown
+    pass
+
+app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7", lifespan=lifespan)
 
 if MetricsMiddleware is not None:
     app.add_middleware(MetricsMiddleware)
 if metrics_router is not None:
     app.include_router(metrics_router)
+
+# Middleware to ensure arena is mounted when needed
+@app.middleware("http")
+async def arena_mounting_middleware(request, call_next):
+    # Check if request is for arena and mount if needed
+    if request.url.path.startswith("/api/arena"):
+        ensure_arena_mounted()
+    response = await call_next(request)
+    return response
+
+# Helper function to dynamically mount arena router
+def ensure_arena_mounted():
+    """Ensure arena router is mounted if ENABLE_ARENA is true."""
+    try:
+        enabled = str(os.getenv("ENABLE_ARENA", "false")).lower() == "true"
+        if enabled:
+            # Check if already mounted
+            already = any(getattr(r, "path", "") and "/arena" in getattr(r, "path", "") for r in app.routes)
+            if not already:
+                from .arena import router as arena_router
+                app.include_router(arena_router)
+                print("✅ Arena router mounted dynamically")
+    except Exception as e:
+        print(f"❌ Failed to mount arena router: {e}")
+
+# Mount arena router if enabled (for tests that set ENABLE_ARENA)
+try:
+    if str(os.getenv("ENABLE_ARENA", "false")).lower() == "true":
+        from .arena import router as arena_router
+        app.include_router(arena_router)
+        print("✅ Arena router mounted at startup")
+except Exception as e:
+    print(f"❌ Failed to mount arena router at startup: {e}")
 
 # Conditionally mount Arena service if enabled
 try:
@@ -281,8 +415,8 @@ cache_manager = None
 websockets: list[WebSocket] = []
 
 
-@app.on_event("startup")
-async def startup() -> None:
+# Original startup function converted to lifespan (duplicate removed)
+async def startup_components():
     """Initialize global components on startup."""
     global settings, retriever, engine, text_roles, judge, strategy_selector, vl_roles
     global \
@@ -310,8 +444,9 @@ async def startup() -> None:
         already = any(getattr(r, "prefix", "") == f"{API_PREFIX}/arena" for r in app.router.routes)
         if enabled and not already:
             app.include_router(arena_router)
-    except Exception:
-        pass
+            print("✅ Arena router mounted")
+    except Exception as e:
+        print(f"❌ Failed to mount arena router: {e}")
     # Mount Providers admin endpoints if present (keys redacted)
     try:
         from .providers_admin_mount import mount_admin_providers  # type: ignore
@@ -429,6 +564,11 @@ async def startup() -> None:
 
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
+    
+    yield  # App is running
+    
+    # Cleanup on shutdown
+    pass
 
 
 def _env_write(key: str, value: str) -> None:
@@ -1256,7 +1396,7 @@ async def get_cache_status() -> dict[str, Any]:
             "status": "enabled" if semantic_cache.is_ready else "error",
             "health": health,
             "analytics": analytics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

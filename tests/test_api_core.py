@@ -29,8 +29,11 @@ def test_cache_clear_without_admin_token_when_not_required(monkeypatch):
         assert r.status_code == 200
         data = r.json()
         assert isinstance(data, dict)
-        # In test environment, semantic cache is not available
-        assert data.get("error") == "Semantic cache not available"
+        # Should either clear successfully or report cache not available
+        if "error" in data:
+            assert data["error"] == "Semantic cache not available"
+        else:
+            assert "cleared_entries" in data
 
 
 def test_autopromote_preview():

@@ -85,21 +85,19 @@ class Settings(BaseSettings):
         if not secrets_manager:
             return
 
-        # Database URL
-        if not self.redis_url:
-            redis_url = secrets_manager.get_redis_url()
-            if redis_url:
-                self.redis_url = redis_url
+        # Database URL - secrets manager takes precedence
+        redis_url = secrets_manager.get_redis_url()
+        if redis_url:
+            self.redis_url = redis_url
 
-        # Prometheus URL
-        if not self.PROMETHEUS_BASE_URL:
-            prometheus_url = secrets_manager.get_prometheus_url()
-            if prometheus_url:
-                self.PROMETHEUS_BASE_URL = prometheus_url
+        # Prometheus URL - secrets manager takes precedence
+        prometheus_url = secrets_manager.get_prometheus_url()
+        if prometheus_url:
+            self.PROMETHEUS_BASE_URL = prometheus_url
 
-        # vLLM configuration
+        # vLLM configuration - secrets manager takes precedence
         vllm_config = secrets_manager.get_vllm_config()
-        if not self.vllm_endpoint and vllm_config.get("vllm_endpoint"):
+        if vllm_config.get("vllm_endpoint"):
             self.vllm_endpoint = vllm_config["vllm_endpoint"]
         if not self.vllm_endpoint_small and vllm_config.get("vllm_endpoint_small"):
             self.vllm_endpoint_small = vllm_config["vllm_endpoint_small"]
@@ -128,7 +126,9 @@ class Settings(BaseSettings):
             return secrets_manager.get_secret(key, default)
         return os.environ.get(key, default)
 
-    class Config:
-        env_prefix = ""
-        env_file = ".env"
-        extra = "allow"  # Allow extra fields from environment
+    model_config = {
+        "env_prefix": "",
+        "env_file": ".env", 
+        "extra": "allow",  # Allow extra fields from environment
+        "protected_namespaces": ()  # Fix model_ namespace warning
+    }

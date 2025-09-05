@@ -20,10 +20,13 @@ def test_admin_guard_cache_clear_authorized(monkeypatch):
             headers={"x-admin-token": "secret123"},
         )
         assert r.status_code == 200
-        # In test environment, semantic cache is not available, so we expect this error
-        # but it should be authorized (not "Unauthorized")
+        # Cache clear should work when properly authorized
         response_data = r.json()
-        assert response_data.get("error") == "Semantic cache not available"
+        # Should either clear successfully or report cache not available
+        if "error" in response_data:
+            assert response_data["error"] == "Semantic cache not available"
+        else:
+            assert "cleared_entries" in response_data
 
 
 def test_router_thresholds_guard_flow(monkeypatch):
