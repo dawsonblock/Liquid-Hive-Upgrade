@@ -188,3 +188,15 @@ assets_large/
 # Environment files
 *.env
 *.env.*
+
+# Binary artifacts and indices
+*.bin
+*.index
+*.faiss
+rag_index/*.bin
+rag_index/*.index
+models/*.bin
+models/*.safetensors
+checkpoints/
+artifacts/
+
