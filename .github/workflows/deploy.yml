@@ -29,7 +29,7 @@ jobs:
           target: "/tmp/"
       
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.1.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ github.event.inputs.host }}
           username: ${{ secrets.DEPLOY_USER }}
