@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from src.config import get_config
 from src.version import get_build_info
+from apps.api.routers.memory import memory_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
