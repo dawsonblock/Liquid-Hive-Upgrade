@@ -14,16 +14,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
+      
+      - name: Create deployment archive
+        run: |
+          tar -czf deployment.tar.gz --exclude='.git' --exclude='node_modules' --exclude='__pycache__' .
+      
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ inputs.host }}
+          host: ${{ github.event.inputs.host }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          source: "deployment.tar.gz"
+          target: "/tmp/"
+      
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ github.event.inputs.host }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
             set -e
-            mkdir -p ${{ inputs.path }}
-            rsync -a --delete . ${{ secrets.DEPLOY_USER }}@${{ inputs.host }}:${{ inputs.path }}
-            cd ${{ inputs.path }}
+            mkdir -p ${{ github.event.inputs.path }}
+            cd ${{ github.event.inputs.path }}
+            tar -xzf /tmp/deployment.tar.gz
+            rm /tmp/deployment.tar.gz
             docker compose pull || true
             docker compose up -d --build
