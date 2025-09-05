@@ -27,15 +27,15 @@ graph TB
     A[React App] --> B[Component Layer]
     A --> C[Service Layer]
     A --> D[State Layer]
-    
+
     B --> E[Chat Components]
     B --> F[System Components]
     B --> G[Shared Components]
-    
+
     C --> H[API Service]
     C --> I[WebSocket Service]
     C --> J[Environment Service]
-    
+
     D --> K[Redux Store]
     D --> L[Context Providers]
 ```
@@ -140,7 +140,7 @@ const connectWebSocket = useCallback(() => {
   const wsBase = getBackendWsBase();
   const wsUrl = `${wsBase}/api/ws/chat`;
   const ws = new WebSocket(wsUrl);
-  
+
   ws.onmessage = event => {
     const data = JSON.parse(event.data);
     // Handle streaming tokens
@@ -290,7 +290,7 @@ function ChatWithContext() {
   return (
     <Box display="flex">
       <ChatPanel />
-      <ContextSidebar 
+      <ContextSidebar
         context={lastContext}
         reasoning={lastReasoning}
         intent={lastIntent}
@@ -357,7 +357,7 @@ export const health = async () => {
 export const getApprovals = () => api.get('/approvals').then(r => r.data);
 export const approveProposal = (id: number) =>
   api.post(`/approvals/${id}/approve`).then(r => r.data);
-export const denyProposal = (id: number) => 
+export const denyProposal = (id: number) =>
   api.post(`/approvals/${id}/deny`).then(r => r.data);
 
 // Provider management
@@ -514,9 +514,9 @@ function App() {
 
 function ProviderStatus() {
   const { providers, loading, refresh } = useProviders();
-  
+
   if (loading) return <div>Loading providers...</div>;
-  
+
   return (
     <div>
       {providers.map(provider => (
@@ -624,13 +624,13 @@ describe('ChatPanel', () => {
 
   test('sends message on submit', async () => {
     renderWithStore(<ChatPanel />);
-    
+
     const input = screen.getByPlaceholderText(/type your message/i);
     const sendButton = screen.getByRole('button', { name: /send/i });
-    
+
     fireEvent.change(input, { target: { value: 'Hello, AI!' } });
     fireEvent.click(sendButton);
-    
+
     // Assert message was added to store
     expect(store.getState().chatHistory.history).toHaveLength(1);
   });

@@ -16,13 +16,13 @@ graph TB
     D --> G[Provider Adapters]
     E --> H[Distributed State]
     F --> I[Model Evaluation]
-    
+
     subgraph "Core Services"
         D
         E
         F
     end
-    
+
     subgraph "Provider Ecosystem"
         G --> J[OpenAI]
         G --> K[Anthropic]
@@ -130,7 +130,7 @@ Error responses:
 === "Python"
     ```python
     from liquid_hive import LiquidHiveClient
-    
+
     client = LiquidHiveClient(
         base_url="https://api.liquid-hive.dev",
         api_key="your-api-key"
@@ -140,7 +140,7 @@ Error responses:
 === "JavaScript"
     ```javascript
     import { LiquidHiveClient } from '@liquid-hive/client';
-    
+
     const client = new LiquidHiveClient({
       baseUrl: 'https://api.liquid-hive.dev',
       apiKey: 'your-api-key'
@@ -154,7 +154,7 @@ Error responses:
     # Health check
     health = await client.health()
     print(f"System status: {health}")
-    
+
     # Chat with AI
     response = await client.chat("Hello, how can you help me?")
     print(f"AI Response: {response['message']}")
@@ -165,7 +165,7 @@ Error responses:
     // Health check
     const health = await client.health();
     console.log('System status:', health);
-    
+
     // Chat with AI
     const response = await client.chat("Hello, how can you help me?");
     console.log('AI Response:', response.message);

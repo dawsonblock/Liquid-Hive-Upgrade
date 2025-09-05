@@ -29,12 +29,12 @@ graph TB
     A --> C[Swarm Protocol]
     A --> D[Arena Service]
     A --> E[Security Layer]
-    
+
     B --> F[Provider Adapters]
     C --> G[Redis Cluster]
     D --> H[Model Evaluation]
     E --> I[Secrets Manager]
-    
+
     F --> J[OpenAI Provider]
     F --> K[Anthropic Provider]
     F --> L[DeepSeek Provider]
@@ -67,15 +67,15 @@ class ProviderConfig:
 
 class OracleProvider(Protocol):
     """Protocol defining the interface for Oracle Providers."""
-    
+
     async def generate(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         **kwargs: Any
     ) -> dict[str, Any]:
         """Generate a response from the provider."""
         ...
-    
+
     async def health_check(self) -> dict[str, Any]:
         """Check provider health and availability."""
         ...
@@ -88,7 +88,7 @@ Located in `src/oracle/manager.py`:
 ```python
 class ProviderManager:
     """Manages Oracle Provider configuration and routing."""
-    
+
     def __init__(self, config_path: str = "/app/config/providers.yaml") -> None:
         self.config_path = config_path
         self.routing: dict[str, Any] = {}
@@ -144,7 +144,7 @@ api_key = manager.resolve_api_key(openai_config)
 ```python
 class OpenAIProvider:
     """OpenAI API provider implementation."""
-    
+
     def __init__(self, config: ProviderConfig, api_key: str):
         self.config = config
         self.api_key = api_key
@@ -152,7 +152,7 @@ class OpenAIProvider:
             api_key=api_key,
             base_url=config.base_url
         )
-    
+
     async def generate(self, prompt: str, **kwargs) -> dict[str, Any]:
         """Generate completion using OpenAI API."""
         try:
@@ -162,7 +162,7 @@ class OpenAIProvider:
                 max_tokens=self.config.max_tokens or 2000,
                 **kwargs
             )
-            
+
             return {
                 "content": response.choices[0].message.content,
                 "model": response.model,
@@ -174,7 +174,7 @@ class OpenAIProvider:
             }
         except Exception as e:
             return {"error": str(e)}
-    
+
     async def health_check(self) -> dict[str, Any]:
         """Check OpenAI API health."""
         try:
@@ -219,7 +219,7 @@ class SwarmNode:
 
 class SwarmCoordinator:
     """Coordinates task delegation and swarm state management."""
-    
+
     def __init__(self, redis_url: str = "redis://localhost:6379"):
         self.redis_url = redis_url
         self.redis_client: Optional[redis.Redis] = None
@@ -231,17 +231,17 @@ class SwarmCoordinator:
         """Connect to Redis and initialize swarm participation."""
         if redis is None:
             raise RuntimeError("redis package not installed")
-        
+
         self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
         await self.redis_client.ping()
-        
+
         # Register this node
         await self._register_node()
         self.is_running = True
 
     async def delegate_task(
-        self, 
-        task_type: str, 
+        self,
+        task_type: str,
         payload: dict[str, Any],
         priority: int = 1,
         timeout_seconds: int = 300,
@@ -249,7 +249,7 @@ class SwarmCoordinator:
     ) -> str:
         """Delegate a task to the swarm for distributed processing."""
         task_id = f"task_{uuid.uuid4().hex[:8]}"
-        
+
         task = SwarmTask(
             task_id=task_id,
             task_type=task_type,
@@ -258,7 +258,7 @@ class SwarmCoordinator:
             priority=priority,
             timeout_seconds=timeout_seconds
         )
-        
+
         # Store task in Redis
         task_key = f"swarm:task:{task_id}"
         await self.redis_client.setex(
@@ -266,13 +266,13 @@ class SwarmCoordinator:
             timeout_seconds + 60,  # Extra buffer
             json.dumps(asdict(task))
         )
-        
+
         # Add to priority queue
         await self.redis_client.zadd(
             "swarm:task_queue",
             {task_id: priority}
         )
-        
+
         # Publish task notification
         await self.redis_client.publish(
             "swarm:new_task",
@@ -282,19 +282,19 @@ class SwarmCoordinator:
                 "required_capabilities": required_capabilities or []
             })
         )
-        
+
         return task_id
 
     async def get_task_result(self, task_id: str) -> Optional[dict[str, Any]]:
         """Get the result of a completed task."""
         task_key = f"swarm:task:{task_id}"
         task_data = await self.redis_client.get(task_key)
-        
+
         if not task_data:
             return None
-        
+
         task = SwarmTask(**json.loads(task_data))
-        
+
         if task.status == "completed":
             return task.result
         elif task.status == "failed":
@@ -307,15 +307,15 @@ class SwarmCoordinator:
         # Get active nodes
         nodes_data = await self.redis_client.hgetall("swarm:nodes")
         active_nodes = []
-        
+
         for node_id, node_data in nodes_data.items():
             node = SwarmNode(**json.loads(node_data))
             if time.time() - node.last_heartbeat < 60:  # Active within last minute
                 active_nodes.append(node)
-        
+
         # Get pending tasks
         pending_tasks = await self.redis_client.zcard("swarm:task_queue")
-        
+
         return {
             "total_nodes": len(nodes_data),
             "active_nodes": len(active_nodes),
@@ -373,18 +373,18 @@ class SecretProvider(Enum):
 
 class SecretsManager:
     """Centralized secrets management with multiple provider support."""
-    
+
     def __init__(self, provider: SecretProvider = SecretProvider.ENVIRONMENT):
         self.provider = provider
         self.logger = logging.getLogger(__name__)
         self._cache: Dict[str, Any] = {}
-        
+
     async def get_secret(self, key: str, default: Any = None) -> Any:
         """Retrieve a secret by key."""
         # Check cache first
         if key in self._cache:
             return self._cache[key]
-        
+
         try:
             if self.provider == SecretProvider.ENVIRONMENT:
                 value = os.getenv(key, default)
@@ -396,17 +396,17 @@ class SecretsManager:
                 value = await self._get_from_aws(key, default)
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
-            
+
             # Cache the result
             if value is not None:
                 self._cache[key] = value
-            
+
             return value
-            
+
         except Exception as e:
             self.logger.error(f"Failed to retrieve secret '{key}': {e}")
             return default
-    
+
     async def set_secret(self, key: str, value: Any) -> bool:
         """Store a secret."""
         try:
@@ -420,15 +420,15 @@ class SecretsManager:
                 await self._set_to_aws(key, value)
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
-            
+
             # Update cache
             self._cache[key] = value
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to store secret '{key}': {e}")
             return False
-    
+
     async def delete_secret(self, key: str) -> bool:
         """Delete a secret."""
         try:
@@ -437,15 +437,15 @@ class SecretsManager:
             elif self.provider == SecretProvider.FILE:
                 await self._delete_from_file(key)
             # ... other providers
-            
+
             # Remove from cache
             self._cache.pop(key, None)
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to delete secret '{key}': {e}")
             return False
-    
+
     async def list_secrets(self) -> list[str]:
         """List available secret keys (names only)."""
         try:
@@ -454,7 +454,7 @@ class SecretsManager:
             elif self.provider == SecretProvider.FILE:
                 return await self._list_from_file()
             # ... other providers
-            
+
         except Exception as e:
             self.logger.error(f"Failed to list secrets: {e}")
             return []
@@ -514,7 +514,7 @@ class CacheEntry:
 
 class SemanticCache:
     """High-performance semantic cache with multiple eviction strategies."""
-    
+
     def __init__(
         self,
         max_size: int = 1000,
@@ -526,7 +526,7 @@ class SemanticCache:
         self.strategy = strategy
         self._cache: dict[str, CacheEntry] = {}
         self._access_order: list[str] = []  # For LRU
-        
+
     def _generate_key(self, prompt: str, model: str, **kwargs) -> str:
         """Generate a cache key from input parameters."""
         key_data = {
@@ -536,23 +536,23 @@ class SemanticCache:
         }
         key_string = json.dumps(key_data, sort_keys=True)
         return hashlib.sha256(key_string.encode()).hexdigest()
-    
+
     def _is_expired(self, entry: CacheEntry) -> bool:
         """Check if a cache entry has expired."""
         if entry.ttl is None:
             return False
         return time.time() - entry.created_at > entry.ttl
-    
+
     async def get(
-        self, 
-        prompt: str, 
-        model: str, 
+        self,
+        prompt: str,
+        model: str,
         similarity_threshold: float = 0.9,
         **kwargs
     ) -> Optional[Any]:
         """Retrieve from cache with semantic similarity matching."""
         key = self._generate_key(prompt, model, **kwargs)
-        
+
         # Exact match first
         if key in self._cache:
             entry = self._cache[key]
@@ -565,19 +565,19 @@ class SemanticCache:
             else:
                 # Remove expired entry
                 del self._cache[key]
-        
+
         # Semantic similarity search
         if self.strategy == CacheStrategy.SEMANTIC_SIMILARITY:
             return await self._semantic_search(
                 prompt, model, similarity_threshold, **kwargs
             )
-        
+
         return None
-    
+
     async def set(
-        self, 
-        prompt: str, 
-        model: str, 
+        self,
+        prompt: str,
+        model: str,
         value: Any,
         ttl: Optional[float] = None,
         embedding: Optional[List[float]] = None,
@@ -585,11 +585,11 @@ class SemanticCache:
     ) -> None:
         """Store in cache with optional semantic embedding."""
         key = self._generate_key(prompt, model, **kwargs)
-        
+
         # Check if we need to evict
         if len(self._cache) >= self.max_size:
             await self._evict()
-        
+
         entry = CacheEntry(
             key=key,
             value=value,
@@ -600,60 +600,60 @@ class SemanticCache:
             embedding=embedding,
             metadata={"prompt": prompt, "model": model, **kwargs}
         )
-        
+
         self._cache[key] = entry
         self._update_access_order(key)
-    
+
     async def _semantic_search(
-        self, 
-        prompt: str, 
-        model: str, 
+        self,
+        prompt: str,
+        model: str,
         threshold: float,
         **kwargs
     ) -> Optional[Any]:
         """Search for semantically similar cached entries."""
         if not hasattr(self, '_embeddings_client'):
             return None  # No embedding service available
-        
+
         # Generate embedding for the query
         query_embedding = await self._generate_embedding(prompt)
-        
+
         best_match = None
         best_similarity = 0.0
-        
+
         for entry in self._cache.values():
-            if (entry.embedding is not None and 
+            if (entry.embedding is not None and
                 entry.metadata.get("model") == model and
                 not self._is_expired(entry)):
-                
+
                 similarity = self._cosine_similarity(query_embedding, entry.embedding)
-                
+
                 if similarity > threshold and similarity > best_similarity:
                     best_similarity = similarity
                     best_match = entry
-        
+
         if best_match:
             # Update access metadata
             best_match.accessed_at = time.time()
             best_match.access_count += 1
             self._update_access_order(best_match.key)
             return best_match.value
-        
+
         return None
-    
+
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """Calculate cosine similarity between two vectors."""
         import math
-        
+
         dot_product = sum(x * y for x, y in zip(a, b))
         magnitude_a = math.sqrt(sum(x * x for x in a))
         magnitude_b = math.sqrt(sum(x * x for x in b))
-        
+
         if magnitude_a == 0 or magnitude_b == 0:
             return 0.0
-        
+
         return dot_product / (magnitude_a * magnitude_b)
-    
+
     async def _evict(self) -> None:
         """Evict entries based on the configured strategy."""
         if self.strategy == CacheStrategy.LRU:
@@ -661,7 +661,7 @@ class SemanticCache:
             oldest_key = self._access_order[0]
             del self._cache[oldest_key]
             self._access_order.remove(oldest_key)
-            
+
         elif self.strategy == CacheStrategy.TTL:
             # Remove expired entries first
             expired_keys = [
@@ -672,18 +672,18 @@ class SemanticCache:
                 del self._cache[key]
                 if key in self._access_order:
                     self._access_order.remove(key)
-            
+
             # If still over capacity, use LRU
             if len(self._cache) >= self.max_size:
                 oldest_key = self._access_order[0]
                 del self._cache[oldest_key]
                 self._access_order.remove(oldest_key)
-    
+
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         total_entries = len(self._cache)
         expired_entries = sum(1 for entry in self._cache.values() if self._is_expired(entry))
-        
+
         return {
             "total_entries": total_entries,
             "expired_entries": expired_entries,
@@ -787,13 +787,13 @@ async def chat_endpoint(
     try:
         # Route to appropriate provider
         provider = await select_optimal_provider(q)
-        
+
         # Generate response
         response = await provider.generate(q)
-        
+
         # Store in cache
         await cache.set(q, provider.name, response)
-        
+
         return {
             "message": response["content"],
             "model_used": response["model"],
@@ -801,7 +801,7 @@ async def chat_endpoint(
             "tokens_used": response.get("usage", {}),
             "timestamp": datetime.utcnow().isoformat()
         }
-        
+
     except Exception as e:
         logging.error(f"Chat endpoint error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -811,19 +811,19 @@ async def chat_endpoint(
 async def websocket_chat_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time streaming chat."""
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive message
             data = await websocket.receive_json()
             message = data.get("message", "")
             stream = data.get("stream", True)
-            
+
             if stream:
                 await handle_streaming_generation(websocket, message)
             else:
                 await handle_non_streaming_generation(websocket, message)
-                
+
     except WebSocketDisconnect:
         logging.info("WebSocket client disconnected")
     except Exception as e:
@@ -833,14 +833,14 @@ async def websocket_chat_endpoint(websocket: WebSocket):
 async def handle_streaming_generation(websocket: WebSocket, query: str):
     """Handle streaming response generation."""
     provider = await select_optimal_provider(query)
-    
+
     async for token in provider.stream_generate(query):
         await websocket.send_json({
             "type": "token",
             "content": token,
             "timestamp": datetime.utcnow().isoformat()
         })
-    
+
     await websocket.send_json({
         "type": "end",
         "timestamp": datetime.utcnow().isoformat()
@@ -1011,19 +1011,19 @@ def test_health_endpoint():
 async def test_swarm_coordinator():
     """Test swarm coordination functionality."""
     from src.hivemind.swarm_protocol import SwarmCoordinator
-    
+
     coordinator = SwarmCoordinator("redis://localhost:6379")
     await coordinator.connect()
-    
+
     # Test task delegation
     task_id = await coordinator.delegate_task(
         task_type="test",
         payload={"data": "test"},
         priority=1
     )
-    
+
     assert task_id.startswith("task_")
-    
+
     # Test task retrieval
     result = await coordinator.get_task_result(task_id)
     assert result is not None
@@ -1129,29 +1129,29 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     debug: bool = False
-    
+
     # Database
     database_url: str
     redis_url: str
-    
+
     # Security
     secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    
+
     # Oracle Providers
     openai_api_key: str
     anthropic_api_key: str
     deepseek_api_key: str
-    
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"
-    
+
     # Performance
     worker_processes: int = 4
     max_connections: int = 1000
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = False

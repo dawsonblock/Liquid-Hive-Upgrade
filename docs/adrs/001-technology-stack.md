@@ -255,7 +255,7 @@ This ADR will be reviewed quarterly to assess:
 
 ---
 
-**Author**: Engineering Team  
-**Date**: 2024-01-15  
-**Review Date**: 2024-04-15  
+**Author**: Engineering Team
+**Date**: 2024-01-15
+**Review Date**: 2024-04-15
 **Status**: Accepted

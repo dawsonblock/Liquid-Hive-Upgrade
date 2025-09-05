@@ -116,27 +116,27 @@ Regular key rotation is recommended for security:
 ```python
 async def rotate_api_key(old_key: str) -> str:
     """Rotate an API key while maintaining service availability."""
-    
+
     # Step 1: Create new key
     new_key_response = await create_api_key_with_same_permissions(old_key)
     new_key = new_key_response['api_key']
-    
+
     # Step 2: Update your applications to use new key
     # (This should be done gradually)
-    
+
     # Step 3: Monitor usage to ensure old key is no longer used
     await monitor_key_usage(old_key, duration_minutes=60)
-    
+
     # Step 4: Deactivate old key
     await deactivate_api_key(old_key)
-    
+
     return new_key
 
 async def create_api_key_with_same_permissions(reference_key: str) -> dict:
     """Create a new API key with the same permissions as an existing key."""
     # Get current key info
     key_info = await get_api_key_info(reference_key)
-    
+
     # Create new key with same permissions
     return await create_api_key_with_config(key_info['config'])
 ```
@@ -226,7 +226,7 @@ import hvac
 def get_api_key_from_vault():
     client = hvac.Client(url='https://vault.example.com')
     client.token = os.getenv('VAULT_TOKEN')
-    
+
     response = client.secrets.kv.v2.read_secret_version(
         path='liquid-hive/api-key'
     )
@@ -294,17 +294,17 @@ from urllib.parse import urlencode
 def sign_request(method: str, path: str, body: str, secret: str) -> dict:
     """Generate request signature for additional security."""
     timestamp = str(int(time.time()))
-    
+
     # Create string to sign
     string_to_sign = f"{method}\n{path}\n{body}\n{timestamp}"
-    
+
     # Generate signature
     signature = hmac.new(
         secret.encode(),
         string_to_sign.encode(),
         hashlib.sha256
     ).hexdigest()
-    
+
     return {
         "x-timestamp": timestamp,
         "x-signature": signature
@@ -347,23 +347,23 @@ import random
 
 async def api_call_with_backoff(client, message, max_retries=5):
     """Make API call with exponential backoff on rate limit."""
-    
+
     for attempt in range(max_retries):
         try:
             return await client.chat(message)
-            
+
         except RateLimitError as e:
             if attempt == max_retries - 1:
                 raise  # Final attempt failed
-            
+
             # Calculate backoff time
             base_delay = 2 ** attempt  # Exponential: 1, 2, 4, 8, 16 seconds
             jitter = random.uniform(0, 1)  # Add randomness
             delay = base_delay + jitter
-            
+
             print(f"Rate limited. Retrying in {delay:.1f} seconds...")
             await asyncio.sleep(delay)
-    
+
     raise Exception("Max retries exceeded")
 ```
 
@@ -373,7 +373,7 @@ async def api_call_with_backoff(client, message, max_retries=5):
 class RateLimitMonitor:
     def __init__(self):
         self.limits = {}
-    
+
     def update_from_headers(self, headers: dict):
         """Update rate limit info from response headers."""
         self.limits = {
@@ -382,20 +382,20 @@ class RateLimitMonitor:
             'reset': int(headers.get('X-RateLimit-Reset', 0)),
             'window': int(headers.get('X-RateLimit-Window', 60))
         }
-    
+
     def should_throttle(self, threshold: float = 0.1) -> bool:
         """Check if we should throttle requests."""
         if not self.limits:
             return False
-        
+
         utilization = 1 - (self.limits['remaining'] / self.limits['limit'])
         return utilization > (1 - threshold)  # Throttle if > 90% utilized
-    
+
     def time_until_reset(self) -> int:
         """Seconds until rate limit resets."""
         if not self.limits:
             return 0
-        
+
         return max(0, self.limits['reset'] - int(time.time()))
 
 # Usage
@@ -407,14 +407,14 @@ async def monitored_api_call(client, message):
         wait_time = monitor.time_until_reset()
         print(f"Throttling for {wait_time} seconds...")
         await asyncio.sleep(wait_time)
-    
+
     # Make the call
     response = await client.chat(message)
-    
+
     # Update monitoring info
     # (This would need to be extracted from the actual response headers)
     monitor.update_from_headers(response.get('headers', {}))
-    
+
     return response
 ```
 
@@ -427,7 +427,7 @@ from liquid_hive import LiquidHiveClient, AuthenticationError
 
 async def handle_auth_errors():
     client = LiquidHiveClient(api_key="invalid-key")
-    
+
     try:
         response = await client.chat("Hello")
     except AuthenticationError as e:
@@ -575,13 +575,13 @@ from liquid_hive import LiquidHiveClient, AuthenticationError
 async def test_valid_api_key():
     """Test successful authentication with valid API key."""
     client = LiquidHiveClient(api_key="lh_validkey123456789012345678901234")
-    
+
     with patch.object(client, '_make_request', new=AsyncMock()) as mock_request:
         mock_request.return_value = {"status": "healthy"}
-        
+
         result = await client.health()
         assert result["status"] == "healthy"
-        
+
         # Verify correct headers were sent
         mock_request.assert_called_once()
         call_args = mock_request.call_args
@@ -591,10 +591,10 @@ async def test_valid_api_key():
 async def test_invalid_api_key():
     """Test authentication failure with invalid API key."""
     client = LiquidHiveClient(api_key="invalid-key")
-    
+
     with patch.object(client, '_make_request', new=AsyncMock()) as mock_request:
         mock_request.side_effect = AuthenticationError("Invalid API key")
-        
+
         with pytest.raises(AuthenticationError):
             await client.health()
 
@@ -614,16 +614,16 @@ async def test_real_authentication():
     api_key = os.getenv('TEST_API_KEY')
     if not api_key:
         pytest.skip("TEST_API_KEY not set")
-    
+
     client = LiquidHiveClient(api_key=api_key)
-    
+
     # This should succeed with valid key
     health = await client.health()
     assert health['status'] == 'healthy'
-    
+
     # Test with invalid key should fail
     invalid_client = LiquidHiveClient(api_key="lh_invalid123456789012345678901234")
-    
+
     with pytest.raises(AuthenticationError):
         await invalid_client.health()
 ```

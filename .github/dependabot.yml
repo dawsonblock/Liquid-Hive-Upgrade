@@ -35,10 +35,6 @@ updates:
         update-types: ["minor", "patch"]
 
   # Python (src/internet_agent_advanced/requirements.txt)
-  
-    schedule: { interval: "weekly" }
-    
-        main
   - package-ecosystem: "pip"
     directory: "/src/internet_agent_advanced"
     schedule:
@@ -178,4 +174,4 @@ updates:
   - package-ecosystem: "docker"
     directory: "/"
     schedule: { interval: "weekly" }
-        main
+    target-branch: "main"

@@ -71,16 +71,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-
-      <<: *common-env
-      PYTHONPATH: /app/src:/app
-      HOST: 0.0.0.0
-      PORT: 8000
-    volumes:
-      # Development volume mounts for hot reloading
-      - ./src:/app/src:ro
-      - ./config:/app/config:ro
-
+    environment:
       <<: *common-env
       PYTHONPATH: /app/src:/app
       HOST: 0.0.0.0
@@ -108,7 +99,6 @@ services:
       retries: 3
       start_period: 60s
     <<: *restart-policy
-        main
 
   # =============================================================================
   # Database Services
@@ -317,6 +307,10 @@ services:
       timeout: 5s
       retries: 10
 
+  # Alertmanager for monitoring alerts
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -344,7 +338,6 @@ services:
   # =============================================================================
   # Optional Services
   # =============================================================================
-        main
 
   # VLLM - Local LLM serving (GPU required)
   vllm:
@@ -403,16 +396,7 @@ services:
   # RAG watcher daemon.  Monitors the ingest directory and automatically
   # indexes new documents into the vector store.  Uses the same image as
   # the API since the script resides in this repository.
-
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
-      interval: 60s
-      timeout: 30s
-      retries: 3
-      start_period: 120s
-    <<: *restart-policy
-
   # RAG Document Watcher - Automated document indexing
-        main
   rag_watcher:
     build: .
     profiles: [rag, full]
@@ -470,10 +454,8 @@ services:
 # =============================================================================
 
 networks:
-
-fusionnet:
+  fusionnet:
     driver: bridge
-
   liquid-hive-net:
     driver: bridge
     name: liquid-hive-network

@@ -36,11 +36,11 @@ async def main():
         base_url="https://api.liquid-hive.dev",
         api_key="your-api-key-here"
     )
-    
+
     # Check system health
     health = await client.health()
     print(f"System status: {health}")
-    
+
     # Send a chat message
     response = await client.chat("What is machine learning?")
     print(f"AI Response: {response}")
@@ -191,7 +191,7 @@ from liquid_hive import LiquidHiveClient, LiquidHiveError, RateLimitError, Authe
 
 async def robust_chat():
     client = LiquidHiveClient()
-    
+
     try:
         response = await client.chat("Hello!")
         return response
@@ -249,11 +249,11 @@ async function main() {
     // Check system health
     const health = await client.health();
     console.log('System status:', health);
-    
+
     // Send a chat message
     const response = await client.chat('What is machine learning?');
     console.log('AI Response:', response.message);
-    
+
   } catch (error) {
     console.error('Error:', error.message);
   }
@@ -380,19 +380,19 @@ The SDK works in browser environments:
 <body>
     <script type="module">
         import { LiquidHiveClient } from 'https://unpkg.com/@liquid-hive/client@latest/dist/index.esm.js';
-        
+
         const client = new LiquidHiveClient({
           baseUrl: 'https://api.liquid-hive.dev',
           apiKey: 'your-api-key'
         });
-        
+
         document.getElementById('chat-btn').onclick = async () => {
           const input = document.getElementById('message').value;
           const response = await client.chat(input);
           document.getElementById('response').textContent = response.message;
         };
     </script>
-    
+
     <input id="message" placeholder="Type your message...">
     <button id="chat-btn">Send</button>
     <div id="response"></div>
@@ -500,17 +500,17 @@ import asyncio
 
 async def batch_chat():
     client = LiquidHiveClient()
-    
+
     questions = [
         "What is AI?",
         "Explain machine learning",
         "What is deep learning?"
     ]
-    
+
     # Process in parallel
     tasks = [client.chat(q) for q in questions]
     responses = await asyncio.gather(*tasks)
-    
+
     for q, r in zip(questions, responses):
         print(f"Q: {q}")
         print(f"A: {r['message']}\n")
