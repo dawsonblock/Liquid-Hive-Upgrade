@@ -110,7 +110,7 @@ class ToolRegistry:
                     spec.loader.exec_module(module)
 
                     # Look for BaseTool subclasses
-                    for name, obj in inspect.getmembers(module, inspect.isclass):
+                    for _name, obj in inspect.getmembers(module, inspect.isclass):
                         if (
                             issubclass(obj, BaseTool)
                             and obj != BaseTool
@@ -271,7 +271,7 @@ class ToolRegistry:
 
     def approve_tool_execution(self, approval_id: str, approver_id: str) -> bool:
         """Approve a pending tool execution request."""
-        for approval_key, approval in self.pending_approvals.items():
+        for _approval_key, approval in self.pending_approvals.items():
             if approval["approval_id"] == approval_id:
                 approval["status"] = "approved"
                 approval["approved_by"] = approver_id

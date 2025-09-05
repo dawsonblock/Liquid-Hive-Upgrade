@@ -22,8 +22,9 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-from fastapi import FastAPI, File, Request, UploadFile
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, File, Request, UploadFile
 
 # Integrate internet agent advanced routes and metrics
 try:
@@ -301,9 +302,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
-    
+
     yield  # App is running
-    
+
     # Cleanup on shutdown
 
 app = FastAPI(title="Fusion HiveMind Capsule", version="0.1.7", lifespan=lifespan)
@@ -563,9 +564,9 @@ async def startup_components():
 
     # Initialize other components as needed
     # ... (additional component initialization can be added here)
-    
+
     yield  # App is running
-    
+
     # Cleanup on shutdown
 
 
@@ -784,7 +785,7 @@ async def secret_set(payload: dict[str, Any], request: Request) -> dict[str, Any
         # Persist to .env when using environment provider to survive restarts
         if _SecretProvider is not None and provider == _SecretProvider.ENVIRONMENT:
             try:
-                _env_write(name, serialized if isinstance(value, (dict, list)) else str(value))
+                _env_write(name, serialized if isinstance(value, dict | list) else str(value))
             except Exception:
                 # Non-fatal
                 pass
@@ -1539,7 +1540,7 @@ async def set_router_thresholds(request: Request, thresholds: dict[str, float]) 
         header_token = request.headers.get("x-admin-token") or request.headers.get("X-Admin-Token")
         if header_token != admin_token:
             return {"error": "Unauthorized"}
-    
+
     if ds_router is None:
         return {"error": "DS-Router not available"}
 
@@ -1948,10 +1949,10 @@ async def chat(q: str, request: Request) -> dict[str, Any]:
                         dilemma_type: str = str(ethical_analysis.get("dilemma_type", "unknown"))
                         severity: str = str(ethical_analysis.get("severity", "medium"))
                         detected_raw: Any = ethical_analysis.get("all_detected", [])
-                        if not isinstance(detected_raw, (list, tuple)):
+                        if not isinstance(detected_raw, list | tuple):
                             detected_raw = []
                         detected_list_any: list[Any] = (
-                            list(detected_raw) if isinstance(detected_raw, (list, tuple)) else []
+                            list(detected_raw) if isinstance(detected_raw, list | tuple) else []
                         )  # type: ignore[list-item]
                         detected_list: list[str] = [str(x) for x in detected_list_any]
 

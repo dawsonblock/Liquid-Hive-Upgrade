@@ -64,7 +64,7 @@ class ToolAuditor:
                     if success:
                         tool_stats["successes"] += 1
         # Compute success_rate for each tool
-        for tool, res in stats.items():
+        for _tool, res in stats.items():
             count = res.get("count", 0.0)
             successes = res.get("successes", 0.0)
             res["success_rate"] = successes / count if count else 0.0

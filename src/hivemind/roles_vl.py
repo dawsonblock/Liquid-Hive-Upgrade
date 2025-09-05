@@ -33,7 +33,7 @@ class VisionRoles:
 
     async def vl_committee(self, question, image, k=3, context=None):
         cands = []
-        for i in range(k):
+        for _i in range(k):
             cands.append(
                 self.vl.generate(f"Answer the user question concisely. Q:{question}", image)
             )

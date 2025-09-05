@@ -109,22 +109,22 @@ class DSRouter:
         # If response already has confidence, use it
         if resp.confidence is not None:
             return float(resp.confidence)
-        
+
         # Analyze content for confidence indicators
         content = resp.content.lower()
-        
+
         # Low confidence indicators
         low_conf_phrases = [
-            "i'm not sure", "not certain", "might be", "possibly", "maybe", 
+            "i'm not sure", "not certain", "might be", "possibly", "maybe",
             "could be", "i think", "probably", "not entirely sure"
         ]
-        
-        # High confidence indicators  
+
+        # High confidence indicators
         high_conf_phrases = [
             "definitively", "clearly", "certainly", "absolutely", "precisely",
             "exactly", "without doubt", "obviously", "undoubtedly"
         ]
-        
+
         # Check for confidence indicators
         if any(phrase in content for phrase in low_conf_phrases):
             return 0.3
@@ -146,7 +146,7 @@ class DSRouter:
         """Determine routing decision for a request."""
         # Check RAG support score
         rag_support = await self._get_rag_support_score(request)
-        
+
         # Route to thinking if hard problem OR low RAG support
         if self._is_hard_problem(request.prompt):
             return RoutingDecision(

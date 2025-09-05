@@ -95,7 +95,7 @@ class TestSecretsManager:
         with patch("hvac.Client") as mock_vault:
             # Disable vault by making it fail
             mock_vault.side_effect = Exception("Vault not available")
-            
+
             with patch("boto3.client") as mock_boto3:
                 mock_client = Mock()
                 # Mock successful connection test with proper ClientError

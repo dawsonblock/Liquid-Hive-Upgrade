@@ -51,12 +51,11 @@ class StrategySelector:
 
         # Predict cost/size
         predicted_tokens = None
-        predicted_cost = None
         try:
             if self.estimator is not None:
                 est = self.estimator.estimate_cost(role="implementer", tier="auto", prompt=prompt)
                 predicted_tokens = est.get("predicted_tokens")
-                predicted_cost = est.get("predicted_cost")
+                est.get("predicted_cost")
         except Exception:
             pass
 

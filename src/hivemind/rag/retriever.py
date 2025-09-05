@@ -193,10 +193,10 @@ class Retriever:
             query_embedding = self.embedding_model.encode(query)
             query_embedding = np.array([query_embedding]).astype("float32")
 
-            D, I = self.faiss_index.search(query_embedding, k)  # D is distances, I is indices
+            distances, indices = self.faiss_index.search(query_embedding, k)  # distances, indices
 
             results: list[Document] = []
-            for idx in I[0]:
+            for idx in indices[0]:
                 if idx < len(self.doc_store):  # Ensure index is valid
                     results.append(self.doc_store[idx])
             log.debug(f"Search for '{query[:50]}' returned {len(results)} results.")

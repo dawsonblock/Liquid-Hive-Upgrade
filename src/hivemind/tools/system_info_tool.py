@@ -347,7 +347,7 @@ class SystemInfoTool(BaseTool):
             elif disk_percent > 80:
                 health_score -= 10
                 issues.append(f"Moderate disk usage: {disk_percent:.1f}%")
-        except:
+        except Exception:
             pass
 
         # Check load average (on Unix-like systems)
@@ -362,7 +362,7 @@ class SystemInfoTool(BaseTool):
             elif load_ratio > 1.0:
                 health_score -= 10
                 issues.append(f"Moderate system load: {load_avg[0]:.2f}")
-        except:
+        except Exception:
             pass
 
         health_score = max(0, health_score)

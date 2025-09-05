@@ -77,7 +77,7 @@ class ConsentManager:
         defaults = self.policy.get("defaults", {})
         cfg = defaults.get(scope, {"require_consent": False})
         if scope in ("robots_override", "captcha_bypass"):
-            allowed = cfg.get("allowed", False)
+            cfg.get("allowed", False)
             return {
                 "allowed": False,
                 "reason": "prohibited_scope",

@@ -46,11 +46,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
+    "coverage"
   ],
   "ts-node": {
     "compilerOptions": {

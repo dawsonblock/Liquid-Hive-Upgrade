@@ -38,7 +38,7 @@ class SubmitResponse(BaseModel):
 
 class CompareRequest(BaseModel):
     model_config = {"protected_namespaces": ()}
-    
+
     task_id: str
     model_a: str
     model_b: str

@@ -1,4 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ReplayIcon from '@mui/icons-material/Replay';
+import SendIcon from '@mui/icons-material/Send';
 import {
   Box,
   Paper,
@@ -17,18 +22,15 @@ import {
   Chip,
   Tooltip,
 } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ReplayIcon from '@mui/icons-material/Replay';
-import CheckIcon from '@mui/icons-material/Check';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import SendIcon from '@mui/icons-material/Send';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import Markdown from './Markdown';
-import { postChat, postVision, fetchState } from '../services/api';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+
+import { postChat, postVision, fetchState } from '../services/api';
 import type { RootState } from '../store';
 import { addChat } from '../store';
+
 import ContextSidebar from './ContextSidebar';
+import Markdown from './Markdown';
 
 const ChatPanel: React.FC = () => {
   const [input, setInput] = useState('');

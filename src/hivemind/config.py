@@ -128,7 +128,7 @@ class Settings(BaseSettings):
 
     model_config = {
         "env_prefix": "",
-        "env_file": ".env", 
+        "env_file": ".env",
         "extra": "allow",  # Allow extra fields from environment
         "protected_namespaces": ()  # Fix model_ namespace warning
     }

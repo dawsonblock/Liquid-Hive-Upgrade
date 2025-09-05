@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -15,6 +14,8 @@ import {
   CircularProgress,
   Stack,
 } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+
 import {
   getAdaptersState,
   promoteAdapter,
@@ -63,7 +64,7 @@ const ForgePanel: React.FC = () => {
     setTrainStatus(null);
     const res = await startTraining();
     if (res.status === 'success') setTrainStatus(`New adapter at ${res.adapter_path}`);
-    else setTrainStatus('Training error: ' + res.detail);
+    else setTrainStatus(`Training error: ${  res.detail}`);
     setLoadingTrain(false);
     await refresh();
   };

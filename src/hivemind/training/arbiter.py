@@ -260,7 +260,7 @@ Please analyze and refine this answer, providing a higher-quality version."""
                     ]
                     if all(field in parsed for field in required_fields):
                         return parsed
-            except:
+            except Exception:
                 pass
             return None
 

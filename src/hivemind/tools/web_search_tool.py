@@ -182,11 +182,6 @@ class WebSearchTool(BaseTool):
         try:
             # This is a simplified approach - DuckDuckGo's web search API is more complex
             # In a production system, you might want to use a dedicated search API
-            params = {
-                "q": query,
-                "format": "json",
-                "no_html": "1",
-            }
 
             # Note: This is a fallback and may not always return web results
             # Consider integrating with other search APIs if needed

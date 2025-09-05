@@ -237,7 +237,7 @@ class SwarmCoordinator:
             # Merge states (simple last-write-wins for now)
             merged_state = local_state.copy()
 
-            for node_id, state_json in distributed_data.items():
+            for _node_id, state_json in distributed_data.items():
                 try:
                     node_state = json.loads(state_json)
                     # Merge logic here - could be more sophisticated

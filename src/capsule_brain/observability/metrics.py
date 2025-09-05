@@ -71,7 +71,7 @@ class MetricsMiddleware:
                 # Try to read from headers (x-adapter-version) if present
                 headers = dict(scope.get("headers") or [])
                 header_val = headers.get(b"x-adapter-version")
-                if isinstance(header_val, (bytes, bytearray)):
+                if isinstance(header_val, bytes | bytearray):
                     try:
                         adapter_version = header_val.decode()
                     except Exception:

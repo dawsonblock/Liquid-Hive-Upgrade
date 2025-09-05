@@ -261,7 +261,7 @@ class AutonomyOrchestrator:
 
                 if promotion_recommendation["should_promote"]:
                     # Create high-confidence promotion proposal
-                    proposal = {
+                    {
                         "action_type": "adapter_promotion",
                         "role": role,
                         "champion": champion,

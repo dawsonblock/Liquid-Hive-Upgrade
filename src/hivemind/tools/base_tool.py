@@ -107,7 +107,7 @@ class BaseTool(ABC):
                     errors.append(f"Parameter {param.name} must be a string")
                 elif param.type == ToolParameterType.INTEGER and not isinstance(value, int):
                     errors.append(f"Parameter {param.name} must be an integer")
-                elif param.type == ToolParameterType.FLOAT and not isinstance(value, (int, float)):
+                elif param.type == ToolParameterType.FLOAT and not isinstance(value, int | float):
                     errors.append(f"Parameter {param.name} must be a number")
                 elif param.type == ToolParameterType.BOOLEAN and not isinstance(value, bool):
                     errors.append(f"Parameter {param.name} must be a boolean")
@@ -117,11 +117,11 @@ class BaseTool(ABC):
                     errors.append(f"Parameter {param.name} must be a dictionary")
 
                 # Range validation
-                if param.min_value is not None and isinstance(value, (int, float)):
+                if param.min_value is not None and isinstance(value, int | float):
                     if value < param.min_value:
                         errors.append(f"Parameter {param.name} must be >= {param.min_value}")
 
-                if param.max_value is not None and isinstance(value, (int, float)):
+                if param.max_value is not None and isinstance(value, int | float):
                     if value > param.max_value:
                         errors.append(f"Parameter {param.name} must be <= {param.max_value}")
 

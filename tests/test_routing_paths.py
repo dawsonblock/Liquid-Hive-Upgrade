@@ -99,7 +99,7 @@ class TestRoutingPaths:
 
         # Should have escalated to R1
         assert response.provider == "deepseek_r1"
-        assert response.metadata.get("escalated") == True
+        assert response.metadata.get("escalated")
 
     def test_confidence_assessment_heuristics(self, router):
         """Test confidence assessment heuristics."""

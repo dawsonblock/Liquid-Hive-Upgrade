@@ -251,7 +251,7 @@ class QwenCPUProvider(BaseProvider):
 
         try:
             # Quick health check with minimal generation
-            test_request = GenRequest(prompt="Hello, how are you?", max_tokens=20, temperature=0.5)
+            GenRequest(prompt="Hello, how are you?", max_tokens=20, temperature=0.5)
 
             # Don't actually generate for health check to save resources
             # Just verify model is loaded
@@ -270,7 +270,7 @@ class QwenCPUProvider(BaseProvider):
                     health_status["gpu_memory_mb"] = torch.cuda.get_device_properties(
                         0
                     ).total_memory // (1024**2)
-                except:
+                except Exception:
                     pass
 
             return health_status
