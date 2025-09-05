@@ -42,6 +42,7 @@ numpy>=1.26.4
 tenacity>=8.4.1
 
 # AI/ML Dependencies (Optional - for LoRA and model management)
+openai>=1.0.0  # OpenAI API client
 torch>=2.0.0  # PyTorch for model operations
 transformers>=4.30.0  # Hugging Face transformers
 peft>=0.4.0  # Parameter-Efficient Fine-Tuning (LoRA)
