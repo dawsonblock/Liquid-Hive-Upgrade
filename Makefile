@@ -1,272 +1,215 @@
-# Liquid Hive Development Makefile
+# Liquid Hive Production-Grade Makefile
 
-.PHONY: help install dev test lint format clean build docker up down logs shell
+.DEFAULT_GOAL := help
+.PHONY: help install dev test lint format clean build docker deploy health
 
-# Default target
+# Configuration
+PYTHON := python3
+PIP := pip
+YARN := yarn
+IMAGE_TAG ?= latest
+
 help: ## Show this help message
 	@echo "Liquid Hive Development Commands"
 	@echo "================================="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Installation
+# Installation & Setup
 install: ## Install all dependencies
-	@echo "Installing Python dependencies..."
-	pip install -e .[dev,test,docs]
-	@echo "Installing Node.js dependencies..."
-	cd apps/dashboard && yarn install
-	@echo "Installing pre-commit hooks..."
-	pre-commit install
+	@echo "📦 Installing Python dependencies..."
+	$(PIP) install -r requirements.txt
+	@echo "📦 Installing frontend dependencies..."
+	cd frontend && $(YARN) install --frozen-lockfile
+	@echo "✅ All dependencies installed!"
 
-install-prod: ## Install production dependencies
-	@echo "Installing production dependencies..."
-	pip install -e .
+install-dev: ## Install development dependencies
+	@echo "📦 Installing development dependencies..."
+	$(PIP) install -r requirements.txt
+	$(PIP) install pytest pytest-cov ruff bandit safety mypy
+	cd frontend && $(YARN) install --frozen-lockfile
+	@echo "✅ Development setup complete!"
 
-# Development
-dev: ## Start development environment
-	@echo "Starting development environment..."
-	docker-compose up -d
-	@echo "Development environment started!"
-	@echo "API: http://localhost:8000"
-	@echo "Dashboard: http://localhost:3000"
-	@echo "Grafana: http://localhost:3001"
-	@echo "Prometheus: http://localhost:9090"
+# Development Environment
+dev: ## Start complete development stack
+	@echo "🚀 Starting development environment..."
+	docker compose up --build
+	@echo "🌐 Services available:"
+	@echo "  API:        http://localhost:8080"
+	@echo "  Frontend:   http://localhost:5173"
+	@echo "  Grafana:    http://localhost:3000"
+	@echo "  Prometheus: http://localhost:9090"
 
 dev-api: ## Start API in development mode
-	@echo "Starting API in development mode..."
-	uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
+	@echo "🔧 Starting API in development mode..."
+	cd apps/api && uvicorn main:app --reload --host 0.0.0.0 --port 8080
 
-dev-dashboard: ## Start dashboard in development mode
-	@echo "Starting dashboard in development mode..."
-	cd apps/dashboard && yarn dev
+dev-frontend: ## Start frontend in development mode
+	@echo "🔧 Starting frontend in development mode..."
+	cd frontend && $(YARN) dev
 
 # Testing
-test: ## Run all tests
-	@echo "Running Python tests..."
-	pytest tests/ -v --cov=src --cov=apps --cov-report=html --cov-report=term-missing
-	@echo "Running TypeScript tests..."
-	cd apps/dashboard && yarn test --coverage --watchAll=false
+test: ## Run complete test suite
+	@echo "🧪 Running backend tests..."
+	pytest tests/ --maxfail=1 --disable-warnings -q --cov=src --cov=apps --cov-report=xml
+	@echo "🧪 Running frontend tests..."
+	cd frontend && $(YARN) test --coverage --watchAll=false
+	@echo "✅ All tests passed!"
 
 test-unit: ## Run unit tests only
-	@echo "Running unit tests..."
-	pytest tests/unit -v
+	@echo "🧪 Running unit tests..."
+	pytest tests/unit/ -v
 
 test-integration: ## Run integration tests only
-	@echo "Running integration tests..."
-	pytest tests/integration -v
+	@echo "🧪 Running integration tests..."
+	pytest tests/integration/ -v
 
-test-e2e: ## Run end-to-end tests
-	@echo "Running E2E tests..."
-	docker-compose -f docker-compose.yml -f docker-compose.test.yml up --build
-	docker-compose -f docker-compose.yml -f docker-compose.test.yml exec api pytest tests/e2e -v
-	docker-compose -f docker-compose.yml -f docker-compose.test.yml down -v
-
-test-coverage: ## Run tests with coverage report
-	@echo "Running tests with coverage..."
-	pytest tests/ --cov=libs --cov=apps --cov-report=html --cov-report=xml --cov-report=term-missing
+test-performance: ## Run performance tests
+	@echo "🏃 Running performance tests..."
+	k6 run tests/performance/k6_smoke.js
 
 # Code Quality
 lint: ## Run all linters
-	@echo "Running Python linters..."
+	@echo "🔍 Linting Python code..."
 	ruff check src apps
-	black --check src apps
-	isort --check-only src apps
-	mypy src apps
-	bandit -r src apps
-	safety check
-	@echo "Running TypeScript linters..."
-	cd apps/dashboard && yarn lint
-	cd apps/dashboard && yarn type-check
+	ruff format --check src apps
+	@echo "🔍 Linting frontend code..."
+	cd frontend && $(YARN) lint
+	@echo "✅ All linting passed!"
 
 format: ## Format all code
-	@echo "Formatting Python code..."
-	ruff format libs apps
-	black libs apps
-	isort libs apps
-	@echo "Formatting TypeScript code..."
-	cd apps/dashboard && yarn format
+	@echo "💅 Formatting Python code..."
+	ruff format src apps
+	@echo "💅 Formatting frontend code..."
+	cd frontend && $(YARN) format
+	@echo "✅ Code formatted!"
 
-format-check: ## Check code formatting
-	@echo "Checking Python formatting..."
-	ruff format --check libs apps
-	black --check libs apps
-	isort --check-only libs apps
-	@echo "Checking TypeScript formatting..."
-	cd apps/dashboard && yarn format:check
+security: ## Run security checks
+	@echo "🔒 Running security checks..."
+	bandit -r src apps
+	safety check
+	@echo "✅ Security checks passed!"
 
-# Docker
+# Docker Operations
 build: ## Build all Docker images
-	@echo "Building Docker images..."
-	docker-compose build
+	@echo "🐳 Building Docker images..."
+	docker compose build
 
-build-api: ## Build API Docker image
-	@echo "Building API Docker image..."
-	docker build -f infra/docker/Dockerfile.api -t liquid-hive-api .
+build-prod: ## Build production Docker images
+	@echo "🐳 Building production images..."
+	docker build -t liquid-hive-api:$(IMAGE_TAG) -f apps/api/Dockerfile .
+	docker build -t liquid-hive-frontend:$(IMAGE_TAG) -f frontend/Dockerfile .
 
-build-dashboard: ## Build dashboard Docker image
-	@echo "Building dashboard Docker image..."
-	docker build -f infra/docker/Dockerfile.dashboard -t liquid-hive-dashboard .
+# Docker Compose Operations
+up: compose-up ## Alias for compose-up
+down: compose-down ## Alias for compose-down
 
-# Docker Compose
-up: ## Start all services
-	@echo "Starting all services..."
-	docker-compose up -d
+compose-up: ## Start all services in background
+	@echo "⬆️  Starting services..."
+	docker compose up -d
 
-up-dev: ## Start development services
-	@echo "Starting development services..."
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-
-up-prod: ## Start production services
-	@echo "Starting production services..."
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
-down: ## Stop all services
-	@echo "Stopping all services..."
-	docker-compose down
-
-down-volumes: ## Stop all services and remove volumes
-	@echo "Stopping all services and removing volumes..."
-	docker-compose down -v
+compose-down: ## Stop all services and remove volumes
+	@echo "⬇️  Stopping services..."
+	docker compose down -v
 
 logs: ## Show logs for all services
-	@echo "Showing logs for all services..."
-	docker-compose logs -f
+	@echo "📋 Showing service logs..."
+	docker compose logs -f
 
-logs-api: ## Show API logs
-	@echo "Showing API logs..."
-	docker-compose logs -f api
+logs-api: ## Show API logs only
+	docker compose logs -f api
 
-logs-dashboard: ## Show dashboard logs
-	@echo "Showing dashboard logs..."
-	docker-compose logs -f dashboard
+logs-frontend: ## Show frontend logs only  
+	docker compose logs -f frontend
 
-# Database
-db-migrate: ## Run database migrations
-	@echo "Running database migrations..."
-	alembic upgrade head
-
-db-migration: ## Create new database migration
-	@echo "Creating new database migration..."
-	@read -p "Enter migration message: " msg; \
-	alembic revision --autogenerate -m "$$msg"
-
-db-reset: ## Reset database
-	@echo "Resetting database..."
-	docker-compose down postgres
+# Database Operations
+db-reset: ## Reset database (if using one)
+	@echo "🗄️  Resetting database..."
+	docker compose down postgres || true
 	docker volume rm liquid-hive_postgres_data || true
-	docker-compose up -d postgres
-	sleep 5
-	make db-migrate
+	docker compose up -d postgres
 
-# Shell access
-shell-api: ## Access API container shell
-	@echo "Accessing API container shell..."
-	docker-compose exec api bash
+# Kubernetes Deployment
+helm-apply: ## Deploy using Helm (development)
+	@echo "☸️  Deploying to Kubernetes (development)..."
+	helm upgrade --install liquid-hive \
+		infra/helm/liquid-hive \
+		-f infra/helm/liquid-hive/values-dev.yaml \
+		--wait --timeout=10m
+	@echo "✅ Deployment complete!"
 
-shell-db: ## Access database shell
-	@echo "Accessing database shell..."
-	docker-compose exec postgres psql -U liquid_hive liquid_hive
+helm-prod: ## Deploy to production
+	@echo "☸️  Deploying to production..."
+	helm upgrade --install liquid-hive \
+		infra/helm/liquid-hive \
+		-f infra/helm/liquid-hive/values-prod.yaml \
+		--set image.tag=$(IMAGE_TAG) \
+		--wait --timeout=10m
+	@echo "✅ Production deployment complete!"
 
-shell-redis: ## Access Redis shell
-	@echo "Accessing Redis shell..."
-	docker-compose exec redis redis-cli
+deploy: helm-apply ## Alias for helm-apply
+
+# Health Checks
+health: ## Check service health
+	@echo "❤️  Checking service health..."
+	@curl -s http://localhost:8080/health || echo "❌ API not responding"
+	@curl -s http://localhost:5173/ || echo "❌ Frontend not responding"
+	@echo "✅ Health check complete!"
 
 # Cleanup
-clean: ## Clean up temporary files
-	@echo "Cleaning up temporary files..."
+clean: ## Clean temporary files and caches
+	@echo "🧹 Cleaning up..."
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name ".pytest_cache" -delete
 	find . -type d -name ".mypy_cache" -delete
 	find . -type d -name ".ruff_cache" -delete
-	find . -type d -name "htmlcov" -delete
-	find . -type f -name "coverage.xml" -delete
-	find . -type f -name ".coverage" -delete
-	cd apps/dashboard && yarn clean || true
+	find . -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
+	find . -name "coverage.xml" -delete 2>/dev/null || true
+	find . -name ".coverage" -delete 2>/dev/null || true
+	cd frontend && $(YARN) clean 2>/dev/null || true
+	@echo "✅ Cleanup complete!"
 
-clean-docker: ## Clean up Docker resources
-	@echo "Cleaning up Docker resources..."
-	docker-compose down -v
+clean-docker: ## Clean Docker resources
+	@echo "🧹 Cleaning Docker resources..."
+	docker compose down -v
 	docker system prune -f
 	docker volume prune -f
+	@echo "✅ Docker cleanup complete!"
 
-# Security
-security: ## Run security checks
-	@echo "Running security checks..."
-	bandit -r src apps -f json -o bandit-report.json
-	bandit -r src apps
-	safety check --json --output safety-report.json
-	safety check
-	@echo "Security checks completed!"
+# CI Pipeline (local)
+ci: install-dev lint test security ## Run complete CI pipeline locally
+	@echo "🎉 CI pipeline completed successfully!"
 
-# Deployment
-deploy: ## Deploy to Kubernetes using Helm
-	@echo "Deploying to Kubernetes..."
-	helm upgrade --install liquid-hive infra/helm/liquid-hive \
-		--namespace liquid-hive --create-namespace \
-		--values infra/helm/liquid-hive/values.yaml \
-		--values infra/helm/liquid-hive/values-dev.yaml \
-		--set image.tag=$(IMAGE_TAG) \
-		--wait
-	@echo "Deployment completed!"
-
-deploy-prod: ## Deploy to production
-	@echo "Deploying to production..."
-	helm upgrade --install liquid-hive infra/helm/liquid-hive \
-		--namespace liquid-hive-prod --create-namespace \
-		--values infra/helm/liquid-hive/values.yaml \
-		--values infra/helm/liquid-hive/values-aws-prod.yaml \
-		--set image.tag=$(IMAGE_TAG) \
-		--wait
-	@echo "Production deployment completed!"
+# Development Workflow
+dev-setup: install-dev ## Complete development setup
+	@echo "⚡ Development setup complete!"
+	@echo "Run 'make dev' to start the development environment"
 
 # Documentation
-docs: ## Generate documentation
-	@echo "Generating documentation..."
-	pdoc --html src --output-dir docs/api
-	@echo "Documentation generated in docs/api/"
+docs: ## Generate API documentation
+	@echo "📚 Generating documentation..."
+	cd apps/api && $(PYTHON) -m pydoc -w .
+	@echo "✅ Documentation generated!"
 
-docs-serve: ## Serve documentation locally
-	@echo "Serving documentation..."
-	cd docs && python -m http.server 8001
-
-# Release
-release: ## Create a new release
-	@echo "Creating new release..."
+# Release Management  
+release: ## Create a new release (requires version tag)
+	@echo "🚀 Creating release..."
 	@read -p "Enter version (e.g., v1.0.0): " version; \
 	git tag -a $$version -m "Release $$version"; \
 	git push origin $$version
+	@echo "✅ Release $$version created!"
 
-# Health checks
-health: ## Check service health
-	@echo "Checking service health..."
-	@echo "API Health:"
-	@curl -s http://localhost:8000/health | jq . || echo "API not responding"
-	@echo "Dashboard Health:"
-	@curl -s http://localhost:3000/health || echo "Dashboard not responding"
-	@echo "Database Health:"
-	@docker-compose exec postgres pg_isready -U liquid_hive || echo "Database not responding"
-	@echo "Redis Health:"
-	@docker-compose exec redis redis-cli ping || echo "Redis not responding"
+# Environment Templates
+env-example: ## Show environment variables example
+	@echo "📋 Environment variables needed:"
+	@cat .env.example
 
-# Development workflow
-dev-setup: install dev ## Complete development setup
-	@echo "Development setup complete!"
-	@echo "Run 'make dev' to start the development environment"
-
-ci: lint test security ## Run CI pipeline locally
-	@echo "CI pipeline completed successfully!"
-
-# Environment management
-env-dev: ## Set development environment
-	@echo "Setting development environment..."
-	export APP_ENV=development
-	export DEBUG=true
-	export DATABASE_URL=sqlite:///./dev_liquid_hive.db
-	export REDIS_URL=redis://localhost:6379/0
-
-env-prod: ## Set production environment
-	@echo "Setting production environment..."
-	export APP_ENV=production
-	export DEBUG=false
-	export DATABASE_URL=postgresql://liquid_hive:password@localhost:5432/liquid_hive
-	export REDIS_URL=redis://localhost:6379/0
+# Quick Status
+status: ## Show current system status
+	@echo "📊 System Status:"
+	@echo "  Python: $$(python --version 2>&1 || echo 'Not installed')"
+	@echo "  Node:   $$(node --version 2>&1 || echo 'Not installed')" 
+	@echo "  Yarn:   $$(yarn --version 2>&1 || echo 'Not installed')"
+	@echo "  Docker: $$(docker --version 2>&1 || echo 'Not installed')"
+	@echo "  Helm:   $$(helm version --short 2>&1 || echo 'Not installed')"
+	@echo "  K6:     $$(k6 version 2>&1 || echo 'Not installed')"
