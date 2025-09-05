@@ -363,8 +363,8 @@ class SystemInfoTool(BaseTool):
             elif load_ratio > 1.0:
                 health_score -= 10
                 issues.append(f"Moderate system load: {load_avg[0]:.2f}")
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"Health scoring: unable to retrieve system load average: {e!s}")
 
         health_score = max(0, health_score)
 
