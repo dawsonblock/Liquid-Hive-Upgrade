@@ -1,33 +1,17 @@
-# OS
+# Operating Systems
 .DS_Store
 Thumbs.db
-
-# Logs, temp, maps
-*.log
-*.tmp
 *.swp
 *.swo
-*.orig
-*.map
-
-# Generated TypeScript files (should not be committed)
-*.js.map
-*.d.ts.map
-frontend/src/**/*.js
-frontend/src/**/*.d.ts
-
-# Reports/artifacts
-reports/
 
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
-.pyre/
-.pytype/
-.cache/
+.ruff_cache/
 .coverage
 .coverage.*
 htmlcov/
@@ -39,7 +23,7 @@ pip-wheel-metadata/
 dist/
 build/
 
-# Environments
+# Python Environments
 .venv/
 venv/
 env/
@@ -47,149 +31,126 @@ ENV/
 .env
 .env.*
 
-# Node / Frontend
+# Node.js / Frontend
 node_modules/
-frontend/node_modules/
+.npm/
+.pnpm-store/
+.next/
+.out/
+coverage/
 dist/
 build/
 out/
 .eslintcache
 *.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package Manager Lockfiles (enforce yarn only)
+package-lock.json
+pnpm-lock.yaml
 
 # IDE / Editors
 .vscode/
 .idea/
 *.iml
+*.swp
+*.swo
+*~
 
-# Docker overrides
-docker-compose.override.yml
-
-# Logs / temp
+# Logs
 *.log
 *.tmp
-*.swp
+*.temp
 
-# Build + caches
+# Build Artifacts & Caches
 build/
 dist/
 bin/
 obj/
 .out/
 .cache/
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.ipynb_checkpoints/
-
-# Python
-.venv/
-venv/
-.env
-.env.*
-*.pyc
-*.pyo
-*.pyd
-pip-wheel-metadata/
-
-# C/C++ toolchains
-CMakeFiles/
-CMakeCache.txt
-cmake-build-*/
-compile_commands.json
-.vscode/settings.json
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm/
-.pnpm-store/
-.next/
-.out/
-coverage/
-*.tsbuildinfo
-
-# Rust/Go/Java (if present)
 target/
 vendor/
-.gradle/
-build.gradle.kts
-.gradle/
-.idea/
 
-# Artifacts
-*.apk
-*.ipa
-*.a
-*.lib
-*.dll
-*.dylib
-*.so
+# Docker
+docker-compose.override.yml
 
-# Model/data (prefer Releases/LFS)
-data/
-datasets/
-artifacts/
-checkpoints/
-models/
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
 
-# Package manager lockfiles - enforce yarn only for Node.js
-package-lock.json
-pnpm-lock.yaml
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment files
-.env
-.env.*
-
-# Compressed files
-*.zip
-*.tar.gz
-*.rar
-
-# Test coverage
+# Test Coverage
 .coverage
 htmlcov/
 coverage/
 .nyc_output/
 
-# Temporary files
-*.tmp
-*.temp
-.tmp/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Local storage
-.local/
-.npm/
-.cache/
-.config/
-
-# Documentation build
+# Documentation Build
 /site
 docs/_build/
+
+# Models & Large Data (use Git LFS or Releases)
+data/
+datasets/
+artifacts/
+checkpoints/
+models/
+*.pkl
+*.h5
+*.pt
+*.pth
 
 # Binaries
 *.exe
 *.dll
 *.so
-*.dylib-e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-        main
+*.dylib
+*.a
+*.lib
+
+# Compressed Files
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary Files
+*.tmp
+*.temp
+.tmp/
+*.orig
+*.map
+*.bak
+
+# Local Storage
+.local/
+.config/
+
+# C/C++ toolchains (if present)
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+compile_commands.json
+
+# Java/Kotlin (if present)
+.gradle/
+build.gradle.kts
+
+# Generated TypeScript files
+*.js.map
+*.d.ts.map
+frontend/src/**/*.js
+frontend/src/**/*.d.ts
+
+# Reports & Artifacts
+reports/
+bandit-report.json
+safety-report.json
+pytest-report.xml
+sbom.spdx.json
+
+# Environment-specific
+.dockerignore
+!.env.example
