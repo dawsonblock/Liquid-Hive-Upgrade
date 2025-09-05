@@ -5,14 +5,14 @@ Overview
 
 External Secrets (AWS example)
 - Install External Secrets Operator in your cluster.
-- Configure a ClusterSecretStore referencing AWS via IRSA (OIDC): see `helm/liquid-hive/templates/externalsecret.yaml` and `helm/liquid-hive/values-aws-prod.yaml`.
+- Configure a ClusterSecretStore referencing AWS via IRSA (OIDC): see `infra/helm/liquid-hive/templates/externalsecret.yaml` and `infra/helm/liquid-hive/values-aws-prod.yaml`.
 - Populate secrets in AWS Secrets Manager with keys matching values under `externalSecrets.data`.
 
 CLI flow (AWS):
 - aws configure (or OIDC in CI).
 - aws secretsmanager create-secret --name liquid-hive/prod/OPENAI_API_KEY --secret-string 'sk-***'
 - Repeat for: DEEPSEEK_API_KEY, DEEPSEEK_R1_API_KEY, ANTHROPIC_API_KEY, QWEN_API_KEY, ADMIN_TOKEN, OTEL_EXPORTER_OTLP_ENDPOINT, etc.
-- helm upgrade --install liquid-hive helm/liquid-hive -n liquid-hive-prod -f helm/liquid-hive/values.yaml -f helm/liquid-hive/values-aws-prod.yaml
+- helm upgrade --install liquid-hive infra/helm/liquid-hive -n liquid-hive-prod -f infra/helm/liquid-hive/values.yaml -f infra/helm/liquid-hive/values-aws-prod.yaml
 
 GCP/Azure
 - Add a ClusterSecretStore for your provider and map `externalSecrets.data` similarly.
@@ -110,7 +110,7 @@ secrets:
 1. **Deploy with development Vault**:
 
 ```bash
-helm install liquid-hive ./helm/liquid-hive -f ./helm/liquid-hive/values-dev.yaml
+helm install liquid-hive ./infra/helm/liquid-hive -f ./infra/helm/liquid-hive/values-dev.yaml
 ```
 
 2. **Store secrets in Vault**:
@@ -191,7 +191,7 @@ aws secretsmanager create-secret \
 3. **Deploy to production**:
 
 ```bash
-helm install liquid-hive ./helm/liquid-hive -f ./helm/liquid-hive/values-aws-prod.yaml
+helm install liquid-hive ./infra/helm/liquid-hive -f ./infra/helm/liquid-hive/values-aws-prod.yaml
 ```
 
 ## Secret Naming Conventions

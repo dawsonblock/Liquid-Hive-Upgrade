@@ -145,7 +145,7 @@ liquid-hive/
 ├── 🗄️ Data & Config
 │   ├── data/                 # RAG indices & storage
 │   ├── config/               # Service configurations
-│   ├── k8s/                  # Kubernetes manifests
+│   ├── infra/k8s/            # Kubernetes manifests
 │   └── helm/                 # Helm charts
 │
 ├── 📊 Observability
@@ -333,7 +333,7 @@ FROM python:3.11-slim as production
 
 ```bash
 # Deploy to Kubernetes
-helm install liquid-hive ./helm/liquid-hive \
+helm install liquid-hive ./infra/helm/liquid-hive \
   --set image.tag=v1.0.0 \
   --set ingress.enabled=true \
   --set autoscaling.enabled=true

@@ -142,9 +142,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
       - name: Helm lint
-        run: helm lint helm/liquid-hive
+        run: helm lint infra/helm/liquid-hive
       - name: Helm template
-        run: helm template lh helm/liquid-hive -f helm/liquid-hive/values-dev.yaml > /dev/null
+        run: helm template lh infra/helm/liquid-hive -f infra/helm/liquid-hive/values-dev.yaml > /dev/null
 
   release:
     name: Release (images + artifacts)

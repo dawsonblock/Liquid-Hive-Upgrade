@@ -15,7 +15,7 @@ jobs:
         env:
           MAX_SIZE: "5242880" # 5MB
           FORBIDDEN_REGEX: '(^|/)node_modules/|(^|/)dist/|(^|/)build/|(^|/)out/|(^|/)coverage/|(^|/)\.cache/|__pycache__/|\.py[cod]$|\.map$|\.log$|\.tsbuildinfo$|\.DS_Store$|Thumbs\.db$'
-          ALLOW_LARGE_REGEX: '^docs/|^grafana/|^prometheus/|^k8s/|^helm/|^deploy/helm/|^data/|^rag_index/'
+          ALLOW_LARGE_REGEX: '^docs/|^grafana/|^prometheus/|^infra/k8s/|^infra/helm/|^data/|^rag_index/'
         shell: bash
         run: |
           set -euo pipefail

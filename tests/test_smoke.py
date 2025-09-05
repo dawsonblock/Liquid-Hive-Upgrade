@@ -6,6 +6,8 @@ import pathlib
 
 import pytest
 
+pytestmark = pytest.mark.smoke
+
 
 def test_truth():
     """Basic sanity check"""
