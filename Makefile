@@ -59,6 +59,16 @@ build: ## Build all components
 	docker build -f apps/api/Dockerfile -t liquid-hive-api .
 	@echo "$(GREEN)✅ Build completed$(NC)"
 
+build-enhanced: ## Enhanced build with optimizations
+	@echo "$(BLUE)Running enhanced build...$(NC)"
+	python3 scripts/enhanced_build.py --clean --optimize
+	@echo "$(GREEN)✅ Enhanced build completed$(NC)"
+
+build-optimize: ## Analyze and optimize build
+	@echo "$(BLUE)Analyzing build...$(NC)"
+	python3 scripts/build_optimizer.py
+	@echo "$(GREEN)✅ Build analysis completed$(NC)"
+
 build-all: ## Build all components with parallel processing
 	@echo "$(BLUE)Building all components in parallel...$(NC)"
 	@$(MAKE) -j$(PARALLEL_JOBS) build-frontend build-backend build-services

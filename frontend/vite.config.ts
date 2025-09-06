@@ -25,21 +25,23 @@ export default defineConfig(({ mode }) => {
           drop_console: mode === 'production',
           drop_debugger: mode === 'production',
         },
-      },
+      } as any,
       rollupOptions: {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
             ui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
             state: ['react-redux', '@reduxjs/toolkit'],
-            utils: ['axios', 'lodash', 'date-fns'],
+            utils: ['axios', 'date-fns'],
+            syntax: ['prismjs', 'react-syntax-highlighter'],
+            markdown: ['react-markdown'],
           },
           chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
           assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
         },
       },
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 2000,
     },
     server: {
       host: '0.0.0.0',

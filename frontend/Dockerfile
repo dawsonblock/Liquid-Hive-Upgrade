@@ -1,5 +1,5 @@
 # Multi-stage build for production-ready frontend
-FROM node:20-alpine as base
+FROM node:20-alpine AS base
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/cache/yarn \
 COPY . .
 
 # Build stage
-FROM base as builder
+FROM base AS builder
 
 # Set build arguments
 ARG NODE_ENV=production
@@ -35,7 +35,7 @@ ARG NEXT_TELEMETRY_DISABLED=1
 RUN yarn build
 
 # Production stage
-FROM nginx:alpine as production
+FROM nginx:alpine AS production
 
 # Install dumb-init and curl
 RUN apk add --no-cache dumb-init curl

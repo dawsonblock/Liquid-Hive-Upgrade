@@ -1,5 +1,5 @@
 # Multi-stage build for production-ready API
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Install system dependencies
 RUN apt-get update && \
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 # Install runtime dependencies
 RUN apt-get update && \

@@ -88,13 +88,13 @@ const EnhancedChatPanel: React.FC = () => {
       recognitionRef.current.interimResults = false;
       recognitionRef.current.lang = 'en-US';
 
-      recognitionRef.current.onresult = (event) => {
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsRecording(false);
       };
 
-      recognitionRef.current.onerror = (event) => {
+      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
         // TODO: Replace with proper error handling
         console.error('Speech recognition error:', event.error);
         setIsRecording(false);
@@ -516,7 +516,7 @@ const EnhancedChatPanel: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      <style jsx>{`
+      <style>{`
         @keyframes pulse {
           0%, 80%, 100% {
             transform: scale(0);
@@ -527,6 +527,11 @@ const EnhancedChatPanel: React.FC = () => {
             opacity: 1;
           }
         }
+        .pulse {
+          animation: pulse 1.4s infinite ease-in-out;
+        }
+        .pulse:nth-child(1) { animation-delay: -0.32s; }
+        .pulse:nth-child(2) { animation-delay: -0.16s; }
       `}</style>
     </Box>
   );
