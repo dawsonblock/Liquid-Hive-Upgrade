@@ -139,6 +139,8 @@ build.gradle.kts
 *.d.ts.map
 frontend/src/**/*.js
 frontend/src/**/*.d.ts
+frontend/src/**/*.js.map
+frontend/src/**/*.d.ts.map
 
 # Reports & Artifacts
 reports/
