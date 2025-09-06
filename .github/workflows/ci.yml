@@ -34,7 +34,7 @@ jobs:
         test-type: [unit, integration, e2e]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -113,7 +113,7 @@ jobs:
     needs: test
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
@@ -144,7 +144,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -219,7 +219,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Start services
       run: docker-compose up -d --wait
@@ -246,7 +246,7 @@ jobs:
     environment: production
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Setup Helm
       uses: azure/setup-helm@v3
