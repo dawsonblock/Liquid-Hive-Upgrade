@@ -163,13 +163,13 @@ const EnhancedChatPanel: React.FC = () => {
   const handleLike = (messageId: string) => {
     // Implement like functionality
     // TODO: Replace with proper logging
-        console.log('Liked message:', messageId);
+        // Message liked: messageId
   };
 
   const handleDislike = (messageId: string) => {
     // Implement dislike functionality
     // TODO: Replace with proper logging
-        console.log('Disliked message:', messageId);
+        // Message disliked: messageId
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {

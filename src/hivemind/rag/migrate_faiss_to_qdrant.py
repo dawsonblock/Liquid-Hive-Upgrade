@@ -322,22 +322,22 @@ async def run_migration(
     migration_results = await migrator.migrate(backup_faiss=True)
 
     logger.info(r"📊 Migration Results:")
-    print(f"   - Status: {migration_results['status']}")
-    print(f"   - Migrated: {migration_results['migrated_documents']} documents")
-    print(f"   - Failed: {migration_results['failed_documents']} documents")
-    print(f"   - Time: {migration_results['migration_time']:.2f}s")
+    logger.info(f"   - Status: {migration_results['status']}")
+    logger.info(f"   - Migrated: {migration_results['migrated_documents']} documents")
+    logger.info(f"   - Failed: {migration_results['failed_documents']} documents")
+    logger.info(f"   - Time: {migration_results['migration_time']:.2f}s")
 
     if migration_results["errors"]:
-        print(f"   - Errors: {len(migration_results['errors'])}")
+        logger.warning(f"   - Errors: {len(migration_results['errors'])}")
 
     # Verify migration
     if migration_results["migrated_documents"] > 0:
         logger.info(r"\n🔍 Verifying migration...")
         verification = await migrator.verify_migration()
-        print(
+        logger.info(
             f"   - Successful searches: {verification['successful_searches']}/{verification['total_queries']}"
         )
-        print(f"   - Average results per query: {verification['average_results_per_query']:.1f}")
+        logger.info(f"   - Average results per query: {verification['average_results_per_query']:.1f}")
 
     return migration_results
 
@@ -353,7 +353,7 @@ if __name__ == "__main__":
             logger.info(r"\n✅ Migration completed successfully!")
             sys.exit(0)
         else:
-            print(f"\n❌ Migration failed: {results.get('errors', ['Unknown error'])}")
+            logger.error(f"\n❌ Migration failed: {results.get('errors', ['Unknown error'])}")
             sys.exit(1)
 
     except Exception as e:

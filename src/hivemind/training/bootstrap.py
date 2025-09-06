@@ -54,4 +54,4 @@ def run_bootstrap(
 
 if __name__ == "__main__":
     p = run_bootstrap()
-    print(p)
+    logger.info(f"Training progress: {p}")
