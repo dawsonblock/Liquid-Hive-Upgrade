@@ -14,6 +14,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json yarn.lock ./
 
+# Enable Corepack and pin Yarn version
+RUN corepack enable && corepack prepare yarn@4.0.2 --activate
+
 # Install dependencies with better caching
 RUN --mount=type=cache,target=/root/.yarn \
     yarn install --frozen-lockfile --production=false
@@ -34,10 +37,8 @@ RUN yarn build
 # Production stage
 FROM nginx:alpine as production
 
-# Install security updates and dumb-init
-RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
-    rm -rf /var/cache/apk/*
+# Install dumb-init
+RUN apk add --no-cache dumb-init
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html

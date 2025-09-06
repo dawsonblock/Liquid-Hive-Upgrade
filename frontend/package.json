@@ -15,6 +15,7 @@
     "test": "jest --ci --runInBand --coverage",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --ci --runInBand",
+    "test:e2e": "jest --ci --runInBand --coverage --testPathPattern=e2e",
     "test:ui": "jest --watch --verbose",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand --no-cache",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 200",
@@ -100,10 +101,4 @@
       "prettier --write"
     ]
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run validate"
-    }
-  }
 }

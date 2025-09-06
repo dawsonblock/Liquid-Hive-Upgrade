@@ -32,16 +32,6 @@ jobs:
         python-version: [3.11, 3.12]
         node-version: [18, 20]
         test-type: [unit, integration, e2e]
-        include:
-          - python-version: 3.11
-            node-version: 20
-            test-type: unit
-          - python-version: 3.12
-            node-version: 18
-            test-type: integration
-          - python-version: 3.11
-            node-version: 20
-            test-type: e2e
 
     steps:
     - uses: actions/checkout@v4

@@ -1,5 +1,5 @@
 class CapsuleBrainGUI {
-  constructor() {
+  constructor(options = {}) {
     this.ws = null;
     this.isConnected = false;
     this.currentTheme = localStorage.getItem('theme') || 'dark';
@@ -11,11 +11,20 @@ class CapsuleBrainGUI {
     this.isRecording = false;
     this.uploadedFiles = [];
 
-    // WebSocket reconnection settings
-    this.reconnectAttempt = 0;
-    this.maxReconnectAttempts = 10;
-    this.baseDelayMs = 1000;
-    this.maxDelayMs = 30000;
+    // WebSocket reconnection settings with configurable defaults
+    const defaultConfig = {
+      reconnectAttempt: 0,
+      maxReconnectAttempts: 10,
+      baseDelayMs: 1000,
+      maxDelayMs: 30000
+    };
+
+    // Merge provided options with defaults
+    const wsConfig = { ...defaultConfig, ...options };
+    this.reconnectAttempt = wsConfig.reconnectAttempt;
+    this.maxReconnectAttempts = Math.max(1, parseInt(wsConfig.maxReconnectAttempts) || 10);
+    this.baseDelayMs = Math.max(100, parseInt(wsConfig.baseDelayMs) || 1000);
+    this.maxDelayMs = Math.max(this.baseDelayMs, parseInt(wsConfig.maxDelayMs) || 30000);
 
     this.init();
   }
@@ -632,7 +641,25 @@ class CapsuleBrainGUI {
 
 // Initialize the GUI when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
-  window.gui = new CapsuleBrainGUI();
+  // Get configuration from window.APP_CONFIG or data attributes
+  let config = {};
+
+  if (window.APP_CONFIG && window.APP_CONFIG.websocket) {
+    config = window.APP_CONFIG.websocket;
+  } else {
+    // Fallback to data attributes on the body element
+    const body = document.body;
+    if (body) {
+      config = {
+        reconnectAttempt: parseInt(body.dataset.reconnectAttempt) || 0,
+        maxReconnectAttempts: parseInt(body.dataset.maxReconnectAttempts) || 10,
+        baseDelayMs: parseInt(body.dataset.baseDelayMs) || 1000,
+        maxDelayMs: parseInt(body.dataset.maxDelayMs) || 30000
+      };
+    }
+  }
+
+  window.gui = new CapsuleBrainGUI(config);
 });
 
 // Handle page visibility changes

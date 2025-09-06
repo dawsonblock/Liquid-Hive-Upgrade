@@ -9,12 +9,11 @@ import sys
 import json
 import time
 import hashlib
-import shutil
 import subprocess
 import multiprocessing
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Any
-from datetime import datetime, timedelta
+from typing import Dict, List, Set, Any
+from datetime import datetime
 import argparse
 
 
@@ -193,10 +192,20 @@ class BuildOptimizer:
 
         return dependencies
 
-    def is_file_changed(self, file_path: Path) -> bool:
+    def is_file_changed(self, file_path: Path, visited: Set[str] = None) -> bool:
         """Check if a file has changed since last build."""
+        if visited is None:
+            visited = set()
+
+        file_path_str = str(file_path)
+        if file_path_str in visited:
+            # Circular dependency detected, treat as unchanged
+            return False
+
+        visited.add(file_path_str)
+
         current_hash = self.calculate_file_hash(file_path)
-        stored_hash = self.manifest["files"].get(str(file_path), {}).get("hash", "")
+        stored_hash = self.manifest["files"].get(file_path_str, {}).get("hash", "")
 
         if current_hash != stored_hash:
             return True
@@ -204,7 +213,7 @@ class BuildOptimizer:
         # Check if any dependencies have changed
         dependencies = self.get_file_dependencies(file_path)
         for dep in dependencies:
-            if self.is_file_changed(dep):
+            if self.is_file_changed(dep, visited):
                 return True
 
         return False
@@ -264,10 +273,21 @@ class BuildOptimizer:
     def compile_python_file(self, file_path: Path) -> bool:
         """Compile a single Python file."""
         try:
-            # This is a placeholder - in practice you'd run actual compilation
-            # For now, just update the manifest
+            import py_compile
+            import tempfile
+            import os
+
+            # Compile the Python file to check for syntax errors
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.pyc', delete=False) as temp_file:
+                py_compile.compile(str(file_path), temp_file.name, doraise=True)
+                os.unlink(temp_file.name)  # Clean up the temp file
+
+            # Update the manifest
             self.update_file_manifest(file_path)
             return True
+        except py_compile.PyCompileError as e:
+            print(f"❌ Syntax error in {file_path}: {e}")
+            return False
         except Exception as e:
             print(f"❌ Failed to compile {file_path}: {e}")
             return False
@@ -340,6 +360,8 @@ class BuildOptimizer:
                 print(f"✅ {dockerfile} built successfully")
             except subprocess.CalledProcessError as e:
                 print(f"❌ {dockerfile} build failed: {e}")
+                print(f"STDOUT: {e.stdout}")
+                print(f"STDERR: {e.stderr}")
                 success = False
 
         return success
