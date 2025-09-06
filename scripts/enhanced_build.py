@@ -218,8 +218,6 @@ def main() -> None:
                     f"❌ Build optimization failed with exit code "
                     f"{opt_result.returncode}"
                 )
-                if opt_result.stderr:
-                    print(f"Error details: {opt_result.stderr}")
                 success = False
 
     elapsed = time.time() - start_time
