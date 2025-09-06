@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from huggingface_hub import HfApi
+from src.logging_config import get_logger
 
 
 def get_hf(api_token: str | None = None) -> HfApi:

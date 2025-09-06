@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Dataset build utilities for text and vision‑language (VL)
 =======================================================
 

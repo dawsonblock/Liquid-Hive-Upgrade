@@ -7,6 +7,7 @@ import yaml
 from ..config import DEFAULT_UA
 from .determinism import set_determinism
 from .manager import ConsentManager
+from src.logging_config import get_logger
 
 
 def _load_policy(path: str | None = None) -> dict:

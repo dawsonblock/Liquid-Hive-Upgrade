@@ -6,6 +6,7 @@ import urllib.parse
 import redis
 
 from .config import PACE_RPS_DEFAULT, REDIS_URL
+from src.logging_config import get_logger
 
 _r = redis.Redis.from_url(REDIS_URL) if REDIS_URL else None
 

@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Base classes for the LIQUID-HIVE Tool Framework
 ==============================================
 """

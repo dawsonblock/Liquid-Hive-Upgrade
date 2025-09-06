@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import os, time, uuid, hashlib
 import structlog
+from src.logging_config import get_logger
 
 logger = structlog.get_logger(__name__)
 

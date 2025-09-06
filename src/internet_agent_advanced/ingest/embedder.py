@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 import httpx
+from src.logging_config import get_logger
 
 EMBED_HTTP_URL = os.getenv("EMBED_HTTP_URL")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")

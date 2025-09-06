@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Calculator Tool for LIQUID-HIVE
 ==============================
 

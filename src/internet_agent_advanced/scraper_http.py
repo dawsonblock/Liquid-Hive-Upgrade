@@ -7,6 +7,7 @@ import httpx
 from .config import DEFAULT_UA, HTTP_TIMEOUT_S
 from .normalizer import html_to_text
 from .schemas import PageContent
+from src.logging_config import get_logger
 
 DEFAULT_HEADERS = {
     "User-Agent": DEFAULT_UA,

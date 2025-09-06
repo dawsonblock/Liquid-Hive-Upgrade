@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from src.logging_config import get_logger
 
 # Trust tiers / domains
 TRUSTED_TLDS = {".gov", ".mil", ".edu", ".org", ".int"}

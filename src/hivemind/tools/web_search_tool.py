@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Web Search Tool for LIQUID-HIVE
 ==============================
 

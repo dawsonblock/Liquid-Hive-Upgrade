@@ -3,6 +3,7 @@ from __future__ import annotations
 import trafilatura
 from bs4 import BeautifulSoup
 from readability import Document
+from src.logging_config import get_logger
 
 
 def extract_readable(html: str):

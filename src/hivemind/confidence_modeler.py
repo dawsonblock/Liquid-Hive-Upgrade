@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Confidence Modeler 2.0 (Enhanced Trust Protocol)
 ================================================
 

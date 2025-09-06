@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from aiolimiter import AsyncLimiter
+from src.logging_config import get_logger
 
 _limiters: dict[str, AsyncLimiter] = {}
 

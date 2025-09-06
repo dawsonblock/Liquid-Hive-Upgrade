@@ -5,6 +5,7 @@ import os
 import httpx
 
 from .schemas import FetchResult
+from src.logging_config import get_logger
 
 
 async def internet_search(query: str, max_results: int = 5) -> FetchResult:

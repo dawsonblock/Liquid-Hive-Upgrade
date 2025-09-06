@@ -6,6 +6,7 @@ import os
 import pathlib
 import time
 from typing import Any
+from src.logging_config import get_logger
 
 try:
     from ..confidence_modeler import ConfidenceModeler, TrustPolicy

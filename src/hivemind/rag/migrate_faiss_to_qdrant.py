@@ -318,10 +318,10 @@ async def run_migration(
     # Create migrator and run migration
     migrator = FaissToQdrantMigrator(faiss_index_dir, qdrant_retriever)
 
-    print("🔄 Starting FAISS to Qdrant migration...")
+    logger.info(r"🔄 Starting FAISS to Qdrant migration...")
     migration_results = await migrator.migrate(backup_faiss=True)
 
-    print("📊 Migration Results:")
+    logger.info(r"📊 Migration Results:")
     print(f"   - Status: {migration_results['status']}")
     print(f"   - Migrated: {migration_results['migrated_documents']} documents")
     print(f"   - Failed: {migration_results['failed_documents']} documents")
@@ -332,7 +332,7 @@ async def run_migration(
 
     # Verify migration
     if migration_results["migrated_documents"] > 0:
-        print("\n🔍 Verifying migration...")
+        logger.info(r"\n🔍 Verifying migration...")
         verification = await migrator.verify_migration()
         print(
             f"   - Successful searches: {verification['successful_searches']}/{verification['total_queries']}"
@@ -350,12 +350,12 @@ if __name__ == "__main__":
         results = asyncio.run(run_migration())
 
         if results.get("status") in ["completed", "completed_with_errors"]:
-            print("\n✅ Migration completed successfully!")
+            logger.info(r"\n✅ Migration completed successfully!")
             sys.exit(0)
         else:
             print(f"\n❌ Migration failed: {results.get('errors', ['Unknown error'])}")
             sys.exit(1)
 
     except Exception as e:
-        print(f"\n💥 Migration crashed: {e}")
+        logger.info(f"\n💥 Migration crashed: {e}")
         sys.exit(1)

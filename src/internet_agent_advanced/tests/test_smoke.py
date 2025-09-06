@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from internet_agent_advanced.main_tool import internet_fetch
+from src.logging_config import get_logger
 
 
 @pytest.mark.skip(reason="Requires internet access - not suitable for CI")

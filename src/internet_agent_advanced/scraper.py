@@ -5,6 +5,7 @@ import urllib.parse
 
 from .rate_limit_local import limiter_for_host
 from .robots import is_allowed
+from src.logging_config import get_logger
 
 # optional redis-based rate limiting (may be unavailable in tests)
 try:

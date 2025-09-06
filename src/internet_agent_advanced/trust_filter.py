@@ -3,6 +3,7 @@ from __future__ import annotations
 import tldextract
 
 from .config import (
+from src.logging_config import get_logger
     BASE_TRUST_SCORES,
     TRUSTED_DOMAINS_TIER1,
     TRUSTED_DOMAINS_TIER2,

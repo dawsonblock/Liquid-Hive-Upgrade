@@ -7,6 +7,7 @@ from playwright.async_api import async_playwright
 
 from .normalizer import html_to_text
 from .schemas import PageContent
+from src.logging_config import get_logger
 
 
 def _detect_challenge(html: str) -> str:

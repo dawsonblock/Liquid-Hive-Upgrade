@@ -5,6 +5,7 @@ import hashlib
 from sqlitedict import SqliteDict
 
 from .config import CACHE_PATH
+from src.logging_config import get_logger
 
 
 def _key(url: str) -> str:

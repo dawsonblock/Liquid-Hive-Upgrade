@@ -3,6 +3,7 @@ import argparse
 from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
+from src.logging_config import get_logger
     AutoModelForCausalLM,
     AutoProcessor,
     TrainingArguments,

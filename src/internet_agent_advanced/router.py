@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from .github_client import fetch_repo_readme
 from .huggingface_client import fetch_model_card
 from .scraper import fetch
+from src.logging_config import get_logger
 
 
 async def route_fetch(target: str, render_js: bool = False) -> dict[str, Any]:

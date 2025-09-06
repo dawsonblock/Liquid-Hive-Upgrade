@@ -3,6 +3,7 @@ from __future__ import annotations
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from starlette.applications import Starlette
 from starlette.responses import Response
+from src.logging_config import get_logger
 
 scrape_success = Counter("ia_scrape_success_total", "Successful scrapes")
 scrape_fail = Counter("ia_scrape_fail_total", "Failed scrapes")

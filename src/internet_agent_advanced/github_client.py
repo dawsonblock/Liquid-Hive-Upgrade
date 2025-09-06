@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from github import Github
+from src.logging_config import get_logger
 
 
 def get_github(token: str | None = None) -> Github:

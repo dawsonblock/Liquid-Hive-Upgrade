@@ -6,6 +6,7 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Union
 from enum import Enum
 import structlog
+from src.logging_config import get_logger
 
 logger = structlog.get_logger(__name__)
 

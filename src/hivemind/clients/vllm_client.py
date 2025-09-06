@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import httpx
+from src.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hivemind.adapter_deployment_manager import AdapterDeploymentManager

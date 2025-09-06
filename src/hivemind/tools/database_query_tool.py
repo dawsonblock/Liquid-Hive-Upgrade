@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Database Query Tool for LIQUID-HIVE
 ===================================
 
@@ -38,7 +39,7 @@ class DatabaseQueryTool(BaseTool):
                     neo4j_uri, auth=(neo4j_user, neo4j_password), max_connection_lifetime=3600
                 )
             except Exception as e:
-                print(f"Failed to connect to Neo4j: {e}")
+                logger.info(f"Failed to connect to Neo4j: {e}")
 
     @property
     def name(self) -> str:

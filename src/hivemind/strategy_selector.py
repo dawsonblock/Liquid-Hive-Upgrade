@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from src.logging_config import get_logger
 
 try:
     from .resource_estimator import ResourceEstimator

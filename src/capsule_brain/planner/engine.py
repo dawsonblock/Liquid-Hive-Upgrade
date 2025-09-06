@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .schema import Plan, TaskNode
+from src.logging_config import get_logger
 
 ENABLE_PLANNER = str(__import__("os").environ.get("ENABLE_PLANNER", "false").lower()) == "true"
 

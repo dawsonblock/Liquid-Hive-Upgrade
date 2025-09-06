@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from .utils import clamp_json
+from src.logging_config import get_logger
 
 PERCEPTOR_SYS = (
     "You are the Perceptor. Extract a compact JSON: {caption:str, entities:[str], doc_like:bool}."

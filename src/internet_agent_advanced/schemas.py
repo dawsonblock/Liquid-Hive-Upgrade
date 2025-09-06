@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel, Field
+from src.logging_config import get_logger
 
 
 class PageContent(BaseModel):

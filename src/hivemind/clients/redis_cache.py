@@ -5,6 +5,7 @@ import time
 import json
 from typing import Any, Optional, Dict, List
 import structlog
+from src.logging_config import get_logger
 
 try:
     import redis

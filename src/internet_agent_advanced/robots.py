@@ -7,6 +7,7 @@ import httpx
 from robotexclusionrulesparser import RobotExclusionRulesParser
 
 from .config import RESPECT_ROBOTS, ROBOTS_TTL_S
+from src.logging_config import get_logger
 
 _cache: dict[str, tuple[RobotExclusionRulesParser, float]] = {}
 

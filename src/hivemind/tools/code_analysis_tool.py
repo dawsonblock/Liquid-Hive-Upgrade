@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Code Analysis Tool for LIQUID-HIVE
 ==================================
 

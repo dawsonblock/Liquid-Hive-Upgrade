@@ -4,6 +4,7 @@ import os
 from typing import Any
 
 import httpx
+from src.logging_config import get_logger
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "web_corpus")

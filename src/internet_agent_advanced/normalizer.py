@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 from readability import Document
+from src.logging_config import get_logger
 
 
 def html_to_text(html: str) -> tuple[str, str]:

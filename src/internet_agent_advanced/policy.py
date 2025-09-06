@@ -6,6 +6,7 @@ import urllib.parse
 import yaml
 
 from .config import DOMAIN_POLICY_PATH
+from src.logging_config import get_logger
 
 
 def _policy_path() -> str:

@@ -4,6 +4,7 @@ from .router import route_fetch
 from .schemas import FetchResult, ScoredItem
 from .search import internet_search as _internet_search
 from .trust_filter import is_trusted, score_url
+from src.logging_config import get_logger
 
 
 async def internet_fetch(urls: list[str], render_js: bool = False) -> FetchResult:

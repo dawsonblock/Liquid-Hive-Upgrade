@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from .main_tool import internet_fetch, internet_ingest, internet_search
 from .metrics import metrics_app
+from src.logging_config import get_logger
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 

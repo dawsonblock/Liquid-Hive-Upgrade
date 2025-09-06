@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Capsule Brain S-AGI :: Control Center</title>
   <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/5.1.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <nav class="navbar">
@@ -16,9 +22,31 @@
           <span class="status-dot"></span><span id="statusText">Connecting...</span>
       </div>
     </div>
+    <div class="nav-controls">
+      <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      <button class="fullscreen-toggle" id="fullscreenToggle" title="Toggle Fullscreen">
+        <i class="fas fa-expand"></i>
+      </button>
+    </div>
     <div class="nav-tabs">
-      <button class="nav-tab active" data-panel="chat">💬 Chat</button>
-      <button class="nav-tab" data-panel="system">📊 System</button>
+      <button class="nav-tab active" data-panel="chat">
+        <i class="fas fa-comments"></i>
+        <span>Chat</span>
+      </button>
+      <button class="nav-tab" data-panel="system">
+        <i class="fas fa-chart-line"></i>
+        <span>System</span>
+      </button>
+      <button class="nav-tab" data-panel="tools">
+        <i class="fas fa-tools"></i>
+        <span>Tools</span>
+      </button>
+      <button class="nav-tab" data-panel="settings">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+      </button>
     </div>
   </nav>
   <main class="main-content">
@@ -28,22 +56,125 @@
           <div class="system-message">Welcome to Capsule Brain Supreme AGI.</div>
         </div>
         <div class="chat-input-area">
-          <label for="fileUpload" class="file-upload-label">📎</label>
-          <input type="file" id="fileUpload" accept=".pdf,.txt" />
-          <span id="fileName" class="file-name"></span>
-          <textarea id="chatInput" placeholder="Send a message to the AGI..." rows="1"></textarea>
-          <button id="sendButton" class="send-button">Send</button>
+          <div class="input-controls">
+            <label for="fileUpload" class="file-upload-label" title="Upload File">
+              <i class="fas fa-paperclip"></i>
+            </label>
+            <input type="file" id="fileUpload" accept=".pdf,.txt,.md,.py,.js,.ts,.json" multiple />
+            <button class="voice-input-btn" id="voiceInputBtn" title="Voice Input">
+              <i class="fas fa-microphone"></i>
+            </button>
+            <button class="clear-chat-btn" id="clearChatBtn" title="Clear Chat">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          <div class="file-preview" id="filePreview"></div>
+          <div class="input-wrapper">
+            <textarea id="chatInput" placeholder="Send a message to the AGI..." rows="1"></textarea>
+            <button id="sendButton" class="send-button">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
     <div class="panel" id="systemPanel">
-      <div class="panel-header"><h2>System Health</h2></div>
-      <div class="hud-container" id="systemHud">
-        <div class="hud-card"><div class="hud-title">Φ</div><div class="hud-value phi" id="phiValue">-</div></div>
-        <div class="hud-card"><div class="hud-title">Glyphs</div><div class="hud-value glyphs" id="glyphsValue">-</div></div>
+      <div class="panel-header">
+        <h2><i class="fas fa-chart-line"></i> System Health</h2>
+        <button class="refresh-btn" id="refreshSystemBtn" title="Refresh">
+          <i class="fas fa-sync-alt"></i>
+        </button>
       </div>
-      <div class="panel-header"><h2>Approval Queue</h2></div>
+      <div class="hud-container" id="systemHud">
+        <div class="hud-card">
+          <div class="hud-title">Φ Consciousness</div>
+          <div class="hud-value phi" id="phiValue">-</div>
+          <div class="hud-subtitle">Integrated Information</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">Glyphs</div>
+          <div class="hud-value glyphs" id="glyphsValue">-</div>
+          <div class="hud-subtitle">Active Patterns</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">Memory Usage</div>
+          <div class="hud-value" id="memoryValue">-</div>
+          <div class="hud-subtitle">RAM Utilization</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">Processing</div>
+          <div class="hud-value" id="cpuValue">-</div>
+          <div class="hud-subtitle">CPU Load</div>
+        </div>
+      </div>
+      <div class="panel-header">
+        <h2><i class="fas fa-tasks"></i> Approval Queue</h2>
+        <span class="queue-count" id="queueCount">0 items</span>
+      </div>
       <div id="approvalQueue" class="approval-queue"></div>
+    </div>
+
+    <div class="panel" id="toolsPanel">
+      <div class="panel-header">
+        <h2><i class="fas fa-tools"></i> Available Tools</h2>
+      </div>
+      <div class="tools-grid" id="toolsGrid">
+        <div class="tool-card">
+          <div class="tool-icon"><i class="fas fa-search"></i></div>
+          <div class="tool-name">Web Search</div>
+          <div class="tool-status active">Active</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon"><i class="fas fa-code"></i></div>
+          <div class="tool-name">Code Analysis</div>
+          <div class="tool-status active">Active</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon"><i class="fas fa-database"></i></div>
+          <div class="tool-name">Database Query</div>
+          <div class="tool-status active">Active</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon"><i class="fas fa-file-alt"></i></div>
+          <div class="tool-name">File Operations</div>
+          <div class="tool-status active">Active</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="settingsPanel">
+      <div class="panel-header">
+        <h2><i class="fas fa-cog"></i> Settings</h2>
+      </div>
+      <div class="settings-container">
+        <div class="setting-group">
+          <h3>Appearance</h3>
+          <div class="setting-item">
+            <label for="themeSelect">Theme</label>
+            <select id="themeSelect">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="fontSize">Font Size</label>
+            <input type="range" id="fontSize" min="12" max="20" value="14">
+            <span id="fontSizeValue">14px</span>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h3>Chat</h3>
+          <div class="setting-item">
+            <label for="autoScroll">Auto-scroll messages</label>
+            <input type="checkbox" id="autoScroll" checked>
+          </div>
+          <div class="setting-item">
+            <label for="showTimestamps">Show timestamps</label>
+            <input type="checkbox" id="showTimestamps">
+          </div>
+        </div>
+      </div>
     </div>
   </main>
   <script src="/static/app.js"></script>

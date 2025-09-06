@@ -1,6 +1,7 @@
 """HiveMind client integrations for vector storage and caching."""
 
 from .qdrant_store import (
+from src.logging_config import get_logger
     ensure_collection,
     upsert_embeddings,
     semantic_search,

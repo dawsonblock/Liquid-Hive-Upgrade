@@ -4,6 +4,7 @@ from time import time
 
 from fastapi import APIRouter, Response
 from prometheus_client import (
+from src.logging_config import get_logger
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,

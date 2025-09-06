@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 from .base import ProviderConfig
+from src.logging_config import get_logger
 
 
 class DeepSeekProvider:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.parse
+from src.logging_config import get_logger
 
 STORAGE_DIR = os.getenv(
     "PLAYWRIGHT_STORAGE_DIR", os.path.join(os.path.dirname(__file__), "..", "sessions")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
+from src.logging_config import get_logger
 
 OpKind = Literal[
     "local_search",  # stubbed local search

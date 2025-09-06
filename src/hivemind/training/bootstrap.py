@@ -4,6 +4,7 @@ import pathlib
 from datetime import datetime
 
 from . import sft_text
+from src.logging_config import get_logger
 
 DEFAULT_OUT = pathlib.Path("/app/adapters/foundational/champion_v1")
 

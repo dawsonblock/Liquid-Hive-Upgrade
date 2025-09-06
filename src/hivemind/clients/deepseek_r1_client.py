@@ -306,7 +306,7 @@ async def test_r1_client():
     client = DeepSeekR1Client()
 
     health = await client.health_check()
-    print(f"DeepSeek R1 Client Health: {health}")
+    logger.info(f"DeepSeek R1 Client Health: {health}")
 
     if health["status"] != "unavailable":
         test_response = await client.generate(
@@ -314,7 +314,7 @@ async def test_r1_client():
             system_prompt="You are an expert arbiter. Provide detailed analysis and improvements.",
         )
 
-        print(f"DeepSeek R1 Response: {test_response}")
+        logger.info(f"DeepSeek R1 Response: {test_response}")
         return test_response
 
     return None

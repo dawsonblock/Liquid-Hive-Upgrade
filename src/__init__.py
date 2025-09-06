@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Liquid Hive Core Library.
 
 This package contains the core functionality for the Liquid Hive platform.

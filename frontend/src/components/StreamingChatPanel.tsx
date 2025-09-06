@@ -94,7 +94,8 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
 
     ws.onopen = () => {
       setConnectionStatus('connected');
-      console.log('🔗 Connected to streaming chat WebSocket');
+      // TODO: Replace with proper logging
+        console.log('🔗 Connected to streaming chat WebSocket');
     };
 
     ws.onmessage = event => {
@@ -102,6 +103,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
         const data = JSON.parse(event.data);
         handleWebSocketMessage(data);
       } catch (error) {
+        // TODO: Replace with proper error handling
         console.error('Failed to parse WebSocket message:', error);
       }
     };
@@ -109,13 +111,15 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     ws.onclose = () => {
       setConnectionStatus('disconnected');
       setIsStreaming(false);
-      console.log('🔌 WebSocket connection closed');
+      // TODO: Replace with proper logging
+        console.log('🔌 WebSocket connection closed');
     };
 
     ws.onerror = error => {
       setConnectionStatus('error');
       setIsStreaming(false);
-      console.error('WebSocket error:', error);
+      // TODO: Replace with proper error handling
+        console.error('WebSocket error:', error);
     };
 
     wsRef.current = ws;
@@ -128,6 +132,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
         setIsStreaming(true);
         setCurrentStreamingMessage('');
         setStreamMetadata(data.metadata);
+        // TODO: Replace with proper logging
         console.log('🚀 Stream started:', data.metadata);
         break;
 
@@ -165,6 +170,7 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
 
         setCurrentStreamingMessage('');
         setStreamMetadata(null);
+        // TODO: Replace with proper logging
         console.log('✅ Stream completed:', data.metadata);
         break;
 
@@ -178,10 +184,12 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
             metadata: { error: true },
           })
         );
+        // TODO: Replace with proper error handling
         console.error('❌ Streaming error:', data.error);
         break;
 
       default:
+        // TODO: Replace with proper logging
         console.log('📨 Unknown message type:', data.type);
     }
   };
@@ -244,7 +252,8 @@ const StreamingChatPanel: React.FC<StreamingChatPanelProps> = () => {
     }
 
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket not connected');
+      // TODO: Replace with proper error handling
+        console.error('WebSocket not connected');
       return;
     }
 

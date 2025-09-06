@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.logging_config import get_logger
 
 
 def chunk(text: str, meta: dict, max_len: int = 900, overlap: int = 120) -> list[dict]:

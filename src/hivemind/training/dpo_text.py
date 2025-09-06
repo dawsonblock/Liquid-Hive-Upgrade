@@ -4,6 +4,7 @@ from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import DPOTrainer
+from src.logging_config import get_logger
 
 
 def to_dataset(path):

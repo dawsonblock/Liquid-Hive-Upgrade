@@ -8,6 +8,7 @@ from qdrant_client.http import models as qm
 import structlog
 
 from src.hivemind.clients.qdrant_store import (
+from src.logging_config import get_logger
     _client, COLL, soft_delete, hard_delete, get_collection_stats
 )
 
@@ -594,4 +595,4 @@ def remove_duplicates(max_duplicates: int = 100) -> int:
 if __name__ == "__main__":
     # Run garbage collection when called directly
     result = run_gc()
-    print(f"Garbage collection completed: {result}")
+    logger.info(f"Garbage collection completed: {result}")

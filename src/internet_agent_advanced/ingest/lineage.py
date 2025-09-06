@@ -5,6 +5,7 @@ import time
 
 import boto3
 from botocore.client import Config
+from src.logging_config import get_logger
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")

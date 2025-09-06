@@ -1,3 +1,4 @@
+from src.logging_config import get_logger
 """Version information for Liquid Hive."""
 
 __version__ = "1.0.0"

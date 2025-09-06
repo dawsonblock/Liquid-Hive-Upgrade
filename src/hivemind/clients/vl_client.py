@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoProcessor
+from src.logging_config import get_logger
 
 
 class VLClient:

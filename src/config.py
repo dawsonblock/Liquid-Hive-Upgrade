@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 import yaml
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
+from src.logging_config import get_logger
 
 
 class DatabaseConfig(BaseSettings):

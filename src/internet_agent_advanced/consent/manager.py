@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import urllib.parse
+from src.logging_config import get_logger
 
 try:
     import redis  # optional

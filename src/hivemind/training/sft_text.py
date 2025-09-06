@@ -7,6 +7,7 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 from transformers import TrainingArguments
 from trl import SFTTrainer
 from unsloth import FastLanguageModel
+from src.logging_config import get_logger
 
 SYSTEM_PREFIX = "### Instruction:\n"
 ASSISTANT_PREFIX = "\n\n### Response:\n"
