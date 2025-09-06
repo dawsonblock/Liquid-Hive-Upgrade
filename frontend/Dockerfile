@@ -14,9 +14,12 @@ WORKDIR /app
 # Copy package files
 COPY package.json yarn.lock ./
 
+# Enable Corepack and pin Yarn version
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
+
 # Install dependencies with better caching
-RUN --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile --production=false
+RUN --mount=type=cache,target=/cache/yarn \
+    YARN_CACHE_FOLDER=/cache/yarn yarn install --immutable
 
 # Copy source code
 COPY . .
@@ -34,10 +37,8 @@ RUN yarn build
 # Production stage
 FROM nginx:alpine as production
 
-# Install security updates and dumb-init
-RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
-    rm -rf /var/cache/apk/*
+# Install dumb-init and curl
+RUN apk add --no-cache dumb-init curl
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -132,7 +133,7 @@ EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:5173/health || exit 1
+    CMD curl -fsS http://localhost:5173/health || exit 1
 
 # Start nginx with dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]

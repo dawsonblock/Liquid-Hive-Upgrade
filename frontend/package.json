@@ -15,6 +15,7 @@
     "test": "jest --ci --runInBand --coverage",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --ci --runInBand",
+    "test:e2e": "jest --ci --runInBand --coverage --testPathPattern=e2e",
     "test:ui": "jest --watch --verbose",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand --no-cache",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 200",
@@ -60,10 +61,10 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@vitejs/plugin-react": "^5.0.2",
     "babel-jest": "^29.7.0",
     "eslint": "^9.18.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.2",
@@ -100,10 +101,4 @@
       "prettier --write"
     ]
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run validate"
-    }
-  }
 }

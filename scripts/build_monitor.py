@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import time
+import logging
 import psutil
 import subprocess
 import requests
@@ -15,6 +16,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import argparse
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class BuildMonitor:
@@ -191,28 +195,51 @@ class BuildMonitor:
             }
 
     def check_service_health(self, service_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Check health of a specific service."""
-        try:
-            url = f"http://localhost:{config['port']}{config['health_endpoint']}"
-            start_time = time.time()
-            response = requests.get(url, timeout=5)
-            response_time = time.time() - start_time
+        """Check health of a specific service with retry logic."""
+        url = f"http://localhost:{config['port']}{config['health_endpoint']}"
+        max_attempts = config.get('max_attempts', 3)
+        base_delay = config.get('base_delay', 1.0)
 
-            return {
-                "healthy": response.status_code == 200,
-                "status_code": response.status_code,
-                "response_time": response_time,
-                "url": url,
-                "error": None
-            }
-        except requests.exceptions.RequestException as e:
-            return {
-                "healthy": False,
-                "status_code": None,
-                "response_time": None,
-                "url": f"http://localhost:{config['port']}{config['health_endpoint']}",
-                "error": str(e)
-            }
+        for attempt in range(max_attempts):
+            try:
+                start_time = time.time()
+                response = requests.get(url, timeout=5)
+                response_time = time.time() - start_time
+
+                if response.status_code == 200:
+                    return {
+                        "healthy": True,
+                        "status_code": response.status_code,
+                        "response_time": response_time,
+                        "url": url,
+                        "error": None
+                    }
+                else:
+                    logger.warning(f"Service {service_name} returned status {response.status_code} on attempt {attempt + 1}")
+
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Service {service_name} health check failed on attempt {attempt + 1}: {e}")
+
+                if attempt < max_attempts - 1:
+                    delay = base_delay * (2 ** attempt)  # Exponential backoff
+                    time.sleep(delay)
+                else:
+                    return {
+                        "healthy": False,
+                        "status_code": None,
+                        "response_time": None,
+                        "url": url,
+                        "error": str(e)
+                    }
+
+        # If we get here, all attempts failed
+        return {
+            "healthy": False,
+            "status_code": None,
+            "response_time": None,
+            "url": url,
+            "error": f"All {max_attempts} attempts failed"
+        }
 
     def collect_service_metrics(self) -> Dict[str, Any]:
         """Collect metrics for all services."""
@@ -251,11 +278,33 @@ class BuildMonitor:
         try:
             coverage_file = Path("coverage.xml")
             if coverage_file.exists():
-                # Parse coverage.xml to extract coverage percentage
-                # This is a simplified version
-                return 85.0  # Placeholder
-        except Exception:
-            pass
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(coverage_file)
+                root = tree.getroot()
+
+                # Try different coverage report formats
+                # Format 1: coverage element with line-rate attribute
+                if root.tag == "coverage" and "line-rate" in root.attrib:
+                    return float(root.attrib["line-rate"]) * 100
+
+                # Format 2: coverage element with lines-covered and lines-valid
+                if root.tag == "coverage":
+                    lines_covered = root.attrib.get("lines-covered", "0")
+                    lines_valid = root.attrib.get("lines-valid", "1")
+                    if lines_valid != "0":
+                        return (float(lines_covered) / float(lines_valid)) * 100
+
+                # Format 3: look for coverage child elements
+                for coverage_elem in root.findall(".//coverage"):
+                    if "percent" in coverage_elem.attrib:
+                        return float(coverage_elem.attrib["percent"])
+                    if "line-rate" in coverage_elem.attrib:
+                        return float(coverage_elem.attrib["line-rate"]) * 100
+
+                logger.warning("Could not parse coverage percentage from coverage.xml")
+                return None
+        except Exception as e:
+            logger.exception(f"Failed to parse coverage.xml: {e}")
         return None
 
     def get_bundle_size(self) -> Dict[str, int]:
@@ -365,7 +414,10 @@ class BuildMonitor:
                                    json=payload, timeout=10)
             response.raise_for_status()
         except Exception as e:
-            print(f"Failed to send webhook alert: {e}")
+            logger.exception(f"Failed to send webhook alert: {e}")
+            # Record the failure in metrics
+            self.metrics["webhook_failures"] = self.metrics.get("webhook_failures", 0) + 1
+            self.metrics["last_webhook_error"] = str(e)
 
     def send_email_alert(self, alerts: List[Dict[str, str]]):
         """Send email alert."""
@@ -447,6 +499,15 @@ class BuildMonitor:
 
 def main():
     """Main function."""
+    # Configure logging at application entry point
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(description="Liquid Hive Build Monitor")
     parser.add_argument("--config", help="Configuration file path")
     parser.add_argument("--output", help="Output file path")

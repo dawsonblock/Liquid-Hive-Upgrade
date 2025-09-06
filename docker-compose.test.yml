@@ -113,14 +113,7 @@ services:
   test-runner:
     build:
       context: .
-      dockerfile: <<EOF
-FROM python:3.11-slim
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["python", "-m", "pytest", "tests/integration/", "-v"]
-EOF
+      dockerfile: tests/integration/Dockerfile
     depends_on:
       test-api:
         condition: service_healthy

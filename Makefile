@@ -119,7 +119,10 @@ test-frontend: ## Run frontend tests
 
 test-integration: ## Run integration tests
 	@echo "$(BLUE)Running integration tests...$(NC)"
-	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit; \
+	exit_code=$$?; \
+	docker compose -f docker-compose.test.yml down --volumes --remove-orphans; \
+	exit $$exit_code
 	@echo "$(GREEN)✅ Integration tests completed$(NC)"
 
 test-services: ## Run service-specific tests
