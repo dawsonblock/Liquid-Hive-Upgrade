@@ -6,9 +6,12 @@ import sys
 import time
 from pathlib import Path
 import argparse
+import shutil
 
 
-def run_command(cmd, cwd=None, check=True):
+def run_command(
+    cmd: list[str], cwd: str | None = None, check: bool = True
+) -> subprocess.CompletedProcess | None:
     """Run a command with better error handling."""
     print(f"🔧 Running: {' '.join(cmd)}")
     start_time = time.time()
@@ -31,7 +34,7 @@ def run_command(cmd, cwd=None, check=True):
         return None
 
 
-def check_prerequisites():
+def check_prerequisites() -> bool:
     """Check if all prerequisites are available."""
     print("🔍 Checking prerequisites...")
 
@@ -63,27 +66,41 @@ def check_prerequisites():
     return True
 
 
-def clean_build():
+def clean_build() -> None:
     """Clean build artifacts."""
     print("🧹 Cleaning build artifacts...")
 
     # Clean frontend
-    frontend_clean = run_command(["yarn", "clean"], cwd="frontend", check=False)
+    frontend_clean = run_command(
+        ["yarn", "clean"], cwd="frontend", check=False
+    )
     if frontend_clean and frontend_clean.returncode != 0:
         print("⚠️ Frontend clean had issues, continuing...")
 
-    # Clean Python
-    python_clean = run_command(["find", ".", "-name", "__pycache__", "-type", "d", "-exec", "rm", "-rf", "{}", "+"], check=False)
+    # Clean Python __pycache__ directories using Python-native approach
+    print("🧹 Cleaning Python __pycache__ directories...")
+    project_root = Path(".")
+    pycache_dirs = list(project_root.rglob("__pycache__"))
+
+    for pycache_dir in pycache_dirs:
+        if pycache_dir.is_dir():
+            try:
+                shutil.rmtree(pycache_dir)
+                print(f"✅ Removed: {pycache_dir}")
+            except OSError as e:
+                print(f"⚠️ Failed to remove {pycache_dir}: {e}")
 
     print("✅ Cleanup completed")
 
 
-def build_frontend():
+def build_frontend() -> bool:
     """Build frontend with optimizations."""
     print("🏗️ Building frontend...")
 
     # Install dependencies
-    install_result = run_command(["yarn", "install", "--frozen-lockfile"], cwd="frontend")
+    install_result = run_command(
+        ["yarn", "install", "--frozen-lockfile"], cwd="frontend"
+    )
     if not install_result:
         return False
 
@@ -96,7 +113,7 @@ def build_frontend():
     return True
 
 
-def build_backend():
+def build_backend() -> bool:
     """Build backend Docker image."""
     print("🐳 Building backend Docker image...")
 
@@ -114,31 +131,43 @@ def build_backend():
     return True
 
 
-def run_tests():
+def run_tests() -> None:
     """Run tests if requested."""
     print("🧪 Running tests...")
 
     # Frontend tests
-    frontend_tests = run_command(["yarn", "test", "--ci"], cwd="frontend", check=False)
+    frontend_tests = run_command(
+        ["yarn", "test", "--ci"], cwd="frontend", check=False
+    )
     if frontend_tests and frontend_tests.returncode != 0:
         print("⚠️ Frontend tests had issues")
 
     # Python tests
-    python_tests = run_command(["python3", "-m", "pytest", "tests/", "-v"], check=False)
+    python_tests = run_command(
+        ["python3", "-m", "pytest", "tests/", "-v"], check=False
+    )
     if python_tests and python_tests.returncode != 0:
         print("⚠️ Python tests had issues")
 
     print("✅ Tests completed")
 
 
-def main():
+def main() -> None:
     """Main build function."""
     parser = argparse.ArgumentParser(description="Enhanced Build Script")
-    parser.add_argument("--clean", action="store_true", help="Clean before building")
+    parser.add_argument(
+        "--clean", action="store_true", help="Clean before building"
+    )
     parser.add_argument("--test", action="store_true", help="Run tests")
-    parser.add_argument("--frontend-only", action="store_true", help="Build only frontend")
-    parser.add_argument("--backend-only", action="store_true", help="Build only backend")
-    parser.add_argument("--optimize", action="store_true", help="Run build optimization")
+    parser.add_argument(
+        "--frontend-only", action="store_true", help="Build only frontend"
+    )
+    parser.add_argument(
+        "--backend-only", action="store_true", help="Build only backend"
+    )
+    parser.add_argument(
+        "--optimize", action="store_true", help="Run build optimization"
+    )
 
     args = parser.parse_args()
 
@@ -173,9 +202,25 @@ def main():
     # Run optimization analysis
     if args.optimize:
         print("🔍 Running build optimization analysis...")
-        opt_result = run_command(["python3", "scripts/build_optimizer.py"], check=False)
-        if opt_result and opt_result.returncode == 0:
-            print(opt_result.stdout)
+        opt_result = run_command(
+            ["python3", "scripts/build_optimizer.py"], check=False
+        )
+        if opt_result:
+            # Always print stdout if present
+            if opt_result.stdout:
+                print(opt_result.stdout)
+            # Always print stderr if present
+            if opt_result.stderr:
+                print(f"STDERR: {opt_result.stderr}")
+            # Check return code and handle failures
+            if opt_result.returncode != 0:
+                print(
+                    f"❌ Build optimization failed with exit code "
+                    f"{opt_result.returncode}"
+                )
+                if opt_result.stderr:
+                    print(f"Error details: {opt_result.stderr}")
+                success = False
 
     elapsed = time.time() - start_time
 

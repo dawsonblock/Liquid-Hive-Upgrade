@@ -61,6 +61,10 @@ build: ## Build all components
 
 build-enhanced: ## Enhanced build with optimizations
 	@echo "$(BLUE)Running enhanced build...$(NC)"
+	@if [ ! -f scripts/enhanced_build.py ]; then \
+		echo "$(RED)❌ scripts/enhanced_build.py not found$(NC)"; \
+		exit 1; \
+	fi
 	python3 scripts/enhanced_build.py --clean --optimize
 	@echo "$(GREEN)✅ Enhanced build completed$(NC)"
 
