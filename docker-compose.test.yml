@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # Test database
+  test-redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test-mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test API
+  test-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8001:8080"
+    environment:
+      - REDIS_URL=redis://test-redis:6379
+      - MONGODB_URL=mongodb://test:test@test-mongodb:27017/test
+      - ENVIRONMENT=test
+    depends_on:
+      test-redis:
+        condition: service_healthy
+      test-mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test frontend
+  test-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:5173"
+    environment:
+      - NODE_ENV=test
+    depends_on:
+      test-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test services
+  test-feedback:
+    build:
+      context: .
+      dockerfile: services/feedback_api/Dockerfile
+    ports:
+      - "8091:8091"
+    environment:
+      - REDIS_URL=redis://test-redis:6379
+      - MONGODB_URL=mongodb://test:test@test-mongodb:27017/test
+      - ENVIRONMENT=test
+    depends_on:
+      test-redis:
+        condition: service_healthy
+      test-mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test-oracle:
+    build:
+      context: .
+      dockerfile: services/oracle_api/Dockerfile
+    ports:
+      - "8092:8092"
+    environment:
+      - REDIS_URL=redis://test-redis:6379
+      - MONGODB_URL=mongodb://test:test@test-mongodb:27017/test
+      - ENVIRONMENT=test
+    depends_on:
+      test-redis:
+        condition: service_healthy
+      test-mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8092/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Integration test runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: <<EOF
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "-m", "pytest", "tests/integration/", "-v"]
+EOF
+    depends_on:
+      test-api:
+        condition: service_healthy
+      test-frontend:
+        condition: service_healthy
+      test-feedback:
+        condition: service_healthy
+      test-oracle:
+        condition: service_healthy
+    environment:
+      - API_URL=http://test-api:8080
+      - FRONTEND_URL=http://test-frontend:5173
+      - FEEDBACK_URL=http://test-feedback:8091
+      - ORACLE_URL=http://test-oracle:8092
+
+networks:
+  default:
+    name: liquid-hive-test

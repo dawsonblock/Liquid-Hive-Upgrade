@@ -1,24 +1,43 @@
 # Multi-stage build for production-ready frontend
-FROM node:20-alpine as builder
+FROM node:20-alpine as base
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app directory with proper permissions
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
-COPY yarn.lock ./
+COPY package.json yarn.lock ./
 
-# Install dependencies
-RUN yarn install --frozen-lockfile --production=false
+# Install dependencies with better caching
+RUN --mount=type=cache,target=/root/.yarn \
+    yarn install --frozen-lockfile --production=false
 
 # Copy source code
 COPY . .
+
+# Build stage
+FROM base as builder
+
+# Set build arguments
+ARG NODE_ENV=production
+ARG NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 RUN yarn build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:alpine as production
+
+# Install security updates and dumb-init
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init && \
+    rm -rf /var/cache/apk/*
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -31,11 +50,29 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
     # Enable gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml
+        image/svg+xml;
 
     # Handle client-side routing
     location / {
@@ -43,37 +80,60 @@ server {
     }
 
     # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp|avif)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header Vary "Accept-Encoding";
     }
 
-    # Security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Deny access to backup files
+    location ~ ~$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
 }
 EOF
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S app -u 1001
+# Create non-root user for nginx
+RUN addgroup -g 1001 -S nginx && \
+    adduser -S nginx -u 1001 -G nginx
 
 # Change ownership of nginx files
-RUN chown -R app:nodejs /usr/share/nginx/html
-RUN chown -R app:nodejs /var/cache/nginx
-RUN chown -R app:nodejs /var/log/nginx
-RUN chown -R app:nodejs /etc/nginx/conf.d
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    chown -R nginx:nginx /var/run
+
+# Create nginx pid directory
+RUN mkdir -p /var/run/nginx && \
+    chown nginx:nginx /var/run/nginx
 
 # Switch to non-root user
-USER app
+USER nginx
 
 # Expose port
 EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:5173/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:5173/health || exit 1
 
-# Start nginx
+# Start nginx with dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["nginx", "-g", "daemon off;"]

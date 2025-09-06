@@ -3,12 +3,19 @@ class CapsuleBrainGUI {
     this.ws = null;
     this.isConnected = false;
     this.currentTheme = localStorage.getItem('theme') || 'dark';
-    this.autoScroll = localStorage.getItem('autoScroll') === 'true' || true;
+    const stored = localStorage.getItem('autoScroll');
+    this.autoScroll = stored === null ? true : stored === 'true';
     this.showTimestamps = localStorage.getItem('showTimestamps') === 'true' || false;
     this.fontSize = parseInt(localStorage.getItem('fontSize')) || 14;
     this.recognition = null;
     this.isRecording = false;
     this.uploadedFiles = [];
+
+    // WebSocket reconnection settings
+    this.reconnectAttempt = 0;
+    this.maxReconnectAttempts = 10;
+    this.baseDelayMs = 1000;
+    this.maxDelayMs = 30000;
 
     this.init();
   }
@@ -29,6 +36,7 @@ class CapsuleBrainGUI {
     this.ws.onopen = () => {
       this.updateStatus("Connected", "online");
       this.isConnected = true;
+      this.reconnectAttempt = 0; // Reset reconnection attempts on successful connection
       this.showNotification("Connected to Capsule Brain", "success");
     };
 
@@ -36,13 +44,13 @@ class CapsuleBrainGUI {
       this.updateStatus("Disconnected", "offline");
       this.isConnected = false;
       this.showNotification("Disconnected from server", "error");
-      // Attempt to reconnect after 3 seconds
-      setTimeout(() => this.setupWebSocket(), 3000);
+      this.scheduleReconnect();
     };
 
     this.ws.onerror = () => {
       this.updateStatus("Error", "offline");
       this.isConnected = false;
+      this.scheduleReconnect();
     };
 
     this.ws.onmessage = (event) => {
@@ -53,6 +61,27 @@ class CapsuleBrainGUI {
         console.error('Error parsing WebSocket message:', e);
       }
     };
+  }
+
+  scheduleReconnect() {
+    if (this.reconnectAttempt >= this.maxReconnectAttempts) {
+      this.showNotification("Max reconnection attempts reached", "error");
+      return;
+    }
+
+    // Calculate delay with exponential backoff and jitter
+    const delay = Math.min(
+      this.baseDelayMs * Math.pow(2, this.reconnectAttempt),
+      this.maxDelayMs
+    );
+    const jitter = Math.random() * 1000; // Add up to 1 second of jitter
+    const totalDelay = delay + jitter;
+
+    this.reconnectAttempt++;
+
+    setTimeout(() => {
+      this.setupWebSocket();
+    }, totalDelay);
   }
 
   handleMessage(msg) {
@@ -128,6 +157,30 @@ class CapsuleBrainGUI {
     // Refresh system
     const refreshBtn = document.getElementById("refreshSystemBtn");
     refreshBtn.addEventListener("click", () => this.loadSystem());
+
+    // Event delegation for remove file buttons
+    document.addEventListener("click", (e) => {
+      if (e.target.closest('.remove-file')) {
+        const button = e.target.closest('.remove-file');
+        const index = parseInt(button.dataset.index);
+        this.removeFile(index);
+      }
+    });
+
+    // Event delegation for approval buttons
+    document.addEventListener("click", (e) => {
+      if (e.target.closest('.approve, .deny')) {
+        const button = e.target.closest('.approve, .deny');
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+
+        if (action === 'approve') {
+          this.approveItem(id);
+        } else if (action === 'deny') {
+          this.denyItem(id);
+        }
+      }
+    });
   }
 
   setupSettingsListeners() {
@@ -308,7 +361,7 @@ class CapsuleBrainGUI {
       item.innerHTML = `
         <i class="fas fa-file"></i>
         <span>${file.name}</span>
-        <button class="remove-file" onclick="gui.removeFile(${index})">
+        <button class="remove-file" data-index="${index}">
           <i class="fas fa-times"></i>
         </button>
       `;
@@ -397,7 +450,28 @@ class CapsuleBrainGUI {
     const timestamp = this.showTimestamps ?
       `<div class="message-timestamp">${new Date().toLocaleTimeString()}</div>` : '';
 
-    msg.innerHTML = timestamp + (window.marked ? window.marked.parse(content || "...") : content || "...");
+    const contentToRender = content || "...";
+    let renderedContent;
+
+    if (window.marked) {
+      const parsed = window.marked.parse(contentToRender);
+      // Sanitize the HTML if DOMPurify is available, otherwise use textContent for safety
+      if (window.DOMPurify) {
+        renderedContent = window.DOMPurify.sanitize(parsed);
+      } else {
+        // Fallback: create a temporary element and use textContent to avoid XSS
+        const temp = document.createElement('div');
+        temp.textContent = contentToRender;
+        renderedContent = temp.innerHTML;
+      }
+    } else {
+      // Fallback: use textContent to avoid XSS
+      const temp = document.createElement('div');
+      temp.textContent = contentToRender;
+      renderedContent = temp.innerHTML;
+    }
+
+    msg.innerHTML = timestamp + renderedContent;
 
     messages.appendChild(msg);
 
@@ -477,13 +551,35 @@ class CapsuleBrainGUI {
       approvals.forEach((item) => {
         const div = document.createElement("div");
         div.className = "approval-item";
-        div.innerHTML = `
-          <span>${item.content}</span>
-          <div class="approval-actions">
-            <button class="approve" onclick="gui.approveItem('${item.id}')">Approve</button>
-            <button class="deny" onclick="gui.denyItem('${item.id}')">Deny</button>
-          </div>
-        `;
+
+        // Create content span safely
+        const contentSpan = document.createElement("span");
+        contentSpan.textContent = item.content;
+
+        // Create actions container
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "approval-actions";
+
+        // Create approve button
+        const approveBtn = document.createElement("button");
+        approveBtn.className = "approve";
+        approveBtn.textContent = "Approve";
+        approveBtn.setAttribute("data-action", "approve");
+        approveBtn.setAttribute("data-id", item.id);
+
+        // Create deny button
+        const denyBtn = document.createElement("button");
+        denyBtn.className = "deny";
+        denyBtn.textContent = "Deny";
+        denyBtn.setAttribute("data-action", "deny");
+        denyBtn.setAttribute("data-id", item.id);
+
+        // Assemble the elements
+        actionsDiv.appendChild(approveBtn);
+        actionsDiv.appendChild(denyBtn);
+        div.appendChild(contentSpan);
+        div.appendChild(actionsDiv);
+
         container.appendChild(div);
       });
     } catch (e) {

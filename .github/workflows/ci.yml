@@ -31,9 +31,17 @@ jobs:
       matrix:
         python-version: [3.11, 3.12]
         node-version: [18, 20]
+        test-type: [unit, integration, e2e]
         include:
-          - test-type: unit
-          - test-type: integration
+          - python-version: 3.11
+            node-version: 20
+            test-type: unit
+          - python-version: 3.12
+            node-version: 18
+            test-type: integration
+          - python-version: 3.11
+            node-version: 20
+            test-type: e2e
 
     steps:
     - uses: actions/checkout@v4
@@ -80,12 +88,27 @@ jobs:
 
     - name: Python Tests
       run: |
-        pytest tests/ --cov=src --cov=apps --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+        if [ "${{ matrix.test-type }}" = "unit" ]; then
+          pytest tests/unit/ --cov=src --cov=apps --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+        elif [ "${{ matrix.test-type }}" = "integration" ]; then
+          pytest tests/integration/ --cov=src --cov=apps --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+        else
+          pytest tests/ --cov=src --cov=apps --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+        fi
 
     - name: Frontend Tests
       run: |
         cd frontend
-        yarn test --coverage --watchAll=false
+        if [ "${{ matrix.test-type }}" = "e2e" ]; then
+          yarn test:e2e --coverage --watchAll=false
+        else
+          yarn test --coverage --watchAll=false
+        fi
+
+    - name: Build Verification
+      run: |
+        python scripts/quick_verify.py
+        python scripts/build_monitor.py --output build_metrics.json
 
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -98,7 +121,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
     - uses: actions/checkout@v4
 

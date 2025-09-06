@@ -262,8 +262,8 @@ class BuildVerifier:
             # Try to validate Dockerfile syntax
             try:
                 result = subprocess.run([
-                    'docker', 'build', '--no-cache', '--progress=plain', '-f', str(dockerfile_path), '.'
-                ], capture_output=True, text=True, timeout=60)
+                    'docker', 'build', '--no-cache', '--progress=plain', '-f', str(dockerfile_path), str(self.project_root)
+                ], capture_output=True, text=True, timeout=60, cwd=str(self.project_root))
 
                 if result.returncode == 0:
                     self.add_test_result(f"Dockerfile {dockerfile}", True, "Build validation passed")
@@ -296,20 +296,40 @@ class BuildVerifier:
                 else:
                     self.add_test_result(f"Service {service_name}", False, f"Unhealthy: HTTP {response.status_code}")
 
-            except requests.exceptions.RequestException:
-                self.add_test_result(f"Service {service_name}", True, f"Not running (expected if not started)", warning=True)
+            except requests.exceptions.RequestException as e:
+                self.add_test_result(f"Service {service_name}", False, f"Not running (expected if not started): {str(e)}", warning=True)
 
         return healthy_services > 0
+
+    def search_pattern_in_files(self, directory: str, pattern: str, file_extensions: tuple, exclude_dirs: set) -> int:
+        """Search for a pattern in files using Python-native traversal."""
+        count = 0
+
+        for root, dirs, files in os.walk(directory):
+            # Remove excluded directories from dirs list to prevent os.walk from descending into them
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+
+            for file in files:
+                if file.endswith(file_extensions):
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                if pattern in line:
+                                    count += 1
+                    except (IOError, UnicodeDecodeError):
+                        # Skip files that can't be read
+                        continue
+
+        return count
 
     def check_code_quality(self) -> bool:
         """Check code quality metrics."""
         try:
-            # Check for print statements
-            result = subprocess.run([
-                'grep', '-r', 'print(', 'src/', '--exclude-dir=__pycache__'
-            ], capture_output=True, text=True)
-
-            print_count = len(result.stdout.splitlines()) if result.returncode == 0 else 0
+            # Check for print statements using Python-native search
+            print_count = self.search_pattern_in_files(
+                'src/', 'print(', ('.py',), {'__pycache__'}
+            )
 
             if print_count > 0:
                 self.add_test_result(
@@ -321,12 +341,10 @@ class BuildVerifier:
             else:
                 self.add_test_result("Code Quality", True, "No print statements found")
 
-            # Check for console.log
-            result = subprocess.run([
-                'grep', '-r', 'console.log', 'frontend/src/', '--exclude-dir=node_modules'
-            ], capture_output=True, text=True)
-
-            console_count = len(result.stdout.splitlines()) if result.returncode == 0 else 0
+            # Check for console.log using Python-native search
+            console_count = self.search_pattern_in_files(
+                'frontend/src/', 'console.log', ('.js', '.ts', '.tsx', '.jsx'), {'node_modules'}
+            )
 
             if console_count > 0:
                 self.add_test_result(
