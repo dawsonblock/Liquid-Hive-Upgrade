@@ -285,11 +285,13 @@ def check_build_artifacts():
         if '.mypy_cache' in dirs:
             artifacts.append(f"{root}/.mypy_cache")
 
-    # Check for generated JS files in src/
+    # Check for generated JS files in src/ (exclude legitimate GUI files)
     for root, dirs, files in os.walk("src"):
         for file in files:
             if file.endswith('.js') and not file.startswith('.'):
-                artifacts.append(f"{root}/{file}")
+                # Exclude legitimate GUI files
+                if not (root.endswith('capsule_brain/gui/static') and file == 'app.js'):
+                    artifacts.append(f"{root}/{file}")
 
     if artifacts:
         print(f"⚠️  Found {len(artifacts)} artifacts (run cleanup to remove)")

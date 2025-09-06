@@ -20,6 +20,16 @@ import argparse
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Configure logger if not already configured
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 
 class BuildMonitor:
     """Comprehensive build monitoring system."""
