@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Enable Corepack and pin Yarn version
-RUN corepack enable && corepack prepare yarn@4.0.2 --activate
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
 
 # Install dependencies with better caching
 RUN --mount=type=cache,target=/cache/yarn \

@@ -5,8 +5,8 @@ Repository cleanup analysis script.
 Finds duplicate files and unnecessary files for cleanup.
 """
 
-import os
 import hashlib
+import shlex
 from pathlib import Path
 from collections import defaultdict
 import json
@@ -271,12 +271,12 @@ def main():
     print(f"\nCleanup Commands:")
     print("# Remove unnecessary files:")
     for file_info in results['unnecessary_files']:
-        print(f"rm -f '{file_info['path']}'")
+        print(f"rm -f {shlex.quote(file_info['path'])}")
 
     print("\n# Remove duplicate files (keep first/canonical):")
     for dup in results['duplicates']:
         for file_info in dup['files'][1:]:  # Skip first (canonical)
-            print(f"rm -f '{file_info['path']}'")
+            print(f"rm -f {shlex.quote(file_info['path'])}")
 
 if __name__ == "__main__":
     main()

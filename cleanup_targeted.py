@@ -6,13 +6,15 @@ Removes only actual build artifacts and generated files.
 """
 
 import os
-import shutil
+import fnmatch
 from pathlib import Path
+from typing import List
 
 def should_remove_file(file_path):
     """Check if file should be removed based on specific patterns."""
     file_name = file_path.name
     file_path_str = str(file_path)
+    normalized_path = os.path.normpath(file_path_str)
 
     # Build artifacts and generated files that are safe to remove
     remove_patterns = [
@@ -55,21 +57,26 @@ def should_remove_file(file_path):
 
     # Check patterns
     for pattern in remove_patterns:
-        if pattern.endswith('*'):
-            if file_name.startswith(pattern[:-1]):
+        if pattern.endswith('/'):
+            # Directory pattern - check if path ends with the directory name
+            dir_name = pattern[:-1]
+            if normalized_path.endswith(os.sep + dir_name) or normalized_path.endswith(dir_name):
                 return True
-        elif pattern.endswith('/'):
-            if file_path_str.endswith(pattern[:-1]):
+        elif '*' in pattern:
+            # Glob pattern - use fnmatch for proper glob matching
+            if fnmatch.fnmatch(file_name, pattern):
                 return True
-        elif pattern in file_path_str:
-            return True
+        else:
+            # Exact match - check if the pattern matches the full path
+            if normalized_path == pattern or normalized_path.endswith(os.sep + pattern):
+                return True
 
     return False
 
 def cleanup_repository():
     """Clean up the repository by removing unnecessary files."""
     repo_path = Path.cwd()
-    removed_files = []
+    removed_files: List[Path] = []
     total_size_removed = 0
 
     print("Starting targeted cleanup...")
@@ -84,7 +91,7 @@ def cleanup_repository():
                 file_size = file_path.stat().st_size
                 print(f"Removing: {file_path} ({file_size} bytes)")
                 file_path.unlink()
-                removed_files.append(str(file_path))
+                removed_files.append(file_path)
                 total_size_removed += file_size
             except Exception as e:
                 print(f"Error removing {file_path}: {e}")
@@ -95,7 +102,7 @@ def cleanup_repository():
         try:
             print(f"Removing symlink: {docker_compose_yml}")
             docker_compose_yml.unlink()
-            removed_files.append(str(docker_compose_yml))
+            removed_files.append(docker_compose_yml)
         except Exception as e:
             print(f"Error removing symlink {docker_compose_yml}: {e}")
 
@@ -112,7 +119,7 @@ def cleanup_repository():
         f.write(f"Total size removed: {total_size_removed / (1024*1024):.2f} MB\n\n")
         f.write("Removed files:\n")
         for file_path in removed_files:
-            f.write(f"  - {file_path}\n")
+            f.write(f"  - {str(file_path)}\n")
 
     print(f"Cleanup log saved to: {log_file}")
 

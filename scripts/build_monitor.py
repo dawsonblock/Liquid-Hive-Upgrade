@@ -20,16 +20,6 @@ import argparse
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# Configure logger if not already configured
-if not logger.hasHandlers():
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-
 
 class BuildMonitor:
     """Comprehensive build monitoring system."""
@@ -509,6 +499,15 @@ class BuildMonitor:
 
 def main():
     """Main function."""
+    # Configure logging at application entry point
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(description="Liquid Hive Build Monitor")
     parser.add_argument("--config", help="Configuration file path")
     parser.add_argument("--output", help="Output file path")
