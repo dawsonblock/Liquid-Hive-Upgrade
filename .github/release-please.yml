@@ -1,5 +1,0 @@
-release-type: simple
-packages:
-  .:
-    release-type: simple
-    package-name: liquid-hive-upgrade
